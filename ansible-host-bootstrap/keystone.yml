@@ -1,0 +1,34 @@
+---
+- name: Check if cached Keystone token exists
+  file:
+    state: file
+    name: files/keystone-token.txt
+  ignore_errors: True
+  register: cached_token
+
+- block:
+    - name: Obtain authentication token from Keystone
+      os_auth:
+        auth:
+          auth_url: "{{ du_url }}/keystone/v2.0"
+          username: "{{ os_username }}"
+          password: "{{ os_password }}"
+          project_name: "{{ os_tenant }}"
+        region_name: "{{ os_region }}"
+        validate_certs: False
+      register: auth_reply
+
+    - name: Save OS Auth Token
+      copy:
+        content: "{{ auth_reply.ansible_facts.auth_token }}"
+        dest: files/keystone-token.txt
+
+    - name: Store OS_AUTH_TOKEN in fact
+      set_fact: "os_auth_token={{ auth_reply.ansible_facts.auth_token }}"
+  when: cached_token|failed
+
+- block:
+    - name: Load OS_AUTH_TOKEN into fact
+      set_fact: "os_auth_token={{ lookup('file', 'keystone-token.txt') }}"
+  when: cached_token|success
+
