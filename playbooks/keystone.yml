@@ -16,6 +16,7 @@
           project_name: "{{ os_tenant }}"
         region_name: "{{ os_region }}"
         validate_certs: False
+      always_run: True
       register: auth_reply
 
     - name: Save OS Auth Token
@@ -31,4 +32,3 @@
     - name: Load OS_AUTH_TOKEN into fact
       set_fact: "os_auth_token={{ lookup('file', 'keystone-token.txt') }}"
   when: cached_token|success
-

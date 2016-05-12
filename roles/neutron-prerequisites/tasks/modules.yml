@@ -1,0 +1,5 @@
+---
+- modprobe:
+    state: present
+    name: "{{ item }}"
+  with_items: "{{ neutron_modules }}"

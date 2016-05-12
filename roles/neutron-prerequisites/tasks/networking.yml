@@ -1,0 +1,8 @@
+---
+- name: Create required OVS bridges
+  openvswitch_bridge:
+    bridge: "{{ item }}"
+    state: present
+  with_items:
+    - br-ext
+    - br-vlan

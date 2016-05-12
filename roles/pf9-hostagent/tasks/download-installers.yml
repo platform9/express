@@ -1,0 +1,10 @@
+- name: Download Platform9 installers
+  connection: local
+  get_url:
+    url: "{{ du_url }}/private/platform9-install-{{ item }}.sh"
+    dest: "files/platform9-install-{{ item }}.sh"
+    headers: "X-Auth-Token:{{ hostvars['localhost']['os_auth_token'] }}"
+    validate_certs: no
+  with_items:
+    - debian
+    - redhat

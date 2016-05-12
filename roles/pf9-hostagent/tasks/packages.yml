@@ -1,0 +1,18 @@
+---
+- name: Check pf9-hostagent on Debian
+  command: dpkg-query -s pf9-hostagent
+  when: ansible_pkg_mgr == "apt"
+  ignore_errors: True
+  register: pkg_state
+  changed_when: pkg_state.rc != 0
+
+- name: Check pf9-hostagent on RedHat
+  command: rpm -q pf9-hostagent
+  when: ansible_pkg_mgr == "yum"
+  ignore_errors: True
+  register: pkg_state
+  changed_when: pkg_state.rc != 0
+
+- name: Install pf9-hostagent on hypervisor
+  script: "platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy"
+  when: pkg_state|failed

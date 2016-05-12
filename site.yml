@@ -1,0 +1,17 @@
+---
+- hosts: localhost
+  tasks:
+    - include: playbooks/keystone.yml
+
+- hosts: hypervisors
+  tasks:
+    - name: Copy SSH authentication
+      authorized_key:
+        state: present
+        user: "{{ ssh_user }}"
+        exclusive: no
+        manage_dir: yes
+        key: "{{ lookup('file', 'files/root-key.pub') }}"
+  roles:
+    - neutron-prerequisites
+    - pf9-hostagent

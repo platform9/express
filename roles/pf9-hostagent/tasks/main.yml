@@ -1,0 +1,4 @@
+---
+- include: download-installers.yml
+- include: packages.yml
+- include: services.yml
