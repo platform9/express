@@ -7,6 +7,20 @@
   register: cached_token
 
 - block:
+    - name: Load OS_AUTH_TOKEN into fact
+      set_fact: "os_auth_token={{ lookup('file', 'keystone-token.txt') | trim }}"
+
+    - name: Validate Keystone token
+      uri:
+        url: "{{ du_url }}/keystone/v2.0"
+        headers:
+          X-Auth-Token: "{{ os_auth_token }}"
+        status_code: 200, 401
+        validate_certs: no
+      register: validate_response
+  when: cached_token|success
+
+- block:
     - name: Obtain authentication token from Keystone
       os_auth:
         auth:
@@ -26,9 +40,6 @@
 
     - name: Store OS_AUTH_TOKEN in fact
       set_fact: "os_auth_token={{ auth_reply.ansible_facts.auth_token }}"
-  when: cached_token|failed
 
-- block:
-    - name: Load OS_AUTH_TOKEN into fact
-      set_fact: "os_auth_token={{ lookup('file', 'keystone-token.txt') }}"
-  when: cached_token|success
+  when: cached_token|failed or
+    (validate_response is defined and validate_response.status != 200)
