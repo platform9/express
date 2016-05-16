@@ -5,6 +5,10 @@
 
 - hosts: hypervisors
   tasks:
+    - group_by: "key={{ ansible_distribution }}"
+
+- hosts: hypervisors
+  tasks:
     - name: Copy SSH authentication
       authorized_key:
         state: present
