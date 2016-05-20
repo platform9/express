@@ -1,0 +1,233 @@
+#!/bin/bash
+
+configNetworking=y
+OS="{{ ansible_os_family }}"
+mgmtIp="{{ ansible_default_ipv4.address }}"
+phyInt=bond0
+mgmtVlan=1
+mgmtSubnet="{{ ansible_default_ipv4.netmask }}"
+mgmtGateway="{{ ansible_default_ipv4.gateway }}"
+mgmtSearchDomain=pf9.labs
+extVlan=204
+tunnelTrue=y
+separateTunnel=y
+tunnelIp="{{ ansible_default_ipv4.address }}"
+tunnelVlanId=150
+tunnelSubnet=255.255.255.0
+mtuSize=1600
+
+if [[ -n $OS && $OS == 'RedHat' ]]; then
+
+	if [ $configNetworking == "y" ]; then
+		# Backup all old network config files
+		cp /etc/sysconfig/network-scripts/ifcfg-* ~/
+		# Create Sub-Interface for Management
+		cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-$phyInt.$mgmtVlan
+		DEVICE=$phyInt.$mgmtVlan
+		ONBOOT=yes
+		BOOTPROTO=none
+		TYPE=Vlan
+		VLAN=yes
+		IPADDR=$mgmtIp
+		NETMASK=$mgmtSubnet
+		GATEWAY=$mgmtGateway
+		{% for nameserver in dns_servers %}
+		DNS{{ loop.index }}={{ nameserver }}
+		{% endfor %}
+		EOF
+		# Add larger MTU to the physical interface
+		if [[ "$tunnelTrue" == "y" ]]; then
+			echo MTU=$mtuSize >> /etc/sysconfig/network-scripts/ifcfg-$phyInt
+			if [[ "$separateTunnel" == "n" ]]; then
+				echo MTU=$mtuSize >> /etc/sysconfig/network-scripts/ifcfg-$phyInt.$mgmtVlan
+			fi
+		fi
+
+		# Setup External Network
+		## Create Bridge for External Network
+		cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-br-ext
+		DEVICE=br-ext
+		BOOTPROTO=none
+		ONBOOT=yes
+		TYPE=OVSBridge
+		DEVICETYPE=ovs
+		EOF
+
+		## Create and Slave External Sub-Interface to External Bridge
+		cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-$phyInt.$extVlan
+		DEVICE=$phyInt.$extVlan
+		ONBOOT=yes
+		TYPE=OVSPort
+		VLAN=yes
+		DEVICETYPE=ovs
+		OVS_BRIDGE=br-ext
+		EOF
+
+		## Slave Physical Interface to VLAN Bridge
+		cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-$phyInt
+		DEVICE=$phyInt
+		BOOTPROTO=none
+		ONBOOT=yes
+		EOF
+
+		if [ "$configureBonding" == "y" ]; then
+			cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-$phyInt
+			BONDING_MASTER=yes >> /etc/sysconfig/network-scripts/ifcfg-$phyInt
+			BONDING_OPTS="mode=$bondingMode"
+			EOF
+			if [ "$vlanTrue" != "y" ]; then
+				echo TYPE=Bond >> /etc/sysconfig/network-scripts/ifcfg-$phyInt
+			fi
+			for slaveInt in "${bondingInts[@]}"; do
+				cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-$slaveInt
+				DEVICE=$slaveInt
+				BOOTPROTO=none
+				ONBOOT=yes
+				TYPE=Ethernet
+				MASTER=bond0
+				SLAVE=yes
+				EOF
+			done
+		fi
+
+		if [ "$vlanTrue" == "y" ]; then
+			## Setup Bridge for VLAN Trunk
+			cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-br-vlan
+			DEVICE=br-vlan
+			BOOTPROTO=none
+			ONBOOT=yes
+			TYPE=OVSBridge
+			DEVICETYPE=ovs
+			EOF
+
+			cat <<-EOF >> /etc/sysconfig/network-scripts/ifcfg-$phyInt
+			OVS_BRIDGE=br-vlan
+			TYPE=OVSPort
+			DEVICETYPE=ovs
+			EOF
+		fi
+
+		if [ "$separateTunnel" == "y" ]; then
+			# Create Sub-Interface for tunneling
+			cat <<-EOF > /etc/sysconfig/network-scripts/ifcfg-$phyInt.$tunnelVlanId
+			DEVICE=$phyInt.$tunnelVlanId
+			IPADDR=$tunnelIp
+			NETMASK=$tunnelSubnet
+			ONBOOT=yes
+			BOOTPROTO=none
+			VLAN=yes
+			TYPE=Vlan
+			MTU=$mtuSize
+			EOF
+		fi
+	fi
+elif [[ -n $OS && $OS == 'Debian' ]]; then
+	if [ $configNetworking == "y" ]; then
+		# Backup old interfaces file
+		cp /etc/network/interfaces ~/
+
+		# Create interfaces header
+		cat <<-EOF > /etc/network/interfaces
+		# This file describes the network interfaces available on your system
+		# and how to activate them. For more information, see interfaces(5).
+
+		# The loopback network interface
+		auto lo
+		iface lo inet loopback
+
+		# Management sub-interface
+		auto $phyInt.$mgmtVlan
+		iface $phyInt.$mgmtVlan inet static
+		  address $mgmtIp
+		  netmask $mgmtSubnet
+		  gateway $mgmtGateway
+		  dns-nameservers {{ dns_servers | join(' ') }}
+		  dns-search $mgmtSearchDomain
+		EOF
+		if [ "$tunnelTrue" == "y" ]; then
+			if [ "$separateTunnel" == "n" ]; then
+				# Add larger MTU to the physical interface
+				cat <<-EOF >> /etc/network/interfaces
+				  post-up ifconfig $phyInt mtu $mtuSize
+				  post-up ifconfig $phyInt.$mgmtVlan mtu $mtuSize
+				EOF
+			elif [ "$separateTunnel" == "y" ]; then
+				cat <<-EOF >> /etc/network/interfaces
+
+				# Tunneling sub-interface
+				auto $phyInt.$tunnelVlanId
+				iface $phyInt.$tunnelVlanId inet static
+				  address $tunnelIp
+				  netmask $tunnelSubnet
+				  post-up ifconfig $phyInt mtu $mtuSize
+				  post-up ifconfig $phyInt.$tunnelVlanId mtu $mtuSize
+				EOF
+			fi
+		fi
+		printf "\n" >> /etc/network/interfaces
+
+		## Create sub-interface for external network
+		cat <<-EOF >> /etc/network/interfaces
+		# External Sub-Interface
+		allow-br-ext $phyInt.$extVlan
+		iface $phyInt.$extVlan inet manual
+		  ovs_type OVSPort
+		  ovs_bridge br-ext
+
+		EOF
+
+		## Create External Bridge
+		cat <<-EOF >> /etc/network/interfaces
+		# External Bridge
+		allow-ovs br-ext
+		iface br-ext inet manual
+		  ovs_type OVSBridge
+		  ovs_ports $phyInt.$extVlan
+
+		EOF
+
+		if [ "$vlanTrue" == "y" ]; then
+			## Setup Bridge for VLAN Trunk
+			cat <<-EOF >> /etc/network/interfaces
+			# Physical interface
+			allow-br-vlan $phyInt
+			iface $phyInt inet manual
+			  ovs_bridge br-vlan
+			  ovs_type OVSPort
+
+			EOF
+
+			# Setup VLAN Trunk for provider and tenant networks.
+			cat <<-EOF >> /etc/network/interfaces
+			# VLAN Bridge
+			allow-ovs br-vlan
+			iface br-vlan inet manual
+			  ovs_type OVSBridge
+			  ovs_ports $phyInt
+			EOF
+		else
+			cat <<-EOF >> /etc/network/interfaces
+			# Physical Interface
+			auto $phyInt
+			iface $phyInt inet manual
+			EOF
+		fi
+
+		if [ "$configureBonding" == "y" ]; then
+			printf "  bond-mode ${bondingMode}\n\n" >> /etc/network/interfaces
+
+			for slaveInt in "${bondingInts[@]}"; do
+				cat <<-EOF >> /etc/network/interfaces
+				# Slaving $slaveInt to Master $phyInt
+				auto $slaveInt
+				iface $slaveInt inet manual
+				  bond-master $phyInt
+
+				EOF
+			done
+		fi
+	fi
+else
+	# Signal failure if unable to determine OS
+	exit 1
+fi
