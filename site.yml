@@ -16,6 +16,31 @@
         exclusive: no
         manage_dir: yes
         key: "{{ lookup('file', 'files/root-key.pub') }}"
+
+- hosts: hypervisors
+  gather_facts: False
+  tasks:
+    - block:
+        - name: Set system hostname
+          hostname:
+            name: "{{ inventory_hostname }}"
+          register: hostname_result
+
+        - name: Update /etc/hosts to reflect hostname change
+          lineinfile:
+            state: present
+            dest: /etc/hosts
+            backrefs: yes
+            regexp: "^(127.0.1.1).*$"
+            line: "\\1\t{{ inventory_hostname_short }}\t{{ inventory_hostname }}"
+          register: etc_hosts_result
+
+        - name: Restart pf9-hostagent on hostname change
+          service:
+            name: pf9-hostagent
+            state: restarted
+          when: hostname_result|changed or etc_hosts_result|changed
+      when: ansible_os_family == "Debian" or ansible_os_family == "RedHat"
   roles:
     - neutron-prerequisites
     - pf9-hostagent
