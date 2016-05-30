@@ -19,3 +19,7 @@
   roles:
     - neutron-prerequisites
     - pf9-hostagent
+
+- hosts: image_libraries
+  roles:
+    - glance-host

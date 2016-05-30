@@ -1,0 +1,20 @@
+---
+- name: Get Glance image path
+  uri:
+    url: "{{ du_url }}/resmgr/v1/hosts/{{ pf9.id }}/roles/pf9-glance-role"
+    headers:
+      X-Auth-Token: "{{ hostvars['localhost']['os_auth_token'] }}"
+  register: glance_role_custom
+
+- name: Set glance_datadir path
+  set_fact: "glance_datadir={{ glance_role_custom.json.filesystem_store_datadir }}"
+
+- name: Create Glance image library path
+  file:
+    path: "{{ glance_datadir }}"
+    state: directory
+    recurse: yes
+    owner: pf9
+    group: pf9group
+
+- include: os-image-download.yml
