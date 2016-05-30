@@ -74,12 +74,23 @@ class Platform9Inventory(object):
         json_response = response.json()
 
         # Restructure JSON for Ansible
-        hosts = dict(
-            _meta={
-                "hostvars": dict()
+        hosts = {
+            'image_libraries': {
+                'hosts': []
+            },
+            'hypervisors': {
+                'hosts': []
+            },
+            '_meta': {
+                'hostvars': dict()
             }
-        )
+        }
+
         for host in json_response:
+
+            if 'pf9-glance-role' in host['roles']:
+                hosts['image_libraries']['hosts'].append(host['info']['hostname'])
+
             hosts["_meta"]["hostvars"][host['info']['hostname']] = dict(
                 pf9=dict(
                     id=host['id'],
