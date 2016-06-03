@@ -1,4 +1,9 @@
 ---
+- include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}.yml"
+    - default.yml
+
 - modprobe:
     state: present
     name: "{{ item }}"

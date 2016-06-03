@@ -1,0 +1,5 @@
+---
+neutron_modules:
+  - 8021q
+  - bonding
+  - br_netfilter
