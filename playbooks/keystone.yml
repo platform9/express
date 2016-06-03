@@ -1,4 +1,15 @@
 ---
+- name: Ensure required Keystone variables exist
+  fail:
+    msg: "{{ item }} variable is not defined."
+  when: "{{ item }} is not defined"
+  with_items:
+    - du_url
+    - os_username
+    - os_password
+    - os_region
+    - os_tenant
+
 - name: Check if cached Keystone token exists
   file:
     state: file
