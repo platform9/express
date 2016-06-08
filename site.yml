@@ -47,6 +47,7 @@
       when: (ansible_os_family == "Debian" or ansible_os_family == "RedHat") and
         manage_hostname|bool == True
   roles:
+    - ntp
     - pf9-hostagent
 
 - hosts: image_libraries

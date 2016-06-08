@@ -1,0 +1,18 @@
+---
+- include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}.yml"
+    - default.yml
+
+- name: Install NTP
+  package:
+    state: present
+    name: "{{ item }}"
+  with_items: "{{ ntp_packages }}"
+
+- name: Enable & start NTP
+  service:
+    name: "{{ ntp_service_name }}"
+    state: started
+    enabled: True
+  when: ntp_service_name is defined
