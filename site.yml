@@ -30,9 +30,8 @@
           lineinfile:
             state: present
             dest: /etc/hosts
-            backrefs: yes
             regexp: "^(127.0.1.1).*$"
-            line: "\\1\t{{ inventory_hostname_short }}\t{{ inventory_hostname }}"
+            line: "127.0.1.1\t{{ inventory_hostname_short }}\t{{ inventory_hostname }}"
           register: etc_hosts_result
 
         - name: Restart pf9-hostagent on hostname change
