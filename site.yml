@@ -19,6 +19,11 @@
 
 - hosts: hypervisors
   gather_facts: False
+  roles:
+    - neutron-prerequisites
+
+- hosts: all
+  gather_facts: False
   tasks:
     - block:
         - name: Set system hostname
@@ -41,7 +46,6 @@
           when: hostname_result|changed or etc_hosts_result|changed
       when: ansible_os_family == "Debian" or ansible_os_family == "RedHat"
   roles:
-    - neutron-prerequisites
     - pf9-hostagent
 
 - hosts: image_libraries
