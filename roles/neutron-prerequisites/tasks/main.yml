@@ -15,7 +15,6 @@
       selinux:
         policy: targeted
         state: permissive
-      notify: reboot
 
     - name: Disable firewall
       service:
