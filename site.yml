@@ -20,7 +20,7 @@
 - hosts: hypervisors
   gather_facts: False
   roles:
-    - neutron-prerequisites
+    - { role: neutron-prerequisites, when: neutron_plugin == 'OVS' }
 
 - hosts: all
   gather_facts: False
