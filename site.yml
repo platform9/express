@@ -3,7 +3,7 @@
   tasks:
     - include: playbooks/keystone.yml
 
-- hosts: hypervisors
+- hosts: all
   tasks:
     - group_by: "key={{ ansible_distribution }}"
 
