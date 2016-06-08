@@ -1,2 +1,7 @@
 ---
+## Playbook defaults
+
+# Set hostname equal to inventory_hostname
+manage_hostname: True
+
 ssh_user: root
