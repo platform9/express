@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import ConfigParser
 import os.path
 import sys
 
@@ -10,13 +11,11 @@ except ImportError:
 
 import requests
 
-KEYSTONE_TOKEN = "files/keystone-token.txt"
-DU_URL = ""
-
 class Platform9Inventory(object):
 
     def __init__(self):
         self.inventory = {}
+        self.read_settings()
         self.read_cli_args()
 
         # Called with '--list'
@@ -43,9 +42,9 @@ class Platform9Inventory(object):
         @rtype: dict
         """
         # Check if OS Token exits
-        if os.path.isfile(KEYSTONE_TOKEN):
+        if self.pf9_keystone_file and os.path.isfile(self.pf9_keystone_file):
             try:
-                os_token_file = open(KEYSTONE_TOKEN)
+                os_token_file = open(self.pf9_keystone_file)
                 os_token = os_token_file.read().strip()
             except Exception, err:
                 raise err
@@ -53,10 +52,10 @@ class Platform9Inventory(object):
             return self.empty_inventory()
 
         # Make get call to resmgr to get list of hosts
-        if not DU_URL or len(DU_URL) == 0:
+        if not self.pf9_du_fqdn or len(self.pf9_du_fqdn) == 0:
             return self.empty_inventory()
 
-        url = DU_URL + '/resmgr/v1/hosts'
+        url = self.pf9_du_fqdn + '/resmgr/v1/hosts'
         headers = {"X-AUTH-TOKEN": os_token}
 
         try:
@@ -106,11 +105,26 @@ class Platform9Inventory(object):
     def empty_inventory(self):
         return {'_meta': {'hostvars': {}}}
 
-    # Read the command line args passed dot the script.
     def read_cli_args(self):
+        """ Read the command line args passed dot the script """
         parser = argparse.ArgumentParser()
         parser.add_argument('--list', action='store_true')
         parser.add_argument('--host', action='store')
         self.args = parser.parse_args()
+
+    def read_settings(self):
+        """ Reads the settings from the cobbler.ini file """
+
+        config = ConfigParser.SafeConfigParser()
+        config.read(os.path.dirname(os.path.realpath(__file__)) + '/../pf9.ini')
+
+        self.pf9_du_fqdn = None
+        self.pf9_keystone_file = None
+
+        if config.has_option('pf9', 'du_fqdn'):
+            self.pf9_du_fqdn = config.get('pf9', 'du_fqdn')
+
+        if config.has_option('pf9', 'keystone_file'):
+            self.pf9_keystone_file = config.get('pf9', 'keystone_file')
 
 Platform9Inventory()
