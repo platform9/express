@@ -90,15 +90,16 @@ class Platform9Inventory(object):
             if 'pf9-glance-role' in host['roles']:
                 hosts['image_libraries']['hosts'].append(host['info']['hostname'])
 
-            hosts["_meta"]["hostvars"][host['info']['hostname']] = dict(
-                pf9=dict(
-                    id=host['id'],
-                    state=host['state'],
-                    hypervisor_type=host['hypervisor_info']['hypervisor_type'],
-                    roles=host['roles'],
-                    ips=host['extensions']['ip_address']['data']
-                )
-            )
+            hosts["_meta"]["hostvars"][host['info']['hostname']] = dict()
+            for key, value in host.iteritems():
+                if key in ('id', 'host', 'state', 'roles'):
+                    hosts["_meta"]["hostvars"][host['info']['hostname']]["pf9_" + key] = value
+                # Move deeply nested vars to top level variables
+                elif key in('extensions', 'hypervisor_info'):
+                    if key == 'extensions':
+                        hosts["_meta"]["hostvars"][host['info']['hostname']]['pf9_ips'] = value['ip_address']['data']
+                    elif key == 'hypervisor_info':
+                        hosts["_meta"]["hostvars"][host['info']['hostname']]['pf9_hypervisor_type'] = value['hypervisor_type']
 
         return hosts
 

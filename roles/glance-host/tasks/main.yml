@@ -1,7 +1,7 @@
 ---
 - name: Get Glance image path
   uri:
-    url: "{{ du_url }}/resmgr/v1/hosts/{{ pf9.id }}/roles/pf9-glance-role"
+    url: "{{ du_url }}/resmgr/v1/hosts/{{ pf9_id }}/roles/pf9-glance-role"
     headers:
       X-Auth-Token: "{{ hostvars['localhost']['os_auth_token'] }}"
   register: glance_role_custom
