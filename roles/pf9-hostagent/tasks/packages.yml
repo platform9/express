@@ -14,5 +14,5 @@
   changed_when: pkg_state.rc != 0
 
 - name: Install pf9-hostagent on hypervisor
-  script: "platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy"
+  script: "{{ du_host }}/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy"
   when: pkg_state|failed
