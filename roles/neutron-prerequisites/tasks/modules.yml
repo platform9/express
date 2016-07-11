@@ -8,3 +8,20 @@
     state: present
     name: "{{ item }}"
   with_items: "{{ neutron_modules }}"
+
+- name: Persist modules on boot
+  lineinfile:
+    state: present
+    line: "{{ item }}"
+    dest: /etc/modules
+  with_items: "{{ neutron_modules }}"
+  when: ansible_os_family == "Debian"
+
+- name: Persist modules on boot
+  lineinfile:
+    state: present
+    dest: /etc/modules-load.d/neutron.conf
+    create: yes
+    line: "{{ item }}"
+  with_items: "{{ neutron_modules }}"
+  when: ansible_os_family == "RedHat"
