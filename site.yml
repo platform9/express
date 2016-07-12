@@ -46,6 +46,17 @@
           when: hostname_result|changed or etc_hosts_result|changed
       when: (ansible_os_family == "Debian" or ansible_os_family == "RedHat") and
         manage_hostname|bool == True
+
+    - name: Modify devpts mount point
+      mount:
+        state: present
+        name: /dev/pts
+        src: devpts
+        fstype: devpts
+        opts: gid=5,mode=620
+        dump: 0
+        passno: 0
+      when: ansible_os_family == "RedHat"
   roles:
     - ntp
     - pf9-hostagent
