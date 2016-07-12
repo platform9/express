@@ -21,6 +21,7 @@
         state: stopped
         name: firewalld
         enabled: no
+      ignore_errors: True
 
     - name: Add PF9 yum repo
       yum:
