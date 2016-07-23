@@ -19,67 +19,10 @@
   with_items: "{{ default_resolvers }}"
   when: ansible_dns.nameservers is undefined
 
-- block:
-    - name: Set SELinux to permissive
-      selinux:
-        policy: targeted
-        state: permissive
-
-    - name: Disable firewall
-      service:
-        state: stopped
-        name: firewalld
-        enabled: no
-      ignore_errors: True
-
-    - name: Add PF9 yum repo
-      yum:
-        name: https://s3-us-west-1.amazonaws.com/platform9-neutron/noarch/platform9-neutron-repo-1-0.noarch.rpm
-        state: present
-        update_cache: yes
-        # validate_certs: no
-
-    - name: Install Open vSwitch
-      yum:
-        name: openvswitch
-        state: present
-        disablerepo: '*'
-        enablerepo: 'platform9-neutron-el7-repo'
-
-    - name: Enable & Start Open vSwitch
-      service:
-        name: openvswitch
-        state: started
-        enabled: yes
+- include: centos.yml
   when: ansible_distribution == 'CentOS'
 
-- block:
-    - name: Install network packages
-      apt:
-        name: "{{ item }}"
-        state: present
-      with_items:
-        - ifenslave
-        - vlan
-
-    - name: Add PF9 repo
-      apt_repository:
-        repo: 'deb http://platform9-neutron.s3-website-us-west-1.amazonaws.com ubuntu/'
-        state: present
-        # filename: platform9-neutron-ubuntu.list
-        update_cache: yes
-
-    - name: Install Open vSwitch
-      apt:
-        name: openvswitch-switch
-        state: present
-        force: yes
-
-    - name: Enable & Start Open vSwitch
-      service:
-        name: openvswitch-switch
-        state: started
-        enabled: yes
+- include: ubuntu.yml
   when: ansible_distribution == 'Ubuntu'
 
 - include: networking.yml

@@ -1,0 +1,25 @@
+- name: Install network packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - ifenslave
+    - vlan
+
+- name: Add PF9 repo
+  apt_repository:
+    repo: 'deb http://platform9-neutron.s3-website-us-west-1.amazonaws.com ubuntu/'
+    state: present
+    update_cache: yes
+
+- name: Install Open vSwitch
+  apt:
+    name: openvswitch-switch
+    state: present
+    force: yes
+
+- name: Enable & Start Open vSwitch
+  service:
+    name: openvswitch-switch
+    state: started
+    enabled: yes

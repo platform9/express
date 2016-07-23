@@ -1,0 +1,31 @@
+---
+- name: Set SELinux to permissive
+  selinux:
+    policy: targeted
+    state: permissive
+
+- name: Disable firewall
+  service:
+    state: stopped
+    name: firewalld
+    enabled: no
+  ignore_errors: True
+
+- name: Add PF9 yum repo
+  yum:
+    name: https://s3-us-west-1.amazonaws.com/platform9-neutron/noarch/platform9-neutron-repo-1-0.noarch.rpm
+    state: present
+    update_cache: yes
+
+- name: Install Open vSwitch
+  yum:
+    name: openvswitch
+    state: present
+    disablerepo: '*'
+    enablerepo: 'platform9-neutron-el7-repo'
+
+- name: Enable & Start Open vSwitch
+  service:
+    name: openvswitch
+    state: started
+    enabled: yes
