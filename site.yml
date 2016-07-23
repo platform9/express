@@ -19,6 +19,19 @@
 
 - hosts: hypervisors
   gather_facts: False
+  pre_tasks:
+    # svm - AMD SVM
+    # vmx - Intel VT-x
+    - name: Check for hardware virtualization support
+      command: "grep -Eiq '(svm|vmx)' /proc/cpuinfo"
+      ignore_errors: True
+      changed_when: hw_virt.rc != 0
+      register: hw_virt
+
+    - name: Quit if hardware virtualization is not enabled
+      fail:
+        msg: "Hardware virtualization is not present, or not enabled."
+      when: hw_virt|failed
   roles:
     - { role: neutron-prerequisites, when: neutron_plugin == 'OVS' }
 
