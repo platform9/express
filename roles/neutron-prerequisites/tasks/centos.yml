@@ -11,6 +11,29 @@
     enabled: no
   ignore_errors: True
 
+- name: Assemble list of ifcfg scripts
+  find:
+    path: /etc/sysconfig/network-scripts
+    recurse: yes
+    patterns: ifcfg-*
+    use_regex: True
+  register: ifcfg_files
+
+- name: Remove interfaces from NetworkManager's control
+  lineinfile:
+    state: present
+    line: NM_CONTROLLED=no
+    regexp: ^NM_CONTROLLED
+    dest: "{{ item }}"
+  with_items: "{{ ifcfg_files.files|map(attribute='path')|list }}"
+
+- name: Disable NetworkManager
+  service:
+    state: stopped
+    name: NetworkManager
+    enabled: no
+  ignore_errors: True
+
 - name: Add PF9 yum repo
   yum:
     name: https://s3-us-west-1.amazonaws.com/platform9-neutron/noarch/platform9-neutron-repo-1-0.noarch.rpm
