@@ -5,6 +5,10 @@
 manage_hostname: True
 
 # Networking defaults
+default_resolvers:
+  - 8.8.8.8
+  - 8.8.4.4
+
 neutron_plugin: OVS
 
 ssh_user: root

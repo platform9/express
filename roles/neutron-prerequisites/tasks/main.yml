@@ -10,6 +10,15 @@
     sysctl_set: yes
   with_dict: "{{ neutron_sysctl }}"
 
+- name: Set DNS resolvers if unset
+  lineinfile:
+    state: present
+    dest: /etc/resolv.conf
+    create: yes
+    line: "nameserver {{ item }}"
+  with_items: "{{ default_resolvers }}"
+  when: ansible_dns.nameservers is undefined
+
 - block:
     - name: Set SELinux to permissive
       selinux:
