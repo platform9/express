@@ -1,0 +1,5 @@
+---
+- name: restart pf9-hostagent
+  service:
+    name: pf9-hostagent
+    state: restarted
