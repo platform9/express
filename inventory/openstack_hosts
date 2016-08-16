@@ -1,0 +1,2 @@
+[localhost]
+localhost ansible_become=no ansible_connection=local
