@@ -26,6 +26,7 @@
     regexp: ^NM_CONTROLLED
     dest: "{{ item }}"
   with_items: "{{ ifcfg_files.files|map(attribute='path')|list }}"
+  when: ifcfg_files is defined
 
 - name: Disable NetworkManager
   service:
