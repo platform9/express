@@ -60,15 +60,22 @@
       when: (ansible_os_family == "Debian" or ansible_os_family == "RedHat") and
         manage_hostname|bool == True
 
-    - name: Modify devpts mount point
-      mount:
-        state: present
-        name: /dev/pts
-        src: devpts
-        fstype: devpts
-        opts: gid=5,mode=620
-        dump: 0
-        passno: 0
+    - block:
+        - name: Modify devpts mount point
+          mount:
+            state: present
+            name: /dev/pts
+            src: devpts
+            fstype: devpts
+            opts: gid=5,mode=620
+            dump: 0
+            passno: 0
+          register: devpts_result
+
+        - name: Remount devpts mount point
+          command: mount -o remount devpts
+          when: devpts_result|changed
+
       when: ansible_os_family == "RedHat"
   roles:
     - ntp
