@@ -1,20 +1,15 @@
 ---
-- include_vars: "{{ item }}"
-  with_first_found:
-    - "vars/{{ ansible_distribution }}.yml"
-    - vars/default.yml
-
 - modprobe:
     state: present
     name: "{{ item }}"
-  with_items: "{{ neutron_modules }}"
+  with_items: "{{ neutron_kernel_modules }}"
 
 - name: Persist modules on boot
   lineinfile:
     state: present
     line: "{{ item }}"
     dest: /etc/modules
-  with_items: "{{ neutron_modules }}"
+  with_items: "{{ neutron_kernel_modules }}"
   when: ansible_os_family == "Debian"
 
 - name: Persist modules on boot
@@ -23,5 +18,5 @@
     dest: /etc/modules-load.d/neutron.conf
     create: yes
     line: "{{ item }}"
-  with_items: "{{ neutron_modules }}"
+  with_items: "{{ neutron_kernel_modules }}"
   when: ansible_os_family == "RedHat"

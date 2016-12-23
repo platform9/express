@@ -4,12 +4,17 @@
     policy: targeted
     state: permissive
 
-- name: Disable firewall
+- name: Disable firewalld
   service:
     state: stopped
     name: firewalld
     enabled: no
   ignore_errors: True
+
+- name: Installing iptables-services
+  yum:
+    name: iptables-services
+    state: present
 
 - name: Assemble list of ifcfg scripts
   find:
@@ -35,7 +40,7 @@
     enabled: no
   ignore_errors: True
 
-- name: Add PF9 yum repo
+- name: Add Platform9 Yum repository
   yum:
     name: https://s3-us-west-1.amazonaws.com/platform9-neutron/noarch/platform9-neutron-repo-1-0.noarch.rpm
     state: present
@@ -48,7 +53,7 @@
     disablerepo: '*'
     enablerepo: 'platform9-neutron-el7-repo'
 
-- name: Enable & Start Open vSwitch
+- name: Enable and start Open vSwitch
   service:
     name: openvswitch
     state: started

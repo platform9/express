@@ -41,7 +41,7 @@ class Platform9Inventory(object):
         @os_token: str
         @rtype: dict
         """
-        # Check if OS Token exits
+        # Check if OS Token exists
         if self.pf9_keystone_file and os.path.isfile(self.pf9_keystone_file):
             try:
                 os_token_file = open(self.pf9_keystone_file)

@@ -1,4 +1,19 @@
 ---
-- include: download-installers.yml
+- name: Download Platform9 installers
+  connection: local
+  get_url:
+    url: "{{ du_url }}/private/platform9-install-{{ item }}.sh"
+    dest: "/tmp/platform9-install-{{ item }}.sh"
+    headers: "X-Auth-Token: {{ hostvars[inventory_hostname]['os_auth_token'] }}"
+    validate_certs: no
+  with_items:
+    - debian
+    - redhat
+
 - include: packages.yml
-- include: services.yml
+
+- name: Enable and start pf9-hostagent
+  service:
+    name: pf9-hostagent
+    state: started
+    enabled: yes

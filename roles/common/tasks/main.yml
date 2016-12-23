@@ -1,0 +1,40 @@
+---
+- name: Check for hardware virtualization support
+  # svm - AMD SVM
+  # vmx - Intel VT-x
+  command: "grep -Eiq '(svm|vmx)' /proc/cpuinfo"
+  ignore_errors: True
+  changed_when: hw_virt.rc != 0
+  register: hw_virt
+  when: inventory_hostname in groups.hypervisors
+
+- name: Quitting if hardware virtualization is not enabled
+  fail:
+    msg: "Hardware virtualization is not present, or not enabled."
+  when: hw_virt|failed and
+        inventory_hostname in groups.hypervisors
+
+- name: Set system hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+  register: hostname_result
+
+- name: Update /etc/hosts to reflect hostname change
+  lineinfile:
+    state: present
+    dest: /etc/hosts
+    regexp: "^(127.0.0.1).*$"
+    line: "127.0.0.1\t{{ inventory_hostname_short }}\t{{ inventory_hostname }}\tlocalhost"
+  register: etc_hosts_result
+
+- name: Set DNS resolvers
+  lineinfile:
+    state: present
+    dest: /etc/resolv.conf
+    create: yes
+    line: "nameserver {{ item }}"
+  with_items: "{{ dns_resolvers }}"
+  when: manage_resolvers == True
+
+- include: redhat.yml
+  when: ansible_os_family == "RedHat"
