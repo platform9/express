@@ -1,19 +1,4 @@
 ---
-- name: Set DNS resolvers if unset
-  lineinfile:
-    state: present
-    dest: /etc/resolv.conf
-    create: yes
-    line: "nameserver {{ item }}"
-  with_items: "{{ default_resolvers }}"
-  when: ansible_dns.nameservers is undefined
-
-- name: Install libselinux-python
-  yum:
-    state: present
-    name: libselinux-python
-  when: ansible_distribution == "CentOS"
-
 - name: Load kernel modules required for Neutron
   include: modules.yml
 
@@ -25,10 +10,23 @@
     sysctl_set: yes
   with_dict: "{{ neutron_sysctl }}"
 
-- include: centos.yml
-  when: ansible_distribution == 'CentOS'
+- include: redhat.yml
+  when: ansible_os_family == "RedHat"
 
 - include: ubuntu.yml
   when: ansible_distribution == 'Ubuntu'
 
-- include: networking.yml
+- name: Create required OVS bridges
+  openvswitch_bridge:
+    bridge: "{{ item }}"
+    state: present
+  with_items:
+    - br-ext
+    - br-vlan
+
+- name: Set br-ext external bridge ID
+  openvswitch_bridge:
+    bridge: br-ext
+    state: present
+    external_ids:
+      bridge-id: br-ext

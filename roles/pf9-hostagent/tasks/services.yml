@@ -1,6 +1,0 @@
----
-- name: Enable & start pf9-hostagent
-  service:
-    name: pf9-hostagent
-    state: started
-    enabled: yes

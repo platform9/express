@@ -11,15 +11,13 @@
     - os_tenant
 
 - name: Check if cached Keystone token exists
-  file:
-    state: file
-    name: files/keystone-token.txt
-  ignore_errors: True
+  stat:
+    path: /root/keystone-token.txt
   register: cached_token
 
 - block:
     - name: Load OS_AUTH_TOKEN into fact
-      set_fact: "os_auth_token={{ lookup('file', 'keystone-token.txt') | trim }}"
+      set_fact: "os_auth_token={{ lookup('file', '/root/keystone-token.txt') | trim }}"
 
     - name: Validate Keystone token
       uri:
@@ -29,7 +27,7 @@
         status_code: 200, 401
         validate_certs: no
       register: validate_response
-  when: cached_token|success
+  when: cached_token.stat.exists == True
 
 - block:
     - name: Obtain authentication token from Keystone
@@ -41,16 +39,16 @@
           project_name: "{{ os_tenant }}"
         region_name: "{{ os_region }}"
         validate_certs: False
-      always_run: True
+      check_mode: no
       register: auth_reply
 
     - name: Save OS Auth Token
       copy:
         content: "{{ auth_reply.ansible_facts.auth_token }}"
-        dest: files/keystone-token.txt
+        dest: /root/keystone-token.txt
 
     - name: Store OS_AUTH_TOKEN in fact
       set_fact: "os_auth_token={{ auth_reply.ansible_facts.auth_token }}"
 
-  when: cached_token|failed or
-    (validate_response is defined and validate_response.status != 200)
+  when: (cached_token.stat.exists == False) or
+        (validate_response is defined and validate_response.status != 200)

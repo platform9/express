@@ -1,30 +1,100 @@
 # autodeploy
-Deployment automation efforts for PF9 pre-reqs, host agent, and authorization.
+
+Deployment automation efforts for Platform9's prerequisites, host agent(s), and authorization via the use of Ansible.
+
+
+## Requirements
+
+* Ansible 2
+* Python 2
+    * shade
+
 
 ## Instructions
 
-After cloning the repo you'll need to create the following files.
+Clone the repository.
+```
+$ git clone https://github.com/platform9/autodeploy.git
+$ cd autodeploy/
+```
 
-### group_vars/all.yml
+After cloning the repository, it is required to configure the variables for deployment.
+```
+# cp -a group_vars/all_example.yml group_vars/all.yml
+# vim group_vars/all.yml
+```
 
-    ssh_user: root
-    os_region: <OS region>
-    os_username: <username>
-    os_password: <password>
-    os_tenant: <tenant name>
-    du_url: <DU_UR>
+The SSH connection details for the hypervisor (Nova) and/or image (Glance) nodes should be defined in a new inventory file.
+```
+# vim production
+```
 
-### inventory/hypervisors
+Finally, the Playbook can be run.
+```
+# ansible-playbook -i production site.yml
+```
 
-    [hypervisors]
-    <fqdn> ansible_host=<ip>
 
-## Example Playbook
+### Variables
 
-    - hosts: hypervisors
-      roles:
-        - neutron-prerequisites
-        - pf9-hostagent
+Hypervisor required variables:
+
+* group_vars/all.yml
+    * os_region = OpenStack region.
+    * os_username = OpenStack admin username.
+    * os_password: OpenStack password.
+    * os_tenant: OpenStack admin project.
+    * du_url = The unique URL provided by Platform9 to access the controller resources.
+
+Image node required variable:
+
+* group_vars/all.yml
+    * pf9_id
+
+Optional variables:
+
+* group_vars/all.yml
+    * manage_hostname = Boolean value. Set the hostname equal to the Ansible inventory_hostname for the host.
+    * manage_resolvers = Boolean value. Append servers listed in the "dns_resolvers" variable to the resolvers file.
+    * dns_resolvers = The DNS resolvers to use for the remote node.
+
+
+### Inventory
+
+All of the hypervisor nodes should be listed in the inventory file. They should be under the "hypervisors" group. Each node should be named after their fully qualified domain name (FQDN) that will be used as the hostname. Here are a few examples for creating Ansible inventory connection details based on common scenarios.
+
+* SSH directly in as root.
+```
+<FQDN> ansible_host=<IP> ansible_port=<SSH_PORT> ansible_user=root
+```
+
+* SSH in as a privileged user and run Ansible tasks using "sudo."
+```
+<FQDN> ansible_host=<IP> ansible_port=<SSH_PORT> ansible_become=True ansible_user=<SSH_USER> ansible_become_method=sudo
+```
+
+* SSH in as a privileged user and then switch to the root user with "su" to run Ansible tasks.
+```
+<FQDN> ansible_host=<IP> ansible_port=<SSH_PORT> ansible_become=True ansible_user=<SSH_USER> ansible_become_method=su ansible_user=<SSH_USER>
+```
+
+* Hypervisor and image storage group inventory example:
+```
+# vim production
+compute01.domain.tld ansible_host=10.0.0.11 ansible_port=2222 ansibler_user=root
+compute02.domain.tld ansible_host=10.0.0.12 ansible_become=True ansible_user=bob ansible_become_method=sudo
+compute03.domain.tld ansible_host=10.0.0.13 ansible_port=2222 ansible_become=True ansible_user=joe ansible_become_method=su
+image01.domain.tld ansible_host=10.0.0.71
+image02.domain.tld ansible_host=10.0.0.72
+
+[hypervisors]
+compute[01:03].domain.tld
+
+[image_storage]
+image[01:02].domain.tld
+```
+
 
 ## License
+
 Commerical

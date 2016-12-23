@@ -6,7 +6,7 @@
     - ifenslave
     - vlan
 
-- name: Add PF9 repo
+- name: Add Platform9 APT repository
   apt_repository:
     repo: 'deb http://platform9-neutron.s3-website-us-west-1.amazonaws.com ubuntu/'
     state: present
@@ -18,7 +18,7 @@
     state: present
     force: yes
 
-- name: Enable & Start Open vSwitch
+- name: Enable and start Open vSwitch
   service:
     name: openvswitch-switch
     state: started

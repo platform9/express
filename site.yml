@@ -1,86 +1,15 @@
 ---
-- hosts: localhost
-  tasks:
-    - include: playbooks/keystone.yml
-
 - hosts: all
-  tasks:
-    - group_by: "key={{ ansible_distribution }}"
+  roles:
+   - common
+   - ntp
+   - pf9-auth
+   - pf9-hostagent
 
 - hosts: hypervisors
-  tasks:
-    - name: Copy SSH authentication
-      authorized_key:
-        state: present
-        user: "{{ ssh_user }}"
-        exclusive: no
-        manage_dir: yes
-        key: "{{ lookup('file', 'files/root-key.pub') }}"
-
-- hosts: hypervisors
-  gather_facts: False
-  pre_tasks:
-    # svm - AMD SVM
-    # vmx - Intel VT-x
-    - name: Check for hardware virtualization support
-      command: "grep -Eiq '(svm|vmx)' /proc/cpuinfo"
-      ignore_errors: True
-      changed_when: hw_virt.rc != 0
-      register: hw_virt
-
-    - name: Quit if hardware virtualization is not enabled
-      fail:
-        msg: "Hardware virtualization is not present, or not enabled."
-      when: hw_virt|failed
   roles:
-    - { role: neutron-prerequisites, when: neutron_plugin == 'OVS' }
+   - neutron-prerequisites
 
-- hosts: all
-  gather_facts: False
-  tasks:
-    - block:
-        - name: Set system hostname
-          hostname:
-            name: "{{ inventory_hostname }}"
-          register: hostname_result
-
-        - name: Update /etc/hosts to reflect hostname change
-          lineinfile:
-            state: present
-            dest: /etc/hosts
-            regexp: "^(127.0.1.1).*$"
-            line: "127.0.1.1\t{{ inventory_hostname_short }}\t{{ inventory_hostname }}"
-          register: etc_hosts_result
-
-        - name: Restart pf9-hostagent on hostname change
-          service:
-            name: pf9-hostagent
-            state: restarted
-          when: hostname_result|changed or etc_hosts_result|changed
-      when: (ansible_os_family == "Debian" or ansible_os_family == "RedHat") and
-        manage_hostname|bool == True
-
-    - block:
-        - name: Modify devpts mount point
-          mount:
-            state: present
-            name: /dev/pts
-            src: devpts
-            fstype: devpts
-            opts: gid=5,mode=620
-            dump: 0
-            passno: 0
-          register: devpts_result
-
-        - name: Remount devpts mount point
-          command: mount -o remount devpts
-          when: devpts_result|changed
-
-      when: ansible_os_family == "RedHat"
-  roles:
-    - ntp
-    - pf9-hostagent
-
-- hosts: image_libraries
+- hosts: image_storage
   roles:
     - glance-host
