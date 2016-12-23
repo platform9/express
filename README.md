@@ -79,7 +79,8 @@ All of the hypervisor nodes should be listed in the inventory file. They should 
 ```
 
 * Hypervisor and image storage group inventory example:
-``
+```
+# vim production
 compute01.domain.tld ansible_host=10.0.0.11 ansible_port=2222 ansibler_user=root
 compute02.domain.tld ansible_host=10.0.0.12 ansible_become=True ansible_user=bob ansible_become_method=sudo
 compute03.domain.tld ansible_host=10.0.0.13 ansible_port=2222 ansible_become=True ansible_user=joe ansible_become_method=su
