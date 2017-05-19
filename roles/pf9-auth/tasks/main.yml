@@ -37,15 +37,17 @@
   when: cached_token.stat.exists == True
 
 - block:
-    - name: Obtain authentication token from Keystone
-      os_auth:
-        auth:
+    - name: Set OS_AUTH fact
+      set_fact:
+        os_auth:
           auth_url: "{{ du_url }}/keystone/v2.0"
           username: "{{ os_username }}"
           password: "{{ os_password }}"
           project_name: "{{ os_tenant }}"
-        region_name: "{{ os_region }}"
-        validate_certs: False
+
+    - name: Obtain authentication token from Keystone
+      become: no
+      local_action: "os_auth auth={{ os_auth }} region_name={{ os_tenant }}"
       check_mode: no
       register: auth_reply
 
