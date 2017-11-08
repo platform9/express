@@ -10,14 +10,21 @@
     - os_region
     - os_tenant
 
+- name: Create local files/ directory
+  connection: local
+  become: no
+  file:
+    state: directory
+    path: files/
+
 - name: Check if cached Keystone token exists
   stat:
-    path: /root/keystone-token.txt
+    path: files/keystone-token.txt
   register: cached_token
 
 - block:
     - name: Load OS_AUTH_TOKEN into fact
-      set_fact: "os_auth_token={{ lookup('file', '/root/keystone-token.txt') | trim }}"
+      set_fact: "os_auth_token={{ lookup('file', 'files/keystone-token.txt') | trim }}"
 
     - name: Validate Keystone token
       uri:
@@ -30,22 +37,26 @@
   when: cached_token.stat.exists == True
 
 - block:
-    - name: Obtain authentication token from Keystone
-      os_auth:
-        auth:
+    - name: Set OS_AUTH fact
+      set_fact:
+        os_auth:
           auth_url: "{{ du_url }}/keystone/v2.0"
           username: "{{ os_username }}"
           password: "{{ os_password }}"
           project_name: "{{ os_tenant }}"
-        region_name: "{{ os_region }}"
-        validate_certs: False
+
+    - name: Obtain authentication token from Keystone
+      become: no
+      local_action: "os_auth auth={{ os_auth }} region_name={{ os_tenant }}"
       check_mode: no
       register: auth_reply
 
     - name: Save OS Auth Token
+      connection: local
+      become: no
       copy:
         content: "{{ auth_reply.ansible_facts.auth_token }}"
-        dest: /root/keystone-token.txt
+        dest: files/keystone-token.txt
 
     - name: Store OS_AUTH_TOKEN in fact
       set_fact: "os_auth_token={{ auth_reply.ansible_facts.auth_token }}"
