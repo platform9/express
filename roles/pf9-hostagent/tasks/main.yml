@@ -1,6 +1,6 @@
 ---
 - name: Download Platform9 installers
-  connection: local
+  # connection: local
   become: no
   get_url:
     url: "{{ du_url }}/private/platform9-install-{{ item }}.sh"
