@@ -1,0 +1,22 @@
+---
+- name: "Add SSH keys for {{ host }} by FQDN"
+  known_hosts:
+    path: "/opt/pf9/home/.ssh/known_hosts"
+    name: "{{ hostvars[host]['ansible_fqdn'] }}"
+    key: "{{ hostvars[host]['ansible_fqdn'] }} {{ item.type }} {{ hostvars[host][item.name] }}"
+  with_items:
+    - name: ansible_ssh_host_key_rsa_public
+      type: ssh-rsa
+    - name: ansible_ssh_host_key_ecdsa_public
+      type: ecdsa-sha2-nistp256
+
+- name: "Add SSH host keys for {{ host }} by IP"
+  known_hosts:
+    path: "/opt/pf9/home/.ssh/known_hosts"
+    name: "{{ hostvars[host]['ansible_default_ipv4']['address'] }}"
+    key: "{{ hostvars[host]['ansible_default_ipv4']['address'] }} {{ item.type }} {{ hostvars[host][item.name] }}"
+  with_items:
+    - name: ansible_ssh_host_key_rsa_public
+      type: ssh-rsa
+    - name: ansible_ssh_host_key_ecdsa_public
+      type: ecdsa-sha2-nistp256
