@@ -1,0 +1,5 @@
+---
+- name: Install sysfsutils
+  package:
+    name: sysfsutils
+    state: present

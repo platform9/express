@@ -1,0 +1,11 @@
+---
+- name: Configure libvirtd to start on boot
+  service:
+    name: "{{ libvirtd_service_name }}"
+    enabled: yes
+
+- name: Enable & start SSH
+  service:
+    name: "{{ sshd_service_name }}"
+    state: started
+    enabled: yes

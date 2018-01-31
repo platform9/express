@@ -9,6 +9,7 @@
 - hosts: hypervisors
   roles:
    - neutron-prerequisites
+   - secure-live-migration
 
 - hosts: image_storage
   roles:
