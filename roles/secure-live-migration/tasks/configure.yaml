@@ -2,6 +2,7 @@
 - name: Tell libvirt to listen on startup - Red Hat
   lineinfile:
     state: present
+    create: True
     line: 'LIBVIRTD_ARGS="--listen"'
     dest: /etc/sysconfig/libvirtd
     regexp: '^#?LIBVIRTD_ARGS.*$'
@@ -11,6 +12,7 @@
 - name: Tell libvirt to listen on startup - Debian
   lineinfile:
     state: present
+    create: True
     line: 'libvirtd_opts="-d -l"'
     dest: /etc/default/libvirt-bin
     regexp: '^#?libvirtd_opts=*.*$'
