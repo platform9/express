@@ -25,5 +25,5 @@
 
 - name: Install pf9-hostagent on hypervisor
   become: yes
-  command: "./tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd --skip-os-check"
+  command: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd --skip-os-check"
   when: pkg_state_debian|failed or pkg_state_redhat|failed
