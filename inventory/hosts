@@ -1,0 +1,7 @@
+[all]
+localhost
+
+[all:vars]
+ansible_user=centos
+ansible_ssh_pass=Pl@tform9
+ansible_sudo_pass=Pl@tform9

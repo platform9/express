@@ -1,23 +1,21 @@
 # autodeploy
-
 Deployment automation efforts for Platform9's prerequisites, host agent(s), and authorization via the use of Ansible.
 
-
-## Requirements
-
-* Ansible 2
-* Python 2
-    * shade
-
-
-## Instructions
-
-Clone the repository.
+* Clone the repository.
 ```
 $ git clone https://github.com/platform9/autodeploy.git
 $ cd autodeploy/
 ```
 
+## Install Required System Packages
+* sudo yum -y install ansible
+* sudo yum -y install gcc
+* sudo yum -y install python-pip
+* sudo pip install --upgrade pip
+* sudo yum -y install python-devel
+* sudo pip install shade
+
+## Instructions
 After cloning the repository, it is required to configure the variables for deployment.
 ```
 # cp -a group_vars/all_example.yml group_vars/all.yml
@@ -31,7 +29,7 @@ The SSH connection details for the hypervisor (Nova) and/or image (Glance) nodes
 
 Finally, the Playbook can be run.
 ```
-# ansible-playbook -i production site.yml
+# ansible-playbook site.yml
 ```
 
 
@@ -94,7 +92,5 @@ compute[01:03].domain.tld
 image[01:02].domain.tld
 ```
 
-
 ## License
-
 Commerical
