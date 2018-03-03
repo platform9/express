@@ -1,36 +1,21 @@
-# autodeploy
-Deployment automation efforts for Platform9's prerequisites, host agent(s), and authorization via the use of Ansible.
+# Platform9 Autodeplopy
+Autodeploy aims to automate the prerequisite tasks required to bring a hypervisor under management by a Platform9 control plane, incluiding package/service prerequisites, host agent(s), and platform authorization.
 
-* Clone the repository.
-```
-$ git clone https://github.com/platform9/autodeploy.git
-$ cd autodeploy/
-```
+## Step 1 : clone the repository
+* git clone https://github.com/platform9/autodeploy.git
 
-## Install Required System Packages
-* sudo yum -y install ansible
-* sudo yum -y install gcc
-* sudo yum -y install python-pip
-* sudo pip install --upgrade pip
-* sudo yum -y install python-devel
-* sudo pip install shade
-
+<hr>
 ## Instructions
 After cloning the repository, it is required to configure the variables for deployment.
-```
-# cp -a group_vars/all_example.yml group_vars/all.yml
-# vim group_vars/all.yml
-```
+* cd autodeploy
+* cp -a group_vars/all_example.yml group_vars/all.yml
+* vim group_vars/all.yml
 
 The SSH connection details for the hypervisor (Nova) and/or image (Glance) nodes should be defined in a new inventory file.
-```
-# vim production
-```
+* vim production
 
-Finally, the Playbook can be run.
-```
-# ansible-playbook site.yml
-```
+Finally, the Playbook can be run:
+* ansible-playbook site.yml
 
 
 ### Variables
