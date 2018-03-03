@@ -4,21 +4,19 @@ Autodeploy aims to automate the prerequisite tasks required to bring a hyperviso
 ## Step 1 : clone the repository
 * git clone https://github.com/platform9/autodeploy.git
 
-<hr>
 ## Instructions
-After cloning the repository, it is required to configure the variables for deployment.
+
+Prior to running autodeploy, there are a number of site-specific variables that must be defined.  These variables are located in group_vars/all.yml.
 * cd autodeploy
-* cp -a group_vars/all_example.yml group_vars/all.yml
 * vim group_vars/all.yml
 
 The SSH connection details for the hypervisor (Nova) and/or image (Glance) nodes should be defined in a new inventory file.
-* vim production
+* vim inventory/hosts
 
 Finally, the Playbook can be run:
 * ansible-playbook site.yml
 
-
-### Variables
+## Variables
 
 Hypervisor required variables:
 
