@@ -218,41 +218,41 @@ validate_config() {
   os_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
 
   # validate manage_hostname
-  if [ -z "${manage_hostname}" ]; then assert "config:manage_hostname : illegal value '${manage_hostname}'\n"; fi
+  if [ -z "${manage_hostname}" ]; then assert "config:manage_hostname : illegal value - run './INSTALL -s'\n"; fi
   case ${manage_hostname} in
   true|false|True|False)
     ;;
   *)
-    assert "config:manage_hostname : illegal value '${manage_hostname}'\n" ;;
+    assert "config:manage_hostname : illegal value - run './INSTALL -s'\n" ;;
   esac
 
   # validate manage_resolver
-  if [ -z "${manage_resolver}" ]; then assert "config:manage_resolver : illegal value '${manage_resolver}'\n"; fi
+  if [ -z "${manage_resolver}" ]; then assert "config:manage_resolver : illegal value - run './INSTALL -s'\n"; fi
   case ${manage_resolver} in
   true|false|True|False)
     ;;
   *)
-    assert "config:manage_resolver : illegal value '${manage_resolver}'\n" ;;
+    assert "config:manage_resolver : illegal value - run './INSTALL -s'\n" ;;
   esac
 
   # validate dns_resolver1
-  if [ -z "${dns_resolver1}" ]; then assert "config:dns_resolver1 : illegal value\n"; fi
+  if [ -z "${dns_resolver1}" ]; then assert "config:dns_resolver1 : illegal value - run './INSTALL -s'\n"; fi
 
   # validate dns_resolver2
-  if [ -z "${dns_resolver2}" ]; then assert "config:dns_resolver2 : illegal value\n"; fi
+  if [ -z "${dns_resolver2}" ]; then assert "config:dns_resolver2 : illegal value - run './INSTALL -s'\n"; fi
 
   # validate os_tenant
-  if [ -z "${os_tenant}" ]; then assert "config:os_tenant : illegal value\n"; fi
+  if [ -z "${os_tenant}" ]; then assert "config:os_tenant : illegal value - run './INSTALL -s'\n"; fi
 
   # validate du_url
-  if [ -z "${du_url}" ]; then assert "config:du_url : illegal value\n"; fi
+  if [ -z "${du_url}" ]; then assert "config:du_url : illegal value - run './INSTALL -s'\n"; fi
 
   # validate os_username
-  if [ -z "${os_username}" ]; then assert "config:os_username : illegal value\n"; fi
+  if [ -z "${os_username}" ]; then assert "config:os_username : illegal value - run './INSTALL -s'\n"; fi
 
   # validate os_password
-  if [ -z "${os_password}" ]; then assert "config:os_password : illegal value\n"; fi
+  if [ -z "${os_password}" ]; then assert "config:os_password : illegal value - run './INSTALL -s'\n"; fi
 
   # validate os_region
-  if [ -z "${os_region}" ]; then assert "config:os_region : illegal value\n"; fi
+  if [ -z "${os_region}" ]; then assert "config:os_region : illegal value - run './INSTALL -s'\n"; fi
 }
