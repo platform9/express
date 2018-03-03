@@ -86,10 +86,6 @@ done
 # validate running on CentOS
 if [ ! -r /etc/redhat-release ]; then assert "This script only runs on  RedHat or CentOS"; fi
 
-# validate bc
-which bc > /dev/null 2>&1
-if [ $? -ne 0 ]; then assert "bc utility not installed - please run 'yum -y install bc'"; fi
-
 # validate sudo priviledges
 sudo bash <<< "exit 200"
 if [ $? -ne 200 ]; then assert "you need sudo privilidges to run this script - please update /etc/sudoers"; fi
@@ -120,7 +116,7 @@ if [ $? -ne 0 ]; then
 
   # install Ansible (and dependencies)
   echo "--> Installing Ansible and dependencies..."
-  for pkg in epel-release ansible gcc python-devel python2-pip; do
+  for pkg in epel-release ansible gcc python-devel python2-pip bc; do
     rpm -q ${pkg} > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       sudo yum -y install ${pkg} > ${log} 2>&1
