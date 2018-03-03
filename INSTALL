@@ -114,9 +114,10 @@ if [ $? -ne 0 ]; then
   getYN "Ansible is not installed - would you like to install it now? "
   if [ $? -ne 0 ]; then assert "Install Ansible and re-run this script - aborting"; fi
 
-  # install Ansible (and dependencies)
-  echo "--> Installing Ansible and dependencies..."
+  # install Ansibl (and dependencies)
+  echo -n "--> Installing Ansible and dependencies: "
   for pkg in epel-release ansible gcc python-devel python2-pip bc; do
+    echo -n "${pkg} "
     rpm -q ${pkg} > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       sudo yum -y install ${pkg} > ${log} 2>&1
@@ -135,11 +136,13 @@ if [ $? -ne 0 ]; then
   fi
 
   # install python shade
+  echo -n "python-shade "
   sudo pip install shade > ${log} 2>&1
   if [ $? -ne 0 ]; then
     echo -e "ERROR: failed to install python shade - here's the log:\n"
     cat ${log}; exit 1
   fi
+  echo
 fi
 
 # validate minimum Ansible version
