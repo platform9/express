@@ -9,16 +9,20 @@ hv1_centos ansible_host=172.16.7.70
 hv2_centos ansible_host=172.16.7.71
 hv3_centos ansible_host=172.16.7.72
 hv4_ubuntu ansible_host=172.16.7.73
+hv5_centos ansible_host=172.16.7.74
+hv6_ubuntu ansible_host=172.16.7.75
 
 ## Hypervisors - CentOS
 [hypervisors-centos]
 hv1_centos ansible_host=172.16.7.70
 hv2_centos ansible_host=172.16.7.71
 hv3_centos ansible_host=172.16.7.72
+hv5_centos ansible_host=172.16.7.74
 
 ## Hypervisors - Ubuntu
 [hypervisors-ubuntu]
 hv4_ubuntu ansible_host=172.16.7.73
+hv6_ubuntu ansible_host=172.16.7.75
 
 ## Group Variables
 [hypervisors-centos:vars]
