@@ -1,15 +1,27 @@
 ---
-- hosts: all
+- hosts: hypervisors-centos
   become: true
   roles:
    - common
    - ntp
    - pf9-auth
    - pf9-hostagent
+   - neutron-prerequisites
 
-- hosts: hypervisors
+- hosts: hypervisors-ubuntu
+  become: true
+  gather_facts: False
+  pre_tasks:
+    - name: install python2
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+
+- hosts: hypervisors-ubuntu
   become: true
   roles:
+   - common
+   - ntp
+   - pf9-auth
+   - pf9-hostagent
    - neutron-prerequisites
 
 # Note: the 'glance-host' role in incomplete; commenting out for now
