@@ -30,6 +30,7 @@ banner() {
 
 help() {
   if [ -r ${help_file} ]; then 
+    usage
     cat ${help_file}
   else
     assert "help file missing"
