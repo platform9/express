@@ -1,14 +1,21 @@
 [all]
 [all:vars]
 
+# hypervisors group : add all machines that require hypervisor role to this group
 [hypervisors]
-lab_kvm_host_0 ansible_host=172.16.7.48
-lab_kvm_host_1 ansible_host=172.16.7.49
-lab_kvm_host_2 ansible_host=172.16.7.47
-lab_kvm_host_3 ansible_host=172.16.7.50
-lab_nfs_server ansible_host=172.16.7.46
+lab_kvm_host_0 ansible_host=172.16.7.58
+lab_kvm_host_1 ansible_host=172.16.7.60
+lab_kvm_host_2 ansible_host=172.16.7.59
+lab_kvm_host_3 ansible_host=172.16.7.57
+lab_nfs_server ansible_host=172.16.7.56
 
+# hypervisors group : modify credentials as needed
 [hypervisors:vars]
 ansible_user=centos
 ansible_ssh_pass=Pl@tform9
 ansible_sudo_pass=Pl@tform9
+
+# image_storage group : add all machines that require glance role to this group
+[image_storage]
+[image_storage:vars]
+
