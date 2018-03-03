@@ -8,9 +8,11 @@
    - pf9-hostagent
 
 - hosts: hypervisors
+  become: true
   roles:
    - neutron-prerequisites
 
 - hosts: image_storage
+  become: true
   roles:
     - glance-host
