@@ -1,6 +1,8 @@
 # Platform9 Autodeplopy
 Autodeploy aims to automate the prerequisite tasks required to bring a hypervisor under management by a Platform9 control plane, including package/service prerequisites, host agent(s), and control plane authorization.
 
+GitHub Repository : [https://github.com/platform9/autodeploy.git](https://github.com/platform9/autodeploy.git)
+
 ## Installation/Setup Instructions
 
 **Step 1 : Define SSH connection details for hypervisors**
