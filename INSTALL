@@ -1,0 +1,159 @@
+#!/bin/bash
+################################################################################
+## Platform9 Openstack Assimilation Utility
+## Copyright(c) 2018 Platform9 Systems, Inc.
+################################################################################
+
+# initialize variables
+basedir=$(dirname $0)
+min_ansible_version="2.2"
+inventory=${basedir}/inventory/hosts
+autodeplopy_script=${basedir}/pf9-autodeploy.yml
+help_file=${basedir}/.help
+target_type=""
+log=${basedir}/.pf9.log
+
+# functions
+usage() {
+  echo "usage: $0 [-h|--help] <target>"
+  echo -e "\n<target> : Ansible inventory target to assimilate into Platform9 control plane"
+  echo -e "           <target> can be a host group or individual host\n"
+  exit 1
+}
+
+assert() {
+  if [ $# -eq 1 ]; then
+    echo -e "ASSERT : ${1}"
+  else
+    echo -e "ASSERT : "
+  fi
+  exit 1
+}
+
+banner() {
+  echo "################################################################"
+  echo "# Platform9 Auto-Deplopy Utility (Version 0.1)"
+  echo "################################################################"
+  echo "--> Target Type : ${target_type}"
+  echo "--> Target      : ${target}"
+}
+
+help() {
+  if [ -r ${help_file} ]; then 
+    cat ${help_file}
+  else
+    assert "help file missing"
+  fi
+  exit 0
+}
+
+getYN() {
+  if [ $# -ne 1 ]; then return 1; fi
+
+  local prompt=${1}
+  local flag_valid=0
+  local reply
+  while [ ${flag_valid} -eq 0 ]; do
+    echo -n "${prompt}"; read reply
+    case ${reply} in
+    y|n|Y|N)
+      flag_valid=1 ;;
+    esac
+  done
+
+  if [ "${reply}" == "Y" -o "${reply}" == "y" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+################################################################################
+## main
+################################################################################
+# validate 
+if [ $# -ne 1 ]; then usage; fi
+while [ $# -gt 0 ]; do
+  case ${1} in
+  -h|--help)
+    help ;;
+  *)
+    target=${1} ;;
+  esac
+  shift
+done
+
+# validate running on CentOS
+if [ ! -r /etc/redhat-release ]; then assert "This script only runs on  RedHat or CentOS"; fi
+
+# validate bc
+which bc > /dev/null 2>&1
+if [ $? -ne 0 ]; then assert "bc utility not installed - please run 'yum -y install bc'"; fi
+
+# validate sudo priviledges
+sudo bash <<< "exit 200"
+if [ $? -ne 200 ]; then assert "you need sudo privilidges to run this script - please update /etc/sudoers"; fi
+
+# search for target in Ansible inventory
+grep ^${target} ${inventory} > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+  target_type="host"
+else
+  grep "^\[${target}\]" ${inventory} > /dev/null 2>&1
+  if [ $? -eq 0 ]; then target_type="group"; fi
+fi
+
+# validate target found
+case ${target_type} in
+host|group)
+  ;;
+*)
+  assert "target not found in Ansible inventory"
+  ;;
+esac
+
+# validate Ansible is installed
+which ansible > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  getYN "Ansible is not installed - would you like to install it now? "
+  if [ $? -ne 0 ]; then assert "Install Ansible and re-run this script - aborting"; fi
+
+  # install Ansible (and dependencies)
+  echo "--> Installing Ansible and dependencies..."
+  for pkg in epel-release ansible gcc python-devel python2-pip; do
+    rpm -q ${pkg} > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      sudo yum -y install ${pkg} > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "ERROR: failed to install ${pkg} - here's the log:\n"
+        cat ${log}; exit 1
+      fi
+    fi
+  done
+
+  # upgrade pip
+  sudo pip install --upgrade pip > ${log} 2>&1
+  if [ $? -ne 0 ]; then
+    echo -e "ERROR: failed to upgrade pip - here's the log:\n"
+    cat ${log}; exit 1
+  fi
+
+  # install python shade
+  sudo pip install shade > ${log} 2>&1
+  if [ $? -ne 0 ]; then
+    echo -e "ERROR: failed to install python shade - here's the log:\n"
+    cat ${log}; exit 1
+  fi
+fi
+
+# validate minimum Ansible version
+ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
+if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
+
+# call pf9-autopdeplopy
+banner
+echo -e "\n[Executing: ansible-playbook -i ${inventory} -l ${target} ${autodeplopy_script}]"
+ansible-playbook -i ${inventory} -l ${target} ${autodeplopy_script}
+
+# exit cleanly
+exit 0

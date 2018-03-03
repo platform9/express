@@ -1,24 +1,39 @@
 # Platform9 Autodeplopy
-Autodeploy aims to automate the prerequisite tasks required to bring a hypervisor under management by a Platform9 control plane, incluiding package/service prerequisites, host agent(s), and platform authorization.
+Autodeploy aims to automate the prerequisite tasks required to bring a hypervisor under management by a Platform9 control plane, including package/service prerequisites, host agent(s), and platform authorization.
+
+## Installation/Setup Instructions
 
 ## Step 1 : clone the repository
 * git clone https://github.com/platform9/autodeploy.git
 
-## Instructions
+## Step 2 : install Ansible on control host (the host that will execute autodeploy)
+* sudo yum -y install epel-release
+* sudo yum -y install ansible
 
-Prior to running autodeploy, there are a number of site-specific variables that must be defined.  These variables are located in group_vars/all.yml.
+## Step 3: configure SSH access to localhost
+* make sure you can SSH to localhost as the user you're logged in as (by configuring SSH keys and configuring ~/.ss/authorized_keys)
+* configure 'ansible_user' vasriable in the [a;;"vars] section of autodeploy/inventory/hosts
+* validate by running 'ansible -m setup localhost'
+
+## Step 4: install prerequisites
 * cd autodeploy
-* vim group_vars/all.yml
+* ansible-playbook -l localhost prereqs-controlhost.yml
 
-The SSH connection details for the hypervisor (Nova) and/or image (Glance) nodes should be defined in a new inventory file.
-* vim inventory/hosts
+## Step 5 : configure environment
+Define site-specific variables in group_vars/all.yml
+* vi group_vars/all.yml
 
-Run autodeploy playbook:
+## Step 6 : define SSH connection details for hypervisors (Nova) and/or image (Glance) nodes in Ansible inventory file
+* vi inventory/hosts
+
+## Running Autodeploy
+
+Execute autodeploy playbook
 * ansible-playbook pf9-autodeploy.yml
 
-## Variables
+## Usage Notes
 
-Hypervisor required variables:
+**1. Hypervisor-related variables**
 
 * group_vars/all.yml
     * os_region = OpenStack region.
