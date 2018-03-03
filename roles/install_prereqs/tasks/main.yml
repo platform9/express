@@ -1,0 +1,16 @@
+---
+
+- name: install gcc
+  yum:
+    name: "{{item}}"
+    state: latest
+  with_items:
+    - gcc
+    - python-devel
+    - python-pip
+
+- name: upgrade pip
+  shell: pip install --upgrade pip
+
+- name: install shade
+  shell: pip install shade
