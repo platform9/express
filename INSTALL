@@ -64,6 +64,7 @@ while [ $# -gt 0 ]; do
 done
 
 ## validate running on CentOS
+banner
 if [ ! -r /etc/redhat-release ]; then assert "This script only runs on  RedHat or CentOS"; fi
 
 ## validate sudo priviledges
@@ -123,7 +124,6 @@ ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
 
 ## call pf9-autopdeplopy
-banner
 echo -e "\n[Executing: ansible-playbook -i ${inventory} -l ${target} ${autodeplopy_script}]"
 ansible-playbook -i ${inventory} -l ${target} ${autodeplopy_script}
 
