@@ -31,12 +31,6 @@
       register: validate_response
   when: cached_token.stat.exists == True
 
-- debug: var=du_url
-- debug: var=os_username
-- debug: var=os_password
-- debug: var=os_region
-- debug: var=os_tenant
-
 - block:
     - name: Set OS_AUTH fact
       set_fact:
@@ -51,7 +45,6 @@
       local_action: "os_auth auth={{ os_auth }} region_name={{ os_tenant }}"
       check_mode: no
       register: auth_reply
-    - debug: var=auth_reply
 
     - name: Save OS Auth Token
       connection: local
