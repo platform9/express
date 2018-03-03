@@ -11,10 +11,7 @@ Autodeploy aims to automate the prerequisite tasks required to bring a hyperviso
 
 \<target\> : hostname or group (defined in Ansible inventory file)
 
-* Notes:
-  * manage_hostname = Boolean value (if true, sets the hostname equal to the Ansible inventory_hostname for the host)
-  * manage_resolvers = Boolean value (if true, appends servers listed in the "dns_resolvers" variable to the resolvers file)
-  * dns_resolvers = The DNS resolvers to use for the remote node.
+The first time you run ./INSTALL it will prompt you for various settings related to the Platform9 Control Plane.  If you need to change any settings after the initial run, you can use './INSTALL -s' to re-enter any values.
 
 ## Inventory Examples/Notes
 
