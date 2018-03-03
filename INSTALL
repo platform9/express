@@ -114,7 +114,7 @@ getYN "Ansible is not installed - would you like to install it now? "
 if [ $? -ne 0 ]; then assert "Install Ansible and re-run this script - aborting"; fi
 
 # install Ansibl (and dependencies)
-echo -n "--> Installing Ansible and dependencies: "
+echo -n "--> Validating package dependencies: "
 for pkg in epel-release ansible gcc python-devel python2-pip bc; do
   echo -n "${pkg} "
   rpm -q ${pkg} > /dev/null 2>&1
