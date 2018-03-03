@@ -32,7 +32,7 @@ Image node required variable:
 * group_vars/all.yml
     * pf9_id
 
-Optional variables:
+## Optional variables:
 
 * group_vars/all.yml
     * manage_hostname = Boolean value. Set the hostname equal to the Ansible inventory_hostname for the host.
@@ -40,7 +40,7 @@ Optional variables:
     * dns_resolvers = The DNS resolvers to use for the remote node.
 
 
-### Inventory
+## Inventory
 
 All of the hypervisor nodes should be listed in the inventory file. They should be under the "hypervisors" group. Each node should be named after their fully qualified domain name (FQDN) that will be used as the hostname. Here are a few examples for creating Ansible inventory connection details based on common scenarios.
 
@@ -76,4 +76,5 @@ image[01:02].domain.tld
 ```
 
 ## License
+
 Commerical
