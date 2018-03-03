@@ -3,10 +3,10 @@ Autodeploy aims to automate the prerequisite tasks required to bring a hyperviso
 
 ## Installation/Setup Instructions
 
-## Step 1 : Define SSH connection details for hypervisors (Nova) and/or image (Glance) nodes in Ansible inventory file
+**Step 1 : Define SSH connection details for hypervisors**
 * vi inventory/hosts
 
-## Step 2: Run 
+**Step 2: Run**
 * ./INSTALL <target>
 
 <target> : hostname or group (defined in Ansible inventory file)
