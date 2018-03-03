@@ -12,7 +12,8 @@
   roles:
    - neutron-prerequisites
 
-- hosts: image_storage
-  become: true
-  roles:
-    - glance-host
+# Note: the 'glance-host' role in incomplete; commenting out for now
+#- hosts: image_storage
+#  become: true
+#  roles:
+#    - glance-host
