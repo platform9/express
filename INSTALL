@@ -34,8 +34,6 @@ banner() {
   echo "################################################################"
   echo "# Platform9 Auto-Deplopy Utility (Version 0.1)"
   echo "################################################################"
-  echo "--> Target Type : ${target_type}"
-  echo "--> Target      : ${target}"
 }
 
 help() {
@@ -81,6 +79,8 @@ else
 fi
 
 ## validate target found
+echo "--> Target Type : ${target_type}"
+echo "--> Target      : ${target}"
 case ${target_type} in
 host|group)
   ;;
