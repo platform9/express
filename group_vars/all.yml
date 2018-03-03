@@ -1,0 +1,16 @@
+---
+# Set hostname equal to inventory_hostname
+manage_hostname: False
+
+# Append DNS resolvers to /etc/resolv.conf
+manage_resolvers: False
+dns_resolvers:
+  - 8.8.8.8
+  - 8.8.4.4
+
+# these variables are required to be filled in for the end-user's environment
+os_username: admin@platform9.net
+os_password: o7tsH7UZEVoCIswx
+os_region: master
+os_tenant: service
+du_url: https://danwright.platform9.horse/
