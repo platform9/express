@@ -9,7 +9,7 @@ Autodeploy aims to automate the prerequisite tasks required to bring a hyperviso
 **Step 2: Run Auto-Deploy**
 * ./INSTALL \<target\>
 
-Where '\<target\>' is a hostname or group defined in Ansible inventory file
+Where '\<target\>' is a hostname or group defined in Ansible inventory file.
 
 The first time you run ./INSTALL it will prompt you for various settings related to the Platform9 Control Plane.  If you need to change any settings after the initial run, you can use './INSTALL -s' to re-enter any values.
 
