@@ -19,7 +19,11 @@ pf9_group_vars=${basedir}/group_vars/all.yml
 # functions
 usage() {
   echo -e "usage: $0 [-h|--help] [-s|--setup] <target>\n"
-  exit 1
+  if [ $# -eq 1 -a "${1}" == "-q" ]; then
+    :
+  else
+    exit 1
+  fi
 }
 
 banner() {
@@ -30,7 +34,7 @@ banner() {
 
 help() {
   if [ -r ${help_file} ]; then 
-    usage
+    usage -q
     cat ${help_file}
   else
     assert "help file missing"
