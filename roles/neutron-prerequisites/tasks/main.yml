@@ -22,12 +22,15 @@
     bridge: "{{ item }}"
     state: present
   with_items:
-    - br-ext
-    - br-vlan
+    - br-pf9
 
-- name: Set br-ext external bridge ID
+- name: Set br-pf9 external bridge ID
   openvswitch_bridge:
-    bridge: br-ext
+    bridge: br-pf9
     state: present
-    external_ids:
-      bridge-id: br-ext
+
+- name: Set br-pf9 port as bond0
+  openvswitch_port:
+    bridge: br-pf9
+    port: bond0
+    state: present

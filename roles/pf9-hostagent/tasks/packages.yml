@@ -20,8 +20,8 @@
 
 - name: Install pf9-hostagent on hypervisor (RedHat)
   shell: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd --skip-os-check"
-  when: pkg_state_redhat.stdout_lines is defined and pkg_state_redhat.stdout_lines == "not-installed"
+  when: pkg_state_redhat.stdout is defined and pkg_state_redhat.stdout.strip() == "not-installed"
 
 - name: Install pf9-hostagent on hypervisor (Debian)
   shell: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd --skip-os-check"
-  when: pkg_state_debian.stdout_lines is defined and pkg_state_debian.stdout_lines == "not-installed"
+  when: pkg_state_debian.stdout is defined and pkg_state_debian.stdout.strip() == "not-installed"
