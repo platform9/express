@@ -62,7 +62,6 @@ while [ $# -gt 0 ]; do
 done
 
 ## validate running on CentOS
-banner
 if [ ! -r /etc/redhat-release ]; then assert "This script only runs on  RedHat or CentOS"; fi
 
 ## validate sudo priviledges
@@ -79,8 +78,6 @@ else
 fi
 
 ## validate target found
-echo "--> Target Type : ${target_type}"
-echo "--> Target      : ${target}"
 case ${target_type} in
 host|group)
   ;;
@@ -88,6 +85,9 @@ host|group)
   assert "target not found in Ansible inventory"
   ;;
 esac
+
+## display banner
+banner
 
 # install Ansibl (and dependencies)
 echo -n "--> Validating package dependencies: "
