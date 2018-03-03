@@ -1,3 +1,4 @@
+pf9-autodeploy.conf
 *.pyc
 *.swp
 *.retry
