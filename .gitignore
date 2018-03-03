@@ -1,4 +1,5 @@
 pf9-autodeploy.conf
+group_vars/all.yml
 *.pyc
 *.swp
 *.retry
