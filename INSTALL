@@ -14,6 +14,7 @@ target_type=""
 log=${basedir}/.pf9.log
 pf9_config=${basedir}/pf9-autodeploy.conf
 pf9_config_tpl=${basedir}/group_vars/pf9-autodeploy.tpl
+pf9_group_vars=${basedir}/group_vars/all.yml
 
 # functions
 usage() {
@@ -223,8 +224,9 @@ setup_pf9() {
   v4=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
   v5=$(grep ^os_tenant ${pf9_config} | cut -d \| -f2)
   v6=$(grep ^manage_hostname ${pf9_config} | cut -d \| -f2)
-  v7=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
-  v8=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
+  v7=$(grep ^manage_resolver ${pf9_config} | cut -d \| -f2)
+  v8=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
+  v9=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
 
   pf9_nv_pairs=(
     "du_url|Instance URL|${v1}"
@@ -233,8 +235,9 @@ setup_pf9() {
     "os_region|Region|${v4}"
     "os_tenant|Tennant|${v5}"
     "manage_hostname|Manage Hostname [true,false]|${v6}|true,false"
-    "dns_resolver1|DNS Resolver 1|${v7}"
-    "dns_resolver2|DNS Resolver 2|${v8}"
+    "manage_resolver|Manage DNS Resolver [true,false]|${v7}|true,false"
+    "dns_resolver1|DNS Resolver 1|${v8}"
+    "dns_resolver2|DNS Resolver 2|${v9}"
   )
 
   for config_nv in "${pf9_nv_pairs[@]}"; do
@@ -242,14 +245,50 @@ setup_pf9() {
     prompt_user "${config_nv}"
   done
 
-  getYN "\nSetup Complete - continue? "
-  if [ $? -eq 1 ]; then exit 0; fi
-  echo
+  getYN "\nSave settings and continue? "; echo
+  if [ $? -eq 0 ]; then
+    build_pf9_config
+  else
+    exit 0
+  fi
 }
 
 init_pf9_config() {
   cp -f ${pf9_config_tpl} ${pf9_config}
   if [ $? -ne 0 ]; then assert "failed to initialize config file"; fi
+}
+
+build_pf9_config() {
+  rm -f ${pf9_group_vars} && touch ${pf9_group_vars}
+  if [ $? -ne 0 ]; then assert "failed to initialize group vars: ${pf9_group_vars}"; fi
+  
+  # read current confif values
+  local du_url=$(grep ^du_url ${pf9_config} | cut -d \| -f2)
+  local os_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
+  local os_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
+  local os_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
+  local os_tenant=$(grep ^os_tenant ${pf9_config} | cut -d \| -f2)
+  local manage_hostname=$(grep ^manage_hostname ${pf9_config} | cut -d \| -f2)
+  local manage_resolver=$(grep ^manage_resolver ${pf9_config} | cut -d \| -f2)
+  local dns_resolver1=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
+  local dns_resolver2=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
+
+  echo "---" > ${pf9_group_vars}
+  echo "# Set hostname equal to inventory_hostname" >> ${pf9_group_vars}
+  echo "manage_hostname: ${manage_hostname}" >> ${pf9_group_vars}
+  echo "" >> ${pf9_group_vars}
+  echo "# Append DNS resolvers to /etc/resolv.conf" >> ${pf9_group_vars}
+  echo "manage_resolvers: ${manage_resolver}" >> ${pf9_group_vars}
+  echo "dns_resolvers:" >> ${pf9_group_vars}
+  echo "  - ${dns_resolver1}" >> ${pf9_group_vars}
+  echo "  - ${dns_resolver2}" >> ${pf9_group_vars}
+  echo "" >> ${pf9_group_vars}
+  echo "# These variables are required to be filled in for the end-user's environment" >> ${pf9_group_vars}
+  echo "os_username: ${os_username}" >> ${pf9_group_vars}
+  echo "os_password: ${os_password}" >> ${pf9_group_vars}
+  echo "os_region: ${os_region}" >> ${pf9_group_vars}
+  echo "os_tenant: ${os_tenant}" >> ${pf9_group_vars}
+  echo "du_url: ${du_url}" >> ${pf9_group_vars}
 }
 
 ################################################################################
