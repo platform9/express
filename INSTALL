@@ -9,27 +9,16 @@ basedir=$(dirname $0)
 min_ansible_version="2.2"
 inventory=${basedir}/inventory/hosts
 autodeplopy_script=${basedir}/pf9-autodeploy.yml
-help_file=${basedir}/.help
+help_file=${basedir}/lib/help.txt
 target_type=""
-log=${basedir}/.pf9.log
+log=${basedir}/lib/INSTALL.log
 pf9_config=${basedir}/pf9-autodeploy.conf
-pf9_config_tpl=${basedir}/group_vars/pf9-autodeploy.tpl
+pf9_config_tpl=${basedir}/lib/pf9-autodeploy.tpl
 pf9_group_vars=${basedir}/group_vars/all.yml
 
 # functions
 usage() {
-  echo "usage: $0 [-h|--help] [-s|--setup] <target>"
-  echo -e "\n<target> : Ansible inventory target to assimilate into Platform9 control plane"
-  echo -e "--setup  : Configure attributes for Platform9 Control Plane\n"
-  exit 1
-}
-
-assert() {
-  if [ $# -eq 1 ]; then
-    echo -e "ASSERT : ${1}"
-  else
-    echo -e "ASSERT : "
-  fi
+  echo -e "usage: $0 [-h|--help] [-s|--setup] <target>\n"
   exit 1
 }
 
@@ -48,250 +37,12 @@ help() {
   exit 0
 }
 
-in_array() {
-  if [ $# -eq 0 ]; then return 1; fi
-
-  local key=${1}
-  shift; defined_values=("$@")
-
-  for value in "${defined_values[@]}"; do
-    if [ "${value}" == "${key}" ]; then return 0; fi
-  done
-
-  return 1
-}
-
-getYN() {
-  if [ $# -ne 1 ]; then return 1; fi
-
-  local prompt=${1}
-  local flag_valid=0
-  local reply
-  while [ ${flag_valid} -eq 0 ]; do
-    echo -n -e "${prompt}"
-    read reply
-    case ${reply} in
-    y|n|Y|N)
-      flag_valid=1
-      ;;
-    *)
-      echo "invalid response; please enter 'y' or 'n'"
-    esac
-  done
-
-  if [ "${reply}" == "Y" -o "${reply}" == "y" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-update_template() {
-  if [ $# -ne 2 ]; then return 1; fi
-
-  # init buffer
-  buffer=/tmp/cm-buffer.$$.tpl
-  rm -f ${buffer} && touch ${buffer}
-  if [ ! -r ${buffer} ]; then
-    echo "failed to initialize buffer ${buffer}"
-    exit 1
-  fi
-
-  local target_key=${1}
-  local target_val=${2}
-  if [ -r ${pf9_config} ]; then
-    while read -r line; do
-      # skip comments and blank lines
-      if [ "${line:0:1}" == "#" -o -z "${line}" ]; then
-        echo "${line}" >> $buffer
-        continue
-      fi
-
-      key=`echo ${line} | cut -d \| -f1`
-      val=`echo ${line} | cut -d \| -f2`
-      if [ "${key}" == "${target_key}" ]; then
-        echo "${key}|${target_val}" >> $buffer
-      else
-        echo "${line}" >> $buffer
-      fi
-    done < ${pf9_config}
-
-    # replace pf9_config with buffer
-    cp -f ${buffer} ${pf9_config}
-    if [ $? -ne 0 ]; then
-      echo "ERROR: failed to replace pf9_config with buffer"
-      exit 1
-    fi
-  fi
-}
-
-get_input() {
-  if [ $# -ne 5 ]; then return 1; fi
-
-  local arg_name=${1}
-  local arg_desc=${2}
-  local arg_default=${3}
-  local arg_allowed_values=${4}
-  local arg_type=${5}
-
-  local input_isValid=0
-  local prompt_string
-
-  # create array of allowed values
-  local IFS=","
-  allowed_values=(${arg_allowed_values})
-
-  # display prompt to user
-  while [ ${input_isValid} -eq 0 ]; do
-    # define prompt
-    if [ "${arg_default}" == "-" ]; then
-      prompt_str="${2}: "
-    else
-      prompt_str="${2} [${arg_default}]: "
-    fi
-
-    # get input from user
-    echo -n ${prompt_str}
-    read -r reply
-
-    # if empty reply from user, substitute default (if defined)
-    if [ -z "${reply}" -a "${arg_default}" != "null-disallowed" ]; then reply=${arg_default}; fi
-
-    # validate reply
-    if [ -z "${reply}" -a "${arg_default}" == "null-allowed" ]; then
-      echo "--> accepted: ${reply}"
-      input_isValid=1
-    elif [ -z "${reply}" -a "${arg_default}" == "null-disallowed" ]; then
-      echo "--> null response not allowed"
-    elif [ ! -z "${reply}" -a "${arg_allowed_values}" != "-" ]; then
-      in_array "${reply}" "${allowed_values[@]}"
-      if [ $? -eq 0 ]; then
-        echo "--> accepted: ${reply}"
-        input_isValid=1
-      else
-        echo "ERROR: allowed values = [${arg_allowed_values}]"
-      fi
-    else
-      echo "--> accepted: ${reply}"
-      input_isValid=1
-    fi
-
-    # paramterize user response into template
-    update_template "${arg_name}" "${reply}"
-    if [ $? -ne 0 ]; then echo "ERROR: failed to update template, aborting."; exit 1; fi
-  done
-}
-
-prompt_user() {
-  local arg_name="-"
-  local arg_desc="-"
-  local arg_default="-"
-  local arg_allowed_values="-"
-  local arg_type="-"
-
-  local IFS="|"
-  config_args=(${1})
-  case ${#config_args[@]} in
-  1) arg_name=${config_args[0]}
-     ;;
-  2) arg_name=${config_args[0]}
-     arg_desc=${config_args[1]}
-     ;;
-  3) arg_name=${config_args[0]}
-     arg_desc=${config_args[1]}
-     arg_default=${config_args[2]}
-     ;;
-  4) arg_name=${config_args[0]}
-     arg_desc=${config_args[1]}
-     arg_default=${config_args[2]}
-     arg_allowed_values=${config_args[3]}
-     ;;
-  5) arg_name=${config_args[0]}
-     arg_desc=${config_args[1]}
-     arg_default=${config_args[2]}
-     arg_allowed_values=${config_args[3]}
-     arg_type=${config_args[4]}
-     ;;
-  esac
-
-  get_input "${arg_name}" "${arg_desc}" "${arg_default}" "${arg_allowed_values}" "${arg_type}"
-}
-
-setup_pf9() {
-  v1=$(grep ^du_url ${pf9_config} | cut -d \| -f2)
-  v2=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
-  v3=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
-  v4=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
-  v5=$(grep ^os_tenant ${pf9_config} | cut -d \| -f2)
-  v6=$(grep ^manage_hostname ${pf9_config} | cut -d \| -f2)
-  v7=$(grep ^manage_resolver ${pf9_config} | cut -d \| -f2)
-  v8=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
-  v9=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
-
-  pf9_nv_pairs=(
-    "du_url|Instance URL|${v1}"
-    "os_username|Admin Username|${v2}"
-    "os_password|Admin Password|${v3}"
-    "os_region|Region|${v4}"
-    "os_tenant|Tennant|${v5}"
-    "manage_hostname|Manage Hostname [true,false]|${v6}|true,false"
-    "manage_resolver|Manage DNS Resolver [true,false]|${v7}|true,false"
-    "dns_resolver1|DNS Resolver 1|${v8}"
-    "dns_resolver2|DNS Resolver 2|${v9}"
-  )
-
-  for config_nv in "${pf9_nv_pairs[@]}"; do
-    echo
-    prompt_user "${config_nv}"
-  done
-
-  getYN "\nSave settings? "; echo
-  if [ $? -eq 0 ]; then
-    build_pf9_config
-  fi
-}
-
-init_pf9_config() {
-  cp -f ${pf9_config_tpl} ${pf9_config}
-  if [ $? -ne 0 ]; then assert "failed to initialize config file"; fi
-}
-
-build_pf9_config() {
-  rm -f ${pf9_group_vars} && touch ${pf9_group_vars}
-  if [ $? -ne 0 ]; then assert "failed to initialize group vars: ${pf9_group_vars}"; fi
-  
-  # read current confif values
-  local du_url=$(grep ^du_url ${pf9_config} | cut -d \| -f2)
-  local os_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
-  local os_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
-  local os_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
-  local os_tenant=$(grep ^os_tenant ${pf9_config} | cut -d \| -f2)
-  local manage_hostname=$(grep ^manage_hostname ${pf9_config} | cut -d \| -f2)
-  local manage_resolver=$(grep ^manage_resolver ${pf9_config} | cut -d \| -f2)
-  local dns_resolver1=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
-  local dns_resolver2=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
-
-  echo "---" > ${pf9_group_vars}
-  echo "# Set hostname equal to inventory_hostname" >> ${pf9_group_vars}
-  echo "manage_hostname: ${manage_hostname}" >> ${pf9_group_vars}
-  echo "" >> ${pf9_group_vars}
-  echo "# Append DNS resolvers to /etc/resolv.conf" >> ${pf9_group_vars}
-  echo "manage_resolvers: ${manage_resolver}" >> ${pf9_group_vars}
-  echo "dns_resolvers:" >> ${pf9_group_vars}
-  echo "  - ${dns_resolver1}" >> ${pf9_group_vars}
-  echo "  - ${dns_resolver2}" >> ${pf9_group_vars}
-  echo "" >> ${pf9_group_vars}
-  echo "# These variables are required to be filled in for the end-user's environment" >> ${pf9_group_vars}
-  echo "os_username: ${os_username}" >> ${pf9_group_vars}
-  echo "os_password: ${os_password}" >> ${pf9_group_vars}
-  echo "os_region: ${os_region}" >> ${pf9_group_vars}
-  echo "os_tenant: ${os_tenant}" >> ${pf9_group_vars}
-  echo "du_url: ${du_url}" >> ${pf9_group_vars}
-}
-
 ################################################################################
 ## main
 ################################################################################
+# incliude libraries
+source ${basedir}/lib/config_util.sh
+source ${basedir}/lib/utility.sh
 
 ## validate commandline arguments
 if [ $# -ne 1 ]; then usage; fi
@@ -300,7 +51,8 @@ while [ $# -gt 0 ]; do
   -h|--help)
     help ;;
   -s|--setup)
-    setup_pf9
+    if [ ! -r ${pf9_config} ]; then init_config; fi
+    run_setup
     exit 0
     ;;
   *)
@@ -339,8 +91,8 @@ banner
 
 # run setup if config file missing
 if [ ! -r ${pf9_config} ]; then
-  init_pf9_config
-  setup_pf9
+  init_config
+  run_setup
 fi
 
 # install Ansibl (and dependencies)
