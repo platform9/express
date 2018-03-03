@@ -3,29 +3,26 @@
 ansible_ssh_pass=Pl@tform9
 ansible_sudo_pass=Pl@tform9
 
-# hypervisors : add ALL hypervisors - both CentOS and Ubuntu
+## Hypervisors (ALL)
 [hypervisors]
-lab_kvm_host_0
-lab_kvm_host_1
-lab_kvm_host_2
-lab_kvm_host_3
-lab_nfs_server
-lab_kvm_host_4
+hv1_centos ansible_host=172.16.7.70
+hv2_centos ansible_host=172.16.7.71
+hv3_centos ansible_host=172.16.7.72
+hv4_ubuntu ansible_host=172.16.7.73
 
-# hypervisors-centos group : add CentOS hypervisors
+## Hypervisors - CentOS
 [hypervisors-centos]
-lab_kvm_host_0 ansible_host=172.16.7.58
-lab_kvm_host_1 ansible_host=172.16.7.60
-lab_kvm_host_2 ansible_host=172.16.7.59
-lab_kvm_host_3 ansible_host=172.16.7.57
-lab_nfs_server ansible_host=172.16.7.56
+hv1_centos ansible_host=172.16.7.70
+hv2_centos ansible_host=172.16.7.71
+hv3_centos ansible_host=172.16.7.72
 
+## Hypervisors - Ubuntu
+[hypervisors-ubuntu]
+hv4_ubuntu ansible_host=172.16.7.73
+
+## Group Variables
 [hypervisors-centos:vars]
 ansible_user=centos
-
-# hypervisors-ubuntu group : add Ubuntu hypervisors
-[hypervisors-ubuntu]
-lab_kvm_host_4 ansible_host=172.16.7.66
 
 [hypervisors-ubuntu:vars]
 ansible_user=ubuntu
@@ -33,4 +30,3 @@ ansible_user=ubuntu
 # image_storage group : add all machines that require glance role to this group
 [image_storage]
 [image_storage:vars]
-
