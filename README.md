@@ -15,7 +15,7 @@ The first time you run ./INSTALL it will prompt you for various settings related
 
 ## Inventory Examples/Notes
 
-All of the hypervisor nodes should be listed in the inventory file. They should be under the "hypervisors" group. Each node should be named after their fully qualified domain name (FQDN) that will be used as the hostname. Here are a few examples for creating Ansible inventory connection details based on common scenarios.
+All of your hypervisor nodes should be listed in the Ansible inventory file (inventory/hopsts). They should be listed under the "[hypervisors]" group. Each node should be named after their fully qualified domain name (FQDN) that will be used as the hostname. Here are a few examples for creating Ansible inventory connection details based on common scenarios.
 
 * SSH directly in as root.
 ```
