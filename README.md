@@ -6,10 +6,10 @@ Autodeploy aims to automate the prerequisite tasks required to bring a hyperviso
 **Step 1 : Define SSH connection details for hypervisors**
 * vi inventory/hosts
 
-**Step 2: Run**
-* ./INSTALL <target>
+**Step 2: Run Auto-Deploy**
+* ./INSTALL \<target\>
 
-<target> : hostname or group (defined in Ansible inventory file)
+\<target\> : hostname or group (defined in Ansible inventory file)
 
 * Notes:
   * manage_hostname = Boolean value (if true, sets the hostname equal to the Ansible inventory_hostname for the host)
