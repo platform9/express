@@ -1,4 +1,5 @@
 ---
+- debug: msg="*** running roles/pf9-hostagent/tasks/packages.yml"
 - name: Check pf9-hostagent on Debian
   command: dpkg-query -s pf9-hostagent
   ignore_errors: True
@@ -17,6 +18,9 @@
     - ansible_os_family == "RedHat"
     - ansible_pkg_mgr == "yum"
 
+- debug: msg="*** ruinning /tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd"
+- name: Add execute permission to installer
+  shell: chmod 755 /tmp/platform9-install-{{ ansible_os_family|lower }}.sh
 - name: Install pf9-hostagent on hypervisor
-  script: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd"
+  script: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd --skip-os-check"
   when: pkg_state_debian|failed or pkg_state_redhat|failed

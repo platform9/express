@@ -1,6 +1,11 @@
 ---
+- debug: msg="auth token = {{ hostvars[inventory_hostname]['os_auth_token'] }}"
+- name: debug local connection
+  shell: hostname -f
+  register: lconn
+- debug: msg="*** download running on {{lconn.stdout_lines}}"
 - name: Download Platform9 installers
-  connection: local
+  #connection: local
   become: no
   get_url:
     url: "{{ du_url }}/private/platform9-install-{{ item }}.sh"

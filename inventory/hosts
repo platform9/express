@@ -2,12 +2,12 @@
 localhost
 
 [all:vars]
-ansible_user=danw
+ansible_user=cmadmin
 private_key_file=~/.ssh/id_rsa
 
 [hypervisors]
-ilab_kvm_host_0 ansible_host=172.16.7.48
-#ilab_kvm_host_1 ansible_host=172.16.7.49
+#ilab_kvm_host_0 ansible_host=172.16.7.48
+ilab_kvm_host_1 ansible_host=172.16.7.49
 #ilab_kvm_host_2 ansible_host=172.16.7.47
 #ilab_kvm_host_3 ansible_host=172.16.7.50
 #lab_nfs_server ansible_host=172.16.7.46
