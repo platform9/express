@@ -13,8 +13,8 @@ Prior to running autodeploy, there are a number of site-specific variables that 
 The SSH connection details for the hypervisor (Nova) and/or image (Glance) nodes should be defined in a new inventory file.
 * vim inventory/hosts
 
-Finally, the Playbook can be run:
-* ansible-playbook site.yml
+Run autodeploy playbook:
+* ansible-playbook pf9-autodeploy.yml
 
 ## Variables
 
