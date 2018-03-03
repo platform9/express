@@ -245,11 +245,9 @@ setup_pf9() {
     prompt_user "${config_nv}"
   done
 
-  getYN "\nSave settings and continue? "; echo
+  getYN "\nSave settings? "; echo
   if [ $? -eq 0 ]; then
     build_pf9_config
-  else
-    exit 0
   fi
 }
 
@@ -302,7 +300,9 @@ while [ $# -gt 0 ]; do
   -h|--help)
     help ;;
   -s|--setup)
-    setup_pf9 ;;
+    setup_pf9
+    exit 0
+    ;;
   *)
     target=${1} ;;
   esac
