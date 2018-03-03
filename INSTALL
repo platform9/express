@@ -60,6 +60,31 @@ in_array() {
   return 1
 }
 
+getYN() {
+  if [ $# -ne 1 ]; then return 1; fi
+
+  local prompt=${1}
+  local flag_valid=0
+  local reply
+  while [ ${flag_valid} -eq 0 ]; do
+    echo -n -e "${prompt}"
+    read reply
+    case ${reply} in
+    y|n|Y|N)
+      flag_valid=1
+      ;;
+    *)
+      echo "invalid response; please enter 'y' or 'n'"
+    esac
+  done
+
+  if [ "${reply}" == "Y" -o "${reply}" == "y" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 update_template() {
   if [ $# -ne 2 ]; then return 1; fi
 
@@ -126,12 +151,7 @@ get_input() {
 
     # get input from user
     echo -n ${prompt_str}
-    if [ "${arg_type}" == "password" ]; then
-      read -r -s reply; echo
-      reply=`encrypt "${reply}"`
-    else
-      read -r reply
-    fi
+    read -r reply
 
     # if empty reply from user, substitute default (if defined)
     if [ -z "${reply}" -a "${arg_default}" != "null-disallowed" ]; then reply=${arg_default}; fi
@@ -150,9 +170,6 @@ get_input() {
       else
         echo "ERROR: allowed values = [${arg_allowed_values}]"
       fi
-    elif [ ! -z "${reply}" -a "${arg_type}" == "password" ]; then
-      echo "--> accepted: ********"
-      input_isValid=1
     else
       echo "--> accepted: ${reply}"
       input_isValid=1
@@ -225,7 +242,8 @@ setup_pf9() {
     prompt_user "${config_nv}"
   done
 
-  exit 0
+  getYN "\nSetup Complete - continue? "
+  if [ $? -eq 1 ]; then exit 0; fi
 }
 
 init_pf9_config() {
