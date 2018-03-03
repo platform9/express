@@ -244,6 +244,7 @@ setup_pf9() {
 
   getYN "\nSetup Complete - continue? "
   if [ $? -eq 1 ]; then exit 0; fi
+  echo
 }
 
 init_pf9_config() {
