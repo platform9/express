@@ -13,7 +13,7 @@
     state: stopped
     name: firewalld
     enabled: no
-  when: firewalld_install_status.stdout_liones is defined and firewalld_install_status.stdout_lines.strip() == "installed"
+  when: firewalld_install_status.stdout is defined and firewalld_install_status.stdout.strip() == "installed"
 
 - name: Installing iptables-services
   yum:
