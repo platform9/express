@@ -20,7 +20,6 @@ hv4_ubuntu
 
 ## Image Libraries : Add nodes that require Glance Role
 [image_storage]
-hv1_centos
 
 ## Group Variables
 [hypervisors:vars]
