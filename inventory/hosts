@@ -1,36 +1,28 @@
+##
+## Ansible Inventory Inventory
+##
+
 [all]
 [all:vars]
 ansible_ssh_pass=Pl@tform9
 ansible_sudo_pass=Pl@tform9
 
-## Hypervisors (ALL)
+## Hypervisors : Add CentOS/Ubuntu nodes that require Compute/Neutron Roles
 [hypervisors]
-hv1_centos ansible_host=172.16.7.70
-hv2_centos ansible_host=172.16.7.71
-hv3_centos ansible_host=172.16.7.72
-hv4_ubuntu ansible_host=172.16.7.73
-hv5_centos ansible_host=172.16.7.74
-hv6_ubuntu ansible_host=172.16.7.75
+hv1_centos ansible_host=172.16.7.70 ansible_user=centos
+hv2_centos ansible_host=172.16.7.71 ansible_user=centos
+hv3_centos ansible_host=172.16.7.72 ansible_user=centos
+hv4_ubuntu ansible_host=172.16.7.73 ansible_user=ubuntu
 
-## Hypervisors - CentOS
-[hypervisors-centos]
-hv1_centos ansible_host=172.16.7.70
-hv2_centos ansible_host=172.16.7.71
-hv3_centos ansible_host=172.16.7.72
-hv5_centos ansible_host=172.16.7.74
-
-## Hypervisors - Ubuntu
+## Hypervisors-Ubuntu : Add Ubuntu nodes (in addition to 'hypervisors' group)
 [hypervisors-ubuntu]
-hv4_ubuntu ansible_host=172.16.7.73
-hv6_ubuntu ansible_host=172.16.7.75
+hv4_ubuntu
+
+## Image Libraries : Add nodes that require Glance Role
+[image_storage]
+hv1_centos
 
 ## Group Variables
-[hypervisors-centos:vars]
-ansible_user=centos
-
+[hypervisors:vars]
 [hypervisors-ubuntu:vars]
-ansible_user=ubuntu
-
-# image_storage group : add all machines that require glance role to this group
-[image_storage]
 [image_storage:vars]
