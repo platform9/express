@@ -100,6 +100,9 @@ if [ ! -r ${pf9_config} ]; then
   run_setup
 fi
 
+# validate all config values are set
+validate_config
+
 # install Ansibl (and dependencies)
 echo -n "--> Validating package dependencies: "
 for pkg in epel-release ansible gcc python-devel python2-pip bc; do

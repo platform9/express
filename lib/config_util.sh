@@ -203,3 +203,56 @@ build_config() {
   echo "du_url: ${du_url}" >> ${pf9_group_vars}
 }
 
+validate_config() {
+  if [ ! -r ${pf9_config} ]; then assert "config file missing"; fi
+
+  # read all config values
+  manage_hostname=$(grep ^manage_hostname ${pf9_config} | cut -d \| -f2)
+  manage_resolver=$(grep ^manage_resolver ${pf9_config} | cut -d \| -f2)
+  dns_resolver1=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
+  dns_resolver2=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
+  os_tenant=$(grep ^os_tenant ${pf9_config} | cut -d \| -f2)
+  du_url=$(grep ^du_url ${pf9_config} | cut -d \| -f2)
+  os_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
+  os_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
+  os_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
+
+  # validate manage_hostname
+  if [ -z "${manage_hostname}" ]; then assert "config:manage_hostname : illegal value '${manage_hostname}'\n"; fi
+  case ${manage_hostname} in
+  true|false|True|False)
+    ;;
+  *)
+    assert "config:manage_hostname : illegal value '${manage_hostname}'\n" ;;
+  esac
+
+  # validate manage_resolver
+  if [ -z "${manage_resolver}" ]; then assert "config:manage_resolver : illegal value '${manage_resolver}'\n"; fi
+  case ${manage_resolver} in
+  true|false|True|False)
+    ;;
+  *)
+    assert "config:manage_resolver : illegal value '${manage_resolver}'\n" ;;
+  esac
+
+  # validate dns_resolver1
+  if [ -z "${dns_resolver1}" ]; then assert "config:dns_resolver1 : illegal value\n"; fi
+
+  # validate dns_resolver2
+  if [ -z "${dns_resolver2}" ]; then assert "config:dns_resolver2 : illegal value\n"; fi
+
+  # validate os_tenant
+  if [ -z "${os_tenant}" ]; then assert "config:os_tenant : illegal value\n"; fi
+
+  # validate du_url
+  if [ -z "${du_url}" ]; then assert "config:du_url : illegal value\n"; fi
+
+  # validate os_username
+  if [ -z "${os_username}" ]; then assert "config:os_username : illegal value\n"; fi
+
+  # validate os_password
+  if [ -z "${os_password}" ]; then assert "config:os_password : illegal value\n"; fi
+
+  # validate os_region
+  if [ -z "${os_region}" ]; then assert "config:os_region : illegal value\n"; fi
+}
