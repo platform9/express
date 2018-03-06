@@ -1,0 +1,75 @@
+---
+- name: Tell libvirt to listen on startup - Red Hat
+  lineinfile:
+    state: present
+    create: True
+    line: 'LIBVIRTD_ARGS="--listen"'
+    dest: /etc/sysconfig/libvirtd
+    regexp: '^#?LIBVIRTD_ARGS.*$'
+  when: ansible_os_family == 'RedHat'
+  notify: restart libvirtd
+
+- name: Tell libvirt to listen on startup - Debian
+  lineinfile:
+    state: present
+    create: True
+    line: 'libvirtd_opts="-d -l"'
+    dest: /etc/default/libvirt-bin
+    regexp: '^#?libvirtd_opts=*.*$'
+  when: ansible_os_family == 'Debian'
+  notify: restart libvirtd
+
+- name: "Create {{ libvirt_pki_path }}"
+  file:
+    state: directory
+    path: "{{ libvirt_pki_path }}"
+    owner: pf9
+    group: pf9group
+    mode: 0750
+
+- name: "Link PF9 certs into {{ libvirt_pki_path }}"
+  file:
+    state: link
+    path: "{{ libvirt_pki_path }}/{{ item.name }}"
+    src: "/etc/pf9/certs/{{ item.src }}"
+    force: yes
+  with_items:
+    - name: cacert.pem
+      src: ca/cert.pem
+    - name: clientcert.pem
+      src: hostagent/cert.pem
+    - name: clientkey.pem
+      src: hostagent/key.pem
+
+- name: Set libvirtd configuration
+  lineinfile:
+    state: present
+    dest: /etc/libvirt/libvirtd.conf
+    line: "{{ item.key }} = {{ item.value }}"
+    regexp: "^#?{{ item.key }}.*$"
+  with_dict:
+    listen_tcp: 0
+    listen_tls: 1
+    auth_tcp: '"sasl"'
+    auth_tls: '"none"'
+    ca_file: "\"{{ libvirt_pki_path }}/cacert.pem\""
+    cert_file: "\"{{ libvirt_pki_path }}/clientcert.pem\""
+    key_file: "\"{{ libvirt_pki_path }}/clientkey.pem\""
+  notify: restart libvirtd
+
+- name: Set libvirt live migration settings in Nova.conf
+  ini_file:
+    state: present
+    dest: /opt/pf9/etc/nova/conf.d/nova_override.conf
+    owner: pf9
+    group: pf9group
+    create: yes
+    section: libvirt
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  with_items:
+    - option: live_migration_uri
+      value: "qemu+tls://%s/system?no_verify=1&pkipath={{ libvirt_pki_path }}"
+    - option: live_migration_flag
+      value: VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, VIR_MIGRATE_LIVE, VIR_MIGRATE_TUNNELLED
+  notify: restart pf9-ostackhost

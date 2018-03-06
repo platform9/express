@@ -10,3 +10,4 @@ neutron_kernel_modules:
   - bonding
   - bridge
   - tun
+  - br_netfilter

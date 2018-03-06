@@ -17,6 +17,13 @@
     - ansible_os_family == "RedHat"
     - ansible_pkg_mgr == "yum"
 
+- name: Change permissions of pf9-hostagent
+  become: yes
+  file:
+    dest: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh"
+    mode: "a+x"
+
 - name: Install pf9-hostagent on hypervisor
-  script: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd"
+  become: yes
+  command: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd --skip-os-check"
   when: pkg_state_debian|failed or pkg_state_redhat|failed
