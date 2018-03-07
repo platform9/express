@@ -1,0 +1,27 @@
+##
+## Ansible Inventory Inventory
+##
+
+[all]
+[all:vars]
+ansible_ssh_pass=SECUREPASS
+ansible_sudo_pass=SECUREPASS
+
+## Hypervisors : Add CentOS/Ubuntu nodes that require Compute/Neutron Roles
+[hypervisors]
+hv1_centos ansible_host=192.168.1.11 ansible_user=centos
+hv2_centos ansible_host=192.168.1.12 ansible_user=centos
+hv3_centos ansible_host=192.168.1.13 ansible_user=centos
+hv4_ubuntu ansible_host=192.168.1.14 ansible_user=ubuntu
+
+## Hypervisors-Ubuntu : Add Ubuntu nodes (in addition to 'hypervisors' group)
+[hypervisors-ubuntu]
+hv4_ubuntu
+
+## Image Libraries : Add nodes that require Glance Role
+[image_storage]
+
+## Group Variables
+[hypervisors:vars]
+[hypervisors-ubuntu:vars]
+[image_storage:vars]

@@ -13,7 +13,6 @@
     - ansible_os_family == "RedHat"
     - ansible_pkg_mgr == "yum"
 
-<<<<<<< HEAD
 - name: Add execute permission to installer
   file:
     path: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh"
