@@ -8,6 +8,7 @@
     name: "{{ item.key }}"
     value: "{{ item.value }}"
     sysctl_set: yes
+    ignoreerrors: true
   with_dict: "{{ neutron_sysctl }}"
 
 - include: redhat.yml

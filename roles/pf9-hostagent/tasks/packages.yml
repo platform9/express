@@ -1,29 +1,28 @@
 ---
-- name: Check pf9-hostagent on Debian
-  command: dpkg-query -s pf9-hostagent
-  ignore_errors: True
+- name: Check if pf9-hostagent in installed (Debian)
+  shell: "`which dpkg-query` -s pf9-hostagent > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
   register: pkg_state_debian
-  changed_when: pkg_state_debian.rc != 0
   when:
     - ansible_os_family == "Debian"
     - ansible_pkg_mgr == "apt"
 
-- name: Check pf9-hostagent on Red Hat
-  command: rpm -q pf9-hostagent
-  ignore_errors: True
+- name: Check pf9-hostagent is installed (RedHat)
+  shell: "`which rpm` -qa | grep pf9-hostagent > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
   register: pkg_state_redhat
-  changed_when: pkg_state_redhat.rc != 0
   when:
     - ansible_os_family == "RedHat"
     - ansible_pkg_mgr == "yum"
 
-- name: Change permissions of pf9-hostagent
-  become: yes
+<<<<<<< HEAD
+- name: Add execute permission to installer
   file:
-    dest: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh"
-    mode: "a+x"
+    path: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh"
+    mode: 0755
 
-- name: Install pf9-hostagent on hypervisor
-  become: yes
-  command: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd --skip-os-check"
-  when: pkg_state_debian|failed or pkg_state_redhat|failed
+- name: Install pf9-hostagent on hypervisor (RedHat)
+  shell: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd --skip-os-check"
+  when: pkg_state_redhat.stdout is defined and pkg_state_redhat.stdout.strip() == "not-installed"
+
+- name: Install pf9-hostagent on hypervisor (Debian)
+  shell: "/tmp/platform9-install-{{ ansible_os_family|lower }}.sh --no-proxy --no-ntpd --skip-os-check"
+  when: pkg_state_debian.stdout is defined and pkg_state_debian.stdout.strip() == "not-installed"

@@ -36,5 +36,6 @@
   with_items: "{{ dns_resolvers }}"
   when: manage_resolvers == True
 
+- debug: msg="OS Family = {{ansible_os_family}}"
 - include: redhat.yml
   when: ansible_os_family == "RedHat"

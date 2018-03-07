@@ -1,0 +1,21 @@
+------------------------------------------------------------------------------------
+Configuration Instructions
+------------------------------------------------------------------------------------
+Prior to running Auto-Deploy, you must configure your environemnt.
+
+Step 1 : Configure Ansile Inventory
+- Edit your 'inventory/hosts file' with the hostnames and IP addresses of the hypervisors
+  you want to assimilate into your Platform9 control plane.
+
+- Here is a sample 'inventry/hosts' for reference:
+  [hypervisors]
+  hv1.company.com ansible_host=1.1.1.1
+  hv2.company.com ansible_host=1.1.1.2
+  hv3.company.com ansible_host=1.1.1.3
+  hv4.company.com ansible_host=1.1.1.4
+
+  [hypervisors:vars]
+  ansible_user=centos
+  ansible_ssh_pass=Pl@tform9
+  ansible_sudo_pass=Pl@tform9
+
