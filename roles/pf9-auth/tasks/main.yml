@@ -47,7 +47,6 @@
       register: auth_reply
 
     - name: Save OS Auth Token
-      connection: local
       become: no
       copy:
         content: "{{ auth_reply.ansible_facts.auth_token }}"

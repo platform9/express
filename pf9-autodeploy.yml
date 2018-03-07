@@ -14,6 +14,7 @@
    - pf9-auth
    - pf9-hostagent
    - neutron-prerequisites
+   - secure-live-migration
 
 - hosts: image_storage
   become: true
