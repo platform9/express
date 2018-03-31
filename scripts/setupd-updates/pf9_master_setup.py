@@ -65,10 +65,9 @@ def configure_master(mgmt_address, admin_user, admin_password, cluster_name='def
     attach_master_node(auth, mgmt_address, host_id, cluster_name)
     print('Done')
 
-def attach_master(mgmt_address, admin_user, admin_password, cluster_name='defaultCluster'):
-    auth = login(mgmt_address, admin_user, admin_password, 'service')
-    host_id = read_host_id()
-    attach_master_node(auth, mgmt_address, host_id, cluster_name)
+def attach_master(mgmt_ip, admin_user, admin_password, host_id, cluster_name='defaultCluster'):
+    auth = login(mgmt_ip, admin_user, admin_password, 'service')
+    attach_master_node(auth, mgmt_ip, host_id, cluster_name)
     print('attach_master() : Done')
 
 def main():

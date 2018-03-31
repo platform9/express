@@ -18,37 +18,29 @@ LOG = logging.getLogger(__name__)
 def _parse_args():
     ap = argparse.ArgumentParser(sys.argv[0],
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    ap.add_argument('--mgmt-fqdn', required=True, dest='mgmt_fqdn',
-                    help='Fully-quaified domain name of the management server')
+    ap.add_argument('--mgmt-ip', required=True, dest='mgmt_ip',
+                    help='IP address of the management server')
     ap.add_argument('--admin-user', required=True, dest='admin_user',
                     help='Username for admin user')
     ap.add_argument('--admin-password', required=True, dest='admin_password',
                     help='Password for admin user')
+    ap.add_argument('--hostid', required=True, dest='host_id',
+                    help='Host ID')
     ap.add_argument('--cluster-name', required=True, dest='default_cluster',
                     help='Cluster Name')
-    ap.add_argument('--mgmt-ip', required=True, dest='mgmt_ip',
-                    help='IP address of the management server')
     return ap.parse_args()
 
 
-def _add_master(mgmt_fqdn, mgmt_ip, admin_user, admin_password, default_cluster):
-
-    print "Adding DNS entry"
-    add_hosts_entry(mgmt_ip, mgmt_fqdn)
-
-    print "mgmt_fqdn = %s" % mgmt_fqdn
-    print "admin_user = %s" % admin_user
-    print "admin_password = %s" % admin_password
-    print "default_cluster = %s" % default_cluster
-    attach_master(mgmt_fqdn, admin_user, admin_password, default_cluster)
+def _add_master(mgmt_ip, admin_user, admin_password, host_id, default_cluster):
+    attach_master(mgmt_ip, admin_user, admin_password, host_id, default_cluster)
 
 def main():
     args = _parse_args()
     setup_logs('/var/log/pf9/master.log')
-    _add_master(args.mgmt_fqdn,
-                args.mgmt_ip,
+    _add_master(args.mgmt_ip,
                 args.admin_user,
                 args.admin_password,
+                args.host_id,
                 args.default_cluster)
 
 

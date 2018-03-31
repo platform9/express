@@ -1,31 +1,38 @@
 ##
-## Ansible Inventory Inventory
+## Ansible Inventory
 ##
-
 [all]
 [all:vars]
 ansible_ssh_pass=Pl@tform9
 ansible_sudo_pass=Pl@rform9
 
-## Hypervisors : Add CentOS/Ubuntu nodes that require Compute/Neutron Roles
+####################################################################################################
+## Hypervisors
 [hypervisors]
-hv1 ansible_host=172.16.7.53 ansible_user=centos
-hv2 ansible_host=172.16.7.52 ansible_user=centos
 
-## Hypervisors-Ubuntu : Add Ubuntu nodes (in addition to 'hypervisors' group)
 [hypervisors-ubuntu]
+
+####################################################################################################
+## Containervisors
+[containervisors]
+cv2 ansible_host=172.16.7.66 ansible_user=centos pf9_clusterName=defaultCluster
+
+## Containervisors-Ubuntu : Add Ubuntu kubernetes nodes (in addition to 'containervisors' group)
+[containervisors-ubuntu]
 
 ## Image Libraries : Add nodes that require Glance Role
 [image_storage]
 
+####################################################################################################
 ## Role Assignments
 [role_pf9_kube]
-hv1
-hv2
+cv2
 
 [role_pf9_ostackhost]
 
 ## Group Variables
 [hypervisors:vars]
 [hypervisors-ubuntu:vars]
+[containervisors:vars]
+[containervisors-ubuntu:vars]
 [image_storage:vars]

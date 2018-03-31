@@ -18,10 +18,10 @@ cluster_fqdn=""
 roles=""
 certificate=""
 flag_debug=0
-config_file=${basedir}/isv.conf
+config_file=${basedir}/../pf9-autodeploy.conf
 
 usage() {
-  echo "usage: `basename $0` <ctrl_ip> <Method> [Args]"
+  echo "usage: `basename $0` <Method> [Args]"
   echo -e "\nMethods:"
   echo "  create-cluster --clusterName <clusterName> --clusterFqdn <clusterFqdn>"
   echo "  get-node [--id <id>]"
@@ -62,26 +62,6 @@ banner() {
   echo "********************************************************************************"
 }
 
-update_setupd_packages() {
-  # create log directory
-  if [ ! -d /var/log/pf9 ]; then mkdir -p /var/log/pf9; fi
-
-  # update setupd packages
-  for pkg in pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py; do
-    /bin/cp -f ${basedir}/setupd-updates/${pkg} /opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/${pkg}
-    if [ $? -ne 0 ]; then
-      assert "failed to update /opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/${pkg}"
-    fi
-  done
-
-  for pkg in attach-node add-cluster; do
-    /bin/cp -f ${basedir}/setupd-updates/${pkg} /opt/pf9/setupd/bin/${pkg}
-    if [ $? -ne 0 ]; then
-      assert "failed to update /opt/pf9/setupd/bin/${pkg}"
-    fi
-  done
-}
-
 attach_cluster() {
   export LD_LIBRARY_PATH="/opt/pf9/python/pf9-lib:/opt/pf9/python/pf9-hostagent-lib:${LD_LIBRARY_PATH}"
   export PYTHONPATH="/opt/pf9/python/lib/python2.7:${PYTHONPATH}"
@@ -115,9 +95,8 @@ inject_cert() {
 }
 
 # validate commandline
-if [ $# -lt 2 ]; then usage; fi
-ctrl_ip=${1}
-op=${2}
+if [ $# -lt 1 ]; then usage; fi
+op=${1}
 
 # validate op
 case ${op} in
@@ -128,7 +107,7 @@ get-node|get-cluster|get-clusterNode|attach-node|delete-node|pre-authorize|injec
 esac
 
 # process optional arguments
-shift 2
+shift 1
 while [ $# -gt 0 ]; do
   case ${1} in
   --id)
@@ -187,12 +166,16 @@ auth_url=https://${ctrl_ip}/keystone/v3
 
 # read config file (if present; otherwise, use hard-codes username/password)
 if [ -r ${config_file} ]; then
-  admin_user=$(grep ^du_username\| ${config_file} | cut -d \| -f2)
-  admin_password=$(grep ^du_password\| ${config_file} | cut -d \| -f2 | openssl enc -base64 -d)
+  admin_user=$(grep ^os_username\| ${config_file} | cut -d \| -f2)
+  admin_password=$(grep ^os_password\| ${config_file} | cut -d \| -f2)
 fi
 
-# update setup packages (pending merge of pull request https://github.com/platform9/pf9-onprem/pull/6)
-update_setupd_packages
+## assign/validate ctrl_ip from config file
+ctrl_hostname=$(grep ^du_url ${config_file} | cut -d \| -f2 | cut -d \/ -f3)
+
+## resolve IP for ctrl_hostname
+tmp_ip=$(ping -c 1 ${ctrl_hostname} | grep PING | cut -d ' ' -f3)
+ctrl_ip=${tmp_ip:1:((${#tmp_ip}-2))}
 
 ################################################################################
 # manage token
@@ -206,13 +189,11 @@ else
 fi
 
 if [ ${flag_update_token} -eq 1 ]; then
-  curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?nocatalog \
-      -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}"
-  
-  # get token from user
-  echo -e "\n\n********************************************************************************"
-  echo -n "*** ENTER TOKEN: "
-  read token; echo
+  token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?nocatalog \
+         -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \
+            \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \
+            \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}" 2>/dev/null \
+            | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
 
   # update tokendb
   echo "$(date +%s)" > ${tokendb}
