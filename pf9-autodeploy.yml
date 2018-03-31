@@ -27,7 +27,8 @@
     - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube" }
 
-- hosts: image_storage
+## Optional Role Assignments
+- hosts: pf9-glance
   become: true
   roles:
     - glance-host

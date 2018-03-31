@@ -9,8 +9,7 @@ ansible_sudo_pass=Pl@tform9
 ####################################################################################################
 ## Hypervisors
 [hypervisors]
-hv1 ansible_host=172.16.7.61 ansible_user=centos
-hv2 ansible_host=172.16.7.62 ansible_user=centos
+hv1 ansible_host=172.16.7.58 ansible_user=centos
 
 [hypervisors-ubuntu]
 
@@ -23,15 +22,13 @@ cv2 ansible_host=172.16.7.66 ansible_user=centos pf9_clusterName=defaultCluster
 ## Containervisors-Ubuntu : Add Ubuntu kubernetes nodes (in addition to 'containervisors' group)
 [containervisors-ubuntu]
 
-## Image Libraries : Add nodes that require Glance Role
-[image_storage]
-
 ####################################################################################################
 ## Optional Role Assignments
+[pf9-glance]
 
 ## Group Variables
 [hypervisors:vars]
 [hypervisors-ubuntu:vars]
 [containervisors:vars]
 [containervisors-ubuntu:vars]
-[image_storage:vars]
+[pf9-glance:vars]

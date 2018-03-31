@@ -249,7 +249,7 @@ install_prereqs
 
 ## validate minimum Ansible version
 ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
-echo "ansible_version = ${ansible_version}"
+echo "info: ansible_version = ${ansible_version}"
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
 
 ## assign/validate ctrl_ip from config file
