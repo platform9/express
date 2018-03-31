@@ -1,5 +1,7 @@
 ---
-- hosts: hypervisors-ubuntu
+- hosts:
+    - hypervisors-ubuntu
+    - containervisors-ubuntu
   become: true
   gather_facts: False
   pre_tasks:
@@ -14,7 +16,14 @@
    - pf9-auth
    - pf9-hostagent
    - neutron-prerequisites
-   #- secure-live-migration
+
+- hosts: containervisors
+  become: true
+  roles:
+   - common
+   - ntp
+   - pf9-auth
+   - pf9-hostagent
 
 - hosts: image_storage
   become: true

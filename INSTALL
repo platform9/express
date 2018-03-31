@@ -19,10 +19,11 @@ pf9_config_tpl=${basedir}/lib/pf9-autodeploy.tpl
 pf9_group_vars=${basedir}/group_vars/all.yml
 pf9_custom_configFile=""
 flag_setup=0
+flag_prereqs=0
 
 # functions
 usage() {
-  echo -e "usage: $0 [-h|--help] [-s|--setup] [-c|--config <configFile>] <ctrl_ip> <target>\n"
+  echo -e "usage: $0 [-h|--help] [-s|--setup] [-c|--config <configFile>] [-i|--installPrereqs] <target>\n"
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
     :
   else
@@ -64,6 +65,94 @@ help() {
   exit 0
 }
 
+install_prereqs() {
+  # install Ansibl (and dependencies)
+  echo -n "--> Validating package dependencies: "
+  if [ "${platform}" == "centos" ]; then
+    for pkg in epel-release nginx ansible gcc python-devel python2-pip bc; do
+      echo -n "${pkg} "
+      rpm -q ${pkg} > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        sudo yum -y install ${pkg} > ${log} 2>&1
+        if [ $? -ne 0 ]; then
+          echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
+          cat ${log}; exit 1
+        fi
+      fi
+    done
+  elif [ "${platform}" == "ubuntu" ]; then
+    # add ansible repository
+    dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      sudo apt-add-repository -y ppa:ansible/ansible > /dev/null 2>&1
+      sudo apt-get update> /dev/null 2>&1
+      sudo apt-get -y install ansible > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
+        cat ${log}; exit 1
+      fi
+    fi
+
+  for pkg in ansible bc ntp python-pip; do
+      echo -n "${pkg} "
+      dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        sudo apt -y install ${pkg} > ${log} 2>&1
+        if [ $? -ne 0 ]; then
+          echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
+          cat ${log}; exit 1
+        fi
+      fi
+    done
+  fi
+
+  ## upgrade pip
+  sudo pip install --upgrade pip > ${log} 2>&1
+  if [ $? -ne 0 ]; then
+    echo -e "\nERROR: failed to upgrade pip - here's the log:\n"
+    cat ${log}; exit 1
+  fi
+
+  ## install python shade
+  echo -n "python-shade "
+  sudo pip install shade > ${log} 2>&1
+  if [ $? -ne 0 ]; then
+    echo -e "\nERROR: failed to install python shade - here's the log:\n"
+    cat ${log}; exit 1
+  fi
+
+  ## install setupd
+  echo -n "setupd"
+  sudo yum -y install ${basedir}/pkg/setupd.rpm > ${log} 2>&1
+  if [ ! -d /opt/pf9/setupd ]; then
+    echo -e "\nERROR: failed to install setupd\n"
+    cat ${log}; exit 1
+  fi
+  echo
+
+  # create log directory
+  if [ ! -d /var/log/pf9 ]; then mkdir -p /var/log/pf9; fi
+
+  # update setupd packages
+  echo -n "--> Updating setupd libraries: "
+  for pkg in pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py; do
+    echo -n "${pkg} "
+    /bin/cp -f ${basedir}/scripts/setupd-updates/${pkg} /opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/${pkg} > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo; assert "failed to update ${pkg}"
+    fi
+  done
+
+  for pkg in attach-node add-cluster; do
+    echo -n "${pkg} "
+    /bin/cp -f ${basedir}/scripts/setupd-updates/${pkg} /opt/pf9/setupd/bin/${pkg} > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      echo; assert "failed to update ${pkg}"
+    fi
+  done
+  echo
+}
+
 ################################################################################
 ## main
 ################################################################################
@@ -81,16 +170,17 @@ while [ $# -gt 0 ]; do
     if [ ! -r ${pf9_config} ]; then init_config; fi
     flag_setup=1
     ;;
+  -i|--installPrereqs)
+    flag_prereqs=1
+    ;;
   -c|--config)
     if [ $# -lt 2 ]; then usage; fi
     pf9_custom_configFile=${2}
     shift
     ;;
   *)
-    if [ $# -ne 2 ]; then usage; fi
-    ctrl_ip=${1}
-    target=${2}
-    shift
+    if [ $# -ne 1 ]; then usage; fi
+    target=${1}
     ;;
   esac
   shift
@@ -105,6 +195,12 @@ if [ ${flag_setup} -eq 1 -a -n "${pf9_custom_configFile}" ]; then assert "'-s' a
 ## run setup
 if [ ${flag_setup} -eq 1 ]; then
   run_setup
+  exit 0
+fi
+
+## install prequisite packages
+if [ ${flag_prereqs} -eq 1 ]; then
+  install_prereqs; echo
   exit 0
 fi
 
@@ -148,78 +244,26 @@ fi
 # validate all config values are set
 validate_config
 
-# install Ansibl (and dependencies)
-echo -n "--> Validating package dependencies: "
-if [ "${platform}" == "centos" ]; then
-  for pkg in epel-release nginx ansible gcc python-devel python2-pip bc; do
-    echo -n "${pkg} "
-    rpm -q ${pkg} > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      sudo yum -y install ${pkg} > ${log} 2>&1
-      if [ $? -ne 0 ]; then
-        echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
-        cat ${log}; exit 1
-      fi
-    fi
-  done
-elif [ "${platform}" == "ubuntu" ]; then
-  # add ansible repository
-  dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    sudo apt-add-repository -y ppa:ansible/ansible > /dev/null 2>&1
-    sudo apt-get update> /dev/null 2>&1
-    sudo apt-get -y install ansible > ${log} 2>&1
-    if [ $? -ne 0 ]; then
-      echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
-      cat ${log}; exit 1
-    fi
-  fi
-
-  for pkg in ansible bc ntp python-pip; do
-    echo -n "${pkg} "
-    dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      sudo apt -y install ${pkg} > ${log} 2>&1
-      if [ $? -ne 0 ]; then
-        echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
-        cat ${log}; exit 1
-      fi
-    fi
-  done
-fi
-
-## upgrade pip
-sudo pip install --upgrade pip > ${log} 2>&1
-if [ $? -ne 0 ]; then
-  echo -e "\nERROR: failed to upgrade pip - here's the log:\n"
-  cat ${log}; exit 1
-fi
-
-## install python shade
-echo -n "python-shade "
-sudo pip install shade > ${log} 2>&1
-if [ $? -ne 0 ]; then
-  echo -e "\nERROR: failed to install python shade - here's the log:\n"
-  cat ${log}; exit 1
-fi
-
-## install setupd
-echo -n "setupd"
-sudo yum -y install ${basedir}/pkg/setupd.rpm > ${log} 2>&1
-if [ ! -d /opt/pf9/setupd ]; then
-  echo -e "\nERROR: failed to install setupd\n"
-  cat ${log}; exit 1
-fi
-echo
+# install prerequisite packages
+install_prereqs
 
 ## validate minimum Ansible version
 ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
 echo "ansible_version = ${ansible_version}"
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
 
+## assign/validate ctrl_ip from config file
+ctrl_hostname=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
+du_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
+du_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
+
+## resolve IP for ctrl_hostname
+tmp_ip=$(ping -c 1 ${ctrl_hostname} | grep PING | cut -d ' ' -f3)
+ctrl_ip=${tmp_ip:1:((${#tmp_ip}-2))}
+
 ## call pf9-autopdeplopy
-echo -e "\n[Executing: ansible-playbook -i ${inventory} -l ${target} ${autodeplopy_script}]"
-ansible-playbook -i ${inventory} -l ${target} -e "ctrl_ip=${ctrl_ip}" ${autodeplopy_script}
+echo -e "\n[Executing: ansible-playbook -i ${inventory} -l ${target} -e \"ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password}\" ${autodeplopy_script}]"
+ansible-playbook -i ${inventory} -l ${target} -e "ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password}" ${autodeplopy_script}
 
 ## exit cleanly
 exit 0

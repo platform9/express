@@ -10,14 +10,10 @@ flag_attachCluster=0
 config_file=${basedir}/isv.conf
 
 # set defaults
-admin_user="admin"
-admin_password="Platform99"
-ctrl_fqdn="ctl.cspi.net"
 cluster_name="defaultCluster"
-hostid=""
 
 usage() {
-  echo -e "usage: `basename $0` <ctrl_ip> <role> [args]\n"
+  echo -e "usage: `basename $0` <ctrl_ip> <role> <host_id> <admin_user> <admin_password> [args]\n"
   echo "-k               : download/install/configure Kubectl from management server"
   echo "-a               : attach node to cluster"
   echo
@@ -68,22 +64,25 @@ wait_n() {
   echo
 }
 
-attach_cluster() {
+attach_node() {
   export LD_LIBRARY_PATH="/opt/pf9/python/pf9-lib:/opt/pf9/python/pf9-hostagent-lib:${LD_LIBRARY_PATH}"
   export PYTHONPATH="/opt/pf9/python/lib/python2.7:${PYTHONPATH}"
   if [ ! -r /opt/pf9/setupd/bin/attach-node ]; then assert "attach-node not found"; fi
-  /opt/pf9/setupd/bin/attach-node --mgmt-fqdn ${ctrl_fqdn} --admin-user ${admin_user} --admin-password ${admin_password} \
-      --cluster-name ${cluster_name} --mgmt-ip ${ctrl_ip}
+  /opt/pf9/setupd/bin/attach-node --mgmt-ip ${ctrl_ip} --admin-user ${admin_user} --admin-password ${admin_password} \
+      --hostid ${host_id} --cluster-name ${cluster_name}
   if [ $? -ne 0 ]; then return 1; fi
 }
 
 ## validate commandline
-if [ $# -lt 2 ]; then usage; fi
+if [ $# -lt 5 ]; then usage; fi
 ctrl_ip=${1}
 role=${2}
+host_id=${3}
+admin_user=${4}
+admin_password=${5}
 
 ## process optional arguments
-shift 2
+shift 5
 while [ $# -gt 0 ]; do
   case ${1} in
   -k)
@@ -107,13 +106,6 @@ esac
 ## validate logged in as root
 uid=$(id -u)
 if [ ${uid} -ne 0 ]; then assert "this operation must be run as root"; fi
-
-## read config file (if present; otherwise, use hard-codes username/password)
-echo "config_file = ${config_file}"
-if [ -r ${config_file} ]; then
-  admin_user=$(grep ^du_username\| ${config_file} | cut -d \| -f2)
-  admin_password=$(grep ^du_password\| ${config_file} | cut -d \| -f2 | openssl enc -base64 -d)
-fi
 
 ## set auth url
 auth_url=https://${ctrl_ip}/keystone/v3
@@ -146,18 +138,18 @@ fi
 ## Attach to Cluster
 ####################################################################################################
 if [ ${flag_attachCluster} -eq 1 ]; then
-  attach_cluster
+  attach_node
   exit 0
 fi
 
 ####################################################################################################
 # validate host agent is running
 ####################################################################################################
-systemctl status pf9-hostagent > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-  systemctl start pf9-hostagent
-  if [ $? -ne 0 ]; then exit 1; fi
-fi
+#systemctl status pf9-hostagent > /dev/null 2>&1
+#if [ $? -ne 0 ]; then
+#  systemctl start pf9-hostagent
+#  if [ $? -ne 0 ]; then exit 1; fi
+#fi
 
 ####################################################################################################
 # Get Keystone Token
@@ -169,26 +161,25 @@ token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?no
 ####################################################################################################
 # Wait for Host Agent to Register
 ####################################################################################################
-banner "Waiting for Host Agent to Register" -n
-wait_n 45
-host_id=$(cat /etc/pf9/host_id.conf | grep ^host_id | cut -d = -f2 | cut -d ' ' -f2)
-curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
-if [ $? -ne 0 ]; then exit 1; fi
+#banner "Waiting for Host Agent to Register" -n
+#wait_n 45
+#curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
+#if [ $? -ne 0 ]; then exit 1; fi
 
 ####################################################################################################
 # Assign Role : pf9-kube
 ####################################################################################################
 if [ "${role}" == "pf9-kube" ]; then
-  banner "Assigning Role : ${role}" -n
-  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-      -d "{}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
-  if [ $? -ne 0 ]; then exit 1; fi
+  #banner "Assigning Role : ${role}" -n
+  #curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+  #    -d "{}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
+  #if [ $? -ne 0 ]; then exit 1; fi
 
   # Attach Node to Cluster
   # NOTE: If k8s containers fail to start, run: 'systemctl restart pf9-kubelet.service'
   banner "Attaching Node to Cluster" -n
-  wait_n 60
-  attach_cluster
+  #wait_n 60
+  attach_node
   if [ $? -ne 0 ]; then exit 1; fi
 fi
 
