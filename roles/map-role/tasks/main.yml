@@ -18,6 +18,5 @@
   script: "map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
   delegate_to: localhost
   register: rolemap_log
-  ignore_errors: true
 
 - debug: var=rolemap_log.stdout_lines

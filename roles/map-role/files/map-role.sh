@@ -145,11 +145,11 @@ fi
 ####################################################################################################
 # validate host agent is running
 ####################################################################################################
-#systemctl status pf9-hostagent > /dev/null 2>&1
-#if [ $? -ne 0 ]; then
-#  systemctl start pf9-hostagent
-#  if [ $? -ne 0 ]; then exit 1; fi
-#fi
+systemctl status pf9-hostagent > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  systemctl start pf9-hostagent
+  if [ $? -ne 0 ]; then exit 1; fi
+fi
 
 ####################################################################################################
 # Get Keystone Token
@@ -161,24 +161,24 @@ token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?no
 ####################################################################################################
 # Wait for Host Agent to Register
 ####################################################################################################
-#banner "Waiting for Host Agent to Register" -n
-#wait_n 45
-#curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
-#if [ $? -ne 0 ]; then exit 1; fi
+banner "Waiting for Host Agent to Register" -n
+wait_n 45
+curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
+if [ $? -ne 0 ]; then exit 1; fi
 
 ####################################################################################################
 # Assign Role : pf9-kube
 ####################################################################################################
 if [ "${role}" == "pf9-kube" ]; then
-  #banner "Assigning Role : ${role}" -n
-  #curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-  #    -d "{}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
-  #if [ $? -ne 0 ]; then exit 1; fi
+  banner "Assigning Role : ${role}" -n
+  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+      -d "{}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
+  if [ $? -ne 0 ]; then exit 1; fi
 
   # Attach Node to Cluster
   # NOTE: If k8s containers fail to start, run: 'systemctl restart pf9-kubelet.service'
   banner "Attaching Node to Cluster" -n
-  #wait_n 60
+  wait_n 60
   attach_node
   if [ $? -ne 0 ]; then exit 1; fi
 fi
