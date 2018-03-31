@@ -12,6 +12,7 @@ ansible_sudo_pass=Pl@tform9
 hv1 ansible_host=172.16.7.58 ansible_user=centos
 
 [hypervisors-ubuntu]
+hv10 ansible_host=172.16.7.57 ansible_user=ubuntu
 
 ####################################################################################################
 ## Containervisors
