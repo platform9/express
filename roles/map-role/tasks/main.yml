@@ -18,6 +18,7 @@
     NOVA_CLUSTER_IP: "{{nova_cluster_ip}}"
     PF9_NOVNCPROXY_BASE_URL: "http://{{nova_cluster_ip}}:6080/vnc_auto.html"
     NOVA_DNS_DOMAIN: "{{nova_dns_domain}}"
+  when: rolename != "pf9-kube"
 
 - name: validate pf9/host_id.conf
   stat:

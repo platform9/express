@@ -1,0 +1,303 @@
+#!/bin/bash
+####################################################################################################
+# Reference script for managing Platform9 kubernetes deployments
+####################################################################################################
+basedir=$(dirname $0)
+tokendb=/tmp/token.dat
+flag_update_token=0
+object_id=""
+project_id=""
+cluster_fqdn=""
+config_file=${basedir}/../pf9-autodeploy.conf
+
+# usage strings
+usage_get_node="get-node [<nodeId>]"
+usage_get_cluster="get-cluster [<clusterId>]"
+usage_get_clusterNode="get-clusterNode [<nodeId>]"
+usage_create_cluster="create-cluster <clusterName> <clusterFqdn>"
+usage_delete_cluster="delete-cluster <clusterId>"
+usage_attach_node="attach-node <nodeId> <clusterName>"
+usage_detach_node="detach-node <nodeId> <projectId>"
+usage_delete_node="delete-node <nodeId> <projectId>"
+usage_install_kubectl="install-kubectl"
+
+usage() {
+  echo "Usage: `basename $0` [-c <config>] <Method> [args]"
+  echo -e "\nMethods:"
+  echo "  ${usage_get_node}"
+  echo "  ${usage_get_cluster}"
+  echo "  ${usage_get_clusterNode}"
+  echo "  ${usage_create_cluster}"
+  echo "  ${usage_delete_cluster}"
+  echo "  ${usage_attach_node}"
+  echo "  ${usage_detach_node}"
+  echo "  ${usage_delete_node}"
+  echo -e "  ${usage_install_kubectl}\n"
+  exit 1
+}
+
+assert() {
+  if [ $# -eq 1 ]; then echo "ASSERT: ${1}"; fi
+  exit 1
+}
+
+validate_platform() {
+  if [ -r /etc/centos-release ]; then
+    release=$(cat /etc/centos-release | cut -d ' ' -f 4)
+    if [[ ! "${release}" == 7.4.* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    platform="centos"
+  elif [ -r /etc/lsb-release ]; then
+    release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
+    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    platform="ubuntu"
+  else
+    assert "unsupported platform"
+  fi
+}
+
+# process optional arguments
+while [ $# -gt 0 ]; do
+  case ${1} in
+  -c|--config)
+    if [ $# -lt 2 ]; then usage; fi
+    config_file=${2}
+    if [ ! -r ${config_file} ]; then assert "cannot open config file '${config_file}'"; fi
+    shift 2
+    ;;
+  *)
+    break
+    ;;
+  esac
+done
+
+# validate commandline
+if [ $# -lt 1 ]; then usage; fi
+op=${1}
+
+# validate op
+shift 1
+case ${op} in
+get-node)
+  if [ $# -ge 1 ]; then object_id=${1}; fi
+  ;;
+get-cluster)
+  if [ $# -ge 1 ]; then object_id=${1}; fi
+  ;;
+get-clusterNode)
+  if [ $# -ge 1 ]; then object_id=${1}; fi
+  ;;
+attach-node)
+  if [ $# -lt 2 ]; then echo -e "Usage: `basename $0` ${usage_attach_node}\n"; exit 1; fi
+  object_id=${1}
+  cluster_name=${2}
+  ;;
+detach-node)
+  if [ $# -lt 2 ]; then echo -e "Usage: `basename $0` ${usage_detach_node}\n"; exit 1; fi
+  object_id=${1}
+  project_id=${2}
+  ;;
+delete-node)
+  if [ $# -lt 2 ]; then echo -e "Usage: `basename $0` ${usage_delete_node}\n"; exit 1; fi
+  object_id=${1}
+  project_id=${2}
+  ;;
+create-cluster)
+  if [ $# -lt 2 ]; then echo -e "Usage: `basename $0` ${usage_create_cluster}\n"; exit 1; fi
+  cluster_name=${1}
+  cluster_fqdn=${2}
+  ;;
+delete-cluster)
+  if [ $# -lt 2 ]; then echo -e "Usage: `basename $0` ${usage_delete_cluster}\n"; exit 1; fi
+  object_id=${1}
+  ;;
+install-kubectl)
+  ;;
+*)
+  usage ;;
+esac
+
+## validate logged in as root
+uid=$(id -u)
+if [ ${uid} -ne 0 ]; then assert "this operation must be run as root"; fi
+
+# validate platform (CentOS 7.4 or Ubuntu 16.04)
+validate_platform
+
+# validate config file
+if [ ! -r ${config_file} ]; then assert "cannot open config file '${config_file}'"; fi
+
+# read config file
+admin_user=$(grep ^os_username\| ${config_file} | cut -d \| -f2)
+admin_password=$(grep ^os_password\| ${config_file} | cut -d \| -f2)
+
+## assign/validate ctrl_ip from config file
+ctrl_hostname=$(grep ^du_url ${config_file} | cut -d \| -f2 | cut -d \/ -f3)
+
+## resolve IP for ctrl_hostname
+tmp_ip=$(ping -c 1 ${ctrl_hostname} | grep PING | cut -d ' ' -f3)
+ctrl_ip=${tmp_ip:1:((${#tmp_ip}-2))}
+
+# set auth url
+auth_url=https://${ctrl_ip}/keystone/v3
+
+banner() {
+  if [ $# -ge 1 ]; then title=${1}; fi
+  if [ $# -eq 2 -a "${2}" == "-n" ]; then echo; fi
+  echo "********************************************************************************"
+  echo "*** ${title}"
+  echo "********************************************************************************"
+}
+
+get_node() {
+  result=`curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+         https://${ctrl_ip}/resmgr/v1/hosts/${object_id} 2>/dev/null`
+  if [ $? -ne 0 ]; then exit 1; fi
+  echo ${result} | grep ^404 > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ${result}
+    exit 1
+  fi
+  echo ${result} | python -m json.tool
+  echo -e "\nNodes : `echo ${result} | python -m json.tool | grep role_status | wc -l`"
+}
+
+delete_node() {
+  echo "Deleting node from Qbert (qbert/v2/<projectId>/nodes/<nodeId>)"
+  curl -k -X PUT -H "Content-Type: application/json;charset=UTF-8" -H "X-Auth-Token: ${token}" \
+       -H "Connection: keep-alive" --data-binary '{"clusterUuid":null}' --compressed \
+       https://${ctrl_ip}/qbert/v2/${project_id}/nodes/${object_id} 2>/dev/null; echo
+
+  echo "Deleting node from Resmgr (resmgr/v1/hosts/<nodeId>/roles/pf9-kube-role)"
+  curl -k -X DELETE -H "Content-Type: application/json;charset=UTF-8" -H "X-Auth-Token: ${token}" \
+       -H "Connection: keep-alive" https://${ctrl_ip}/resmgr/v1/hosts/${object_id}/roles/pf9-kube-role 2>/dev/null; echo
+  
+  if [ "${op}" == "delete-node" ]; then
+    echo "Removing Host Agent"
+    if [ "${platform}" == "centos" ]; then
+      yum -y erase pf9-hostagent
+    elif [ "${platform}" == "ubuntu" ]; then
+      echo "TO-DO: add remove package call for host agent"
+    fi
+  fi
+}
+
+get_cluserNode() {
+  result=`curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+         https://${ctrl_ip}/qbert/v1/nodes/${object_id} 2>/dev/null`
+  if [ $? -ne 0 ]; then exit 1; fi
+  echo ${result} | grep ^404 > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ${result}
+    exit 1
+  fi
+  echo ${result} | python -m json.tool
+  echo -e "\nCluster Nodes : `echo ${result} | python -m json.tool | grep uuid | wc -l`"
+}
+
+get_cluster() {
+  result=`curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+          https://${ctrl_ip}/qbert/v1/clusters/${object_id} 2>/dev/null`
+  if [ $? -ne 0 ]; then exit 1; fi
+  echo ${result} | grep ^404 > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ${result}
+    exit 1
+  fi
+  echo ${result} | python -m json.tool
+  echo -e "\nClusters : `echo ${result} | python -m json.tool | grep uuid | wc -l`"
+}
+
+attach_cluster() {
+  export LD_LIBRARY_PATH="/opt/pf9/python/pf9-lib:/opt/pf9/python/pf9-hostagent-lib:${LD_LIBRARY_PATH}"
+  export PYTHONPATH="/opt/pf9/python/lib/python2.7:${PYTHONPATH}"
+  banner "Attaching to Cluster : ${cluster_name}" -n
+  /opt/pf9/setupd/bin/attach-node --mgmt-ip ${ctrl_ip} --admin-user ${admin_user} --admin-password ${admin_password} \
+      --cluster-name ${cluster_name} --hostid ${object_id}
+  if [ $? -ne 0 ]; then return 1; fi
+}
+
+create_cluster() {
+  export LD_LIBRARY_PATH="/opt/pf9/python/pf9-lib:/opt/pf9/python/pf9-hostagent-lib:${LD_LIBRARY_PATH}"
+  export PYTHONPATH="/opt/pf9/python/lib/python2.7:${PYTHONPATH}"
+  banner "Creating Cluster : ${cluster_name} | ${cluster_fqdn}" -n
+  /opt/pf9/setupd/bin/add-cluster --ctrl-ip ${ctrl_ip} --admin-user ${admin_user} --admin-password ${admin_password} \
+      --cluster-fqdn ${cluster_fqdn} --cluster-name ${cluster_name}
+  if [ $? -ne 0 ]; then exit 1; fi
+}
+
+delete_cluster() {
+  curl -k -X DELETE -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+       https://${ctrl_ip}/qbert/v1/clusters/${object_id} > /dev/null 2>&1
+  if [ $? -ne 0 ]; then assert "Failed to remove cluster"; fi
+  echo "Cluster removed"
+}
+
+install_kubectl() {
+  banner "Installing Kubectl"
+  curl -o /usr/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/kubectl
+  if [ $? -ne 0 ]; then exit 1; fi
+  chmod 0755 /usr/bin/kubectl
+  /opt/pf9/setupd/bin/qb.py --admin-user ${admin_user} --admin-password ${admin_password} \
+      --mgmt-ip ${ctrl_ip}  get-kubeconfig --name ${cluster_name} > /tmp/kubeconfig
+  if [ $? -ne 0 ]; then
+    cat /tmp/kubeconfig
+    exit 1
+  fi
+  echo -e "Executing: kubectl --kubeconfig=/tmp/kubeconfig cluster-info"
+  kubectl --kubeconfig=/tmp/kubeconfig cluster-info
+  exit 0
+}
+
+get_token() {
+  if [ ! -r ${tokendb} ]; then
+    flag_update_token=1
+  else
+    token_ts=$(head -1 ${tokendb})
+    current_time=$(date +%s)
+    token_expire_ts=$((token_ts + 86400))
+    if [ ${current_time} -ge ${token_expire_ts} ]; then flag_update_token=1; fi
+  fi
+
+  if [ ${flag_update_token} -eq 1 ]; then
+    token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?nocatalog \
+           -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \
+              \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \
+              \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}" 2>/dev/null \
+              | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
+
+    # update tokendb
+    if [ -z "${token}" ]; then assert "received a null token"; fi
+    echo "$(date +%s)" > ${tokendb}
+    echo "${token}" >> ${tokendb}
+  else
+    token=$(cat ${tokendb} | tail -1)
+  fi
+}
+
+################################################################################
+# get token
+get_token
+
+################################################################################
+# run operation
+if [ "${op}" == "get-node" ]; then
+  get_node
+elif [ "${op}" == "attach-node" ]; then
+  attach_cluster
+elif [ "${op}" == "pre-authorize" ]; then
+  pre_authorize
+elif [ "${op}" == "create-cluster" ]; then
+  create_cluster
+elif [ "${op}" == "delete-cluster" ]; then
+  delete_cluster
+elif [ "${op}" == "delete-node" -o "${op}" == "detach-node" ]; then
+  delete_node
+elif [ "${op}" == "get-cluster" ]; then
+  get_cluster
+elif [ "${op}" == "get-clusterNode" ]; then
+  get_cluserNode
+elif [ "${op}" == "install-kubectl" ]; then
+  install_kubectl
+fi
+
+exit 0

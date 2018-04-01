@@ -9,17 +9,16 @@ ansible_sudo_pass=Pl@tform9
 ####################################################################################################
 ## Hypervisors
 [hypervisors]
-hv4 ansible_host=172.16.7.69 ansible_user=centos nova_cluster_ip=172.16.7.69
-hv5 ansible_host=172.16.7.74 ansible_user=centos nova_cluster_ip=172.16.7.74
-hv6 ansible_host=172.16.7.75 ansible_user=centos nova_cluster_ip=172.16.7.75
-hv7 ansible_host=172.16.7.62 ansible_user=centos nova_cluster_ip=172.16.7.62
+hv1 ansible_host=172.16.7.63 ansible_user=centos nova_cluster_ip=172.16.7.63
 
 [hypervisors-ubuntu]
 
 ####################################################################################################
 ## Containervisors
 [containervisors]
-cv1 ansible_host=172.16.7.59 ansible_user=centos pf9_clusterName=defaultCluster
+cv1 ansible_host=172.16.7.64 ansible_user=centos pf9_clusterName=defaultCluster
+cv2 ansible_host=172.16.7.65 ansible_user=centos pf9_clusterName=defaultCluster
+p9m0 ansible_host=10.238.0.12 ansible_user=cmadmin ansible_ssh_pass=cm@dmin ansible_sudo_pass=cm@dmin pf9_clusterName=defaultCluster
 
 ## Containervisors-Ubuntu : Add Ubuntu kubernetes nodes (in addition to 'containervisors' group)
 [containervisors-ubuntu]

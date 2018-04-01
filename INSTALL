@@ -6,11 +6,11 @@
 
 # initialize variables
 basedir=$(dirname $0)
-platform=""
 min_ansible_version="2.2"
 inventory=${basedir}/inventory/hosts
 autodeplopy_script=${basedir}/pf9-autodeploy.yml
 help_file=${basedir}/lib/help.txt
+platform=""
 target=""
 target_type=""
 log=${basedir}/lib/INSTALL.log
@@ -130,7 +130,7 @@ install_prereqs() {
 
   ## install setupd
   echo -n "setupd"
-  sudo yum -y install ${basedir}/pkg/setupd.rpm > ${log} 2>&1
+  sudo yum -y install ${basedir}/lib/setupd.rpm > ${log} 2>&1
   if [ ! -d /opt/pf9/setupd ]; then
     echo -e "\nERROR: failed to install setupd\n"
     cat ${log}; exit 1
@@ -217,6 +217,9 @@ fi
 ## use custom config (if specified on commandline)
 if [ -n "${pf9_custom_configFile}" ]; then pf9_config=${pf9_custom_configFile}; fi
 
+## build group_vars/all.yml
+build_config
+
 ## validate target
 if [ -z "${target}" ]; then usage; fi
 
@@ -280,7 +283,7 @@ else
 fi
 
 ## inform user of Ansible command being run
-echo -e "\n[Executing: ansible-playbook -i ${inventory} -l ${target} -e \"autoreg=${autoreg} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password}\" ${autodeplopy_script}]"
+echo -e "\n[Executing: ansible-playbook ${autodeplopy_script}]"
 
 ## call pf9-autopdeplopy
 ansible-playbook -i ${inventory} -l ${target} -e "autoreg=${autoreg} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password}" ${autodeplopy_script}

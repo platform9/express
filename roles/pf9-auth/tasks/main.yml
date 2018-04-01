@@ -20,6 +20,8 @@
       password: "{{os_password}}"
       project_name: "{{os_tenant}}"
 
+- debug: msg="keystone auth_url = {{os_auth['auth_url']}}"
+
 - name: Obtain authentication token from Keystone
   become: no
   local_action: "os_auth auth={{ os_auth }} region_name={{ os_tenant }}"
