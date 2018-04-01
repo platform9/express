@@ -157,10 +157,10 @@ token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?no
 ####################################################################################################
 # Wait for Host Agent to Register
 ####################################################################################################
-#banner "Waiting for Host Agent to Register" -n
-#wait_n 45
-#curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
-#if [ $? -ne 0 ]; then exit 1; fi
+banner "Waiting for Host Agent to Register" -n
+wait_n 45
+curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
+if [ $? -ne 0 ]; then exit 1; fi
 
 ####################################################################################################
 # Display ROle Metadata
@@ -176,7 +176,6 @@ if [ "${role}" == "pf9-kube" ]; then
   banner "Assigning Role : ${role}" -n
   curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
       -d "@{role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role} > /dev/null 2>&1
-  #if [ $? -ne 0 ]; then exit 1; fi
 
   # create cluster (if not exist)
   curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
@@ -194,7 +193,6 @@ if [ "${role}" == "pf9-kube" ]; then
   banner "Attaching Node to Cluster" -n
   wait_n 60
   attach_node
-  if [ $? -ne 0 ]; then exit 1; fi
 fi
 
 ####################################################################################################
