@@ -20,10 +20,17 @@ pf9_group_vars=${basedir}/group_vars/all.yml
 pf9_custom_configFile=""
 flag_setup=0
 flag_prereqs=0
+flag_autoregister=0
 
 # functions
 usage() {
-  echo -e "usage: $0 [-h|--help] [-s|--setup] [-c|--config <configFile>] [-i|--installPrereqs] <target>\n"
+  echo "Usage: $0 [Args] <target>"
+  echo -e "\nArgs (Optional):\n"
+  echo "-a|--autoRegister        : auto-register host with control plane"
+  echo "-i|--installPrereqs      : install pre-requisites and exit"
+  echo "-s|--setup               : run setup and exit"
+  echo "-c|--config <configFile> : use custom configuration file"
+  echo -e "-h|--help                : display this message\n"
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
     :
   else
@@ -173,6 +180,9 @@ while [ $# -gt 0 ]; do
   -i|--installPrereqs)
     flag_prereqs=1
     ;;
+  -a|--autoRegister)
+    flag_autoregister=1
+    ;;
   -c|--config)
     if [ $# -lt 2 ]; then usage; fi
     pf9_custom_configFile=${2}
@@ -249,21 +259,31 @@ install_prereqs
 
 ## validate minimum Ansible version
 ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
-echo "info: ansible_version = ${ansible_version}"
+echo "--> ansible_version = ${ansible_version}"
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
 
-## assign/validate ctrl_ip from config file
-ctrl_hostname=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
+## lookup configuration values from config file
 du_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
 du_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
+nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
 
-## resolve IP for ctrl_hostname
+## assign/validate ctrl_ip from config file and resolve IP for ctrl_hostname
+ctrl_hostname=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
 tmp_ip=$(ping -c 1 ${ctrl_hostname} | grep PING | cut -d ' ' -f3)
 ctrl_ip=${tmp_ip:1:((${#tmp_ip}-2))}
 
+## toggle auto-regsister flag
+if [ ${flag_autoregister} -eq 1 ]; then
+  autoreg="on"
+else
+  autoreg="off"
+fi
+
+## inform user of Ansible command being run
+echo -e "\n[Executing: ansible-playbook -i ${inventory} -l ${target} -e \"autoreg=${autoreg} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password}\" ${autodeplopy_script}]"
+
 ## call pf9-autopdeplopy
-echo -e "\n[Executing: ansible-playbook -i ${inventory} -l ${target} -e \"ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password}\" ${autodeplopy_script}]"
-ansible-playbook -i ${inventory} -l ${target} -e "ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password}" ${autodeplopy_script}
+ansible-playbook -i ${inventory} -l ${target} -e "autoreg=${autoreg} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password}" ${autodeplopy_script}
 
 ## exit cleanly
 exit 0

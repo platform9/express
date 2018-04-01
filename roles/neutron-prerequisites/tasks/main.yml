@@ -17,20 +17,24 @@
 - include: ubuntu.yml
   when: ansible_distribution == 'Ubuntu'
 
-- name: Create required OVS bridges
-  openvswitch_bridge:
-    bridge: "{{ item }}"
-    state: present
-  with_items:
-    - br-pf9
+- name: check if OVS bridge already exists
+  shell: "ifconfig -a | grep ^br-pf9 > /dev/null 2>&1; if [ $? -eq 0 ]; then echo 'exists'; else echo 'not-exist'; fi"
+  register: ovs_bridge_check
 
-- name: Set br-pf9 external bridge ID
-  openvswitch_bridge:
-    bridge: br-pf9
-    state: present
+- block: 
+  - name: Create required OVS bridges
+    openvswitch_bridge:
+      bridge: br-pf9
+      state: present
 
-- name: Set br-pf9 port as bond0
-  openvswitch_port:
-    bridge: br-pf9
-    port: bond0
-    state: present
+  - name: Set br-pf9 external bridge ID
+    openvswitch_bridge:
+      bridge: br-pf9
+      state: present
+
+  - name: Set br-pf9 port as bond0
+    openvswitch_port:
+      bridge: br-pf9
+      port: bond0
+      state: present
+  when: ovs_bridge_check.stdout.strip() == "not-exist"

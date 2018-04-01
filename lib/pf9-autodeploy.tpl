@@ -7,3 +7,4 @@ du_url|
 os_username|
 os_password|
 os_region|kvm01
+nova_dns_domain|

@@ -1,5 +1,24 @@
 ---
 
+# default facts (can be over-ridden by using extra-vars)
+- set_fact:
+    NOVA_BRIDGE_MAPPING: "external:br-pf9"
+  when: NOVA_BRIDGE_MAPPING is undefined
+
+- set_fact:
+    NOVA_INSTANCES_PATH: "/opt/pf9/data/instances/"
+  when: NOVA_INSTANCES_PATH is undefined
+
+- set_fact:
+    NOVA_DNSMASQ_DNS_SERVERS: "8.8.8.8"
+  when: NOVA_DNSMASQ_DNS_SERVERS is undefined
+
+# discovered facts
+- set_fact:
+    NOVA_CLUSTER_IP: "{{nova_cluster_ip}}"
+    PF9_NOVNCPROXY_BASE_URL: "http://{{nova_cluster_ip}}:6080/vnc_auto.html"
+    NOVA_DNS_DOMAIN: "{{nova_dns_domain}}"
+
 - name: validate pf9/host_id.conf
   stat:
     path: /etc/pf9/host_id.conf
@@ -12,10 +31,19 @@
   shell: cat /etc/pf9/host_id.conf | grep ^host_id | cut -d = -f2 | cut -d ' ' -f2
   register: host_id
 
+- set_fact:
+    role_metadata: "/tmp/{{inventory_hostname}}.{{rolename}}.json"
+
+- name: prepare role json data
+  template:
+    src: "{{rolename}}.j2"
+    dest: "{{role_metadata}}"
+  delegate_to: localhost
+
 - debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
 
 - name: "Assigning Role - {{rolename}}"
-  script: "map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
+  script: "map-role.sh {{ctrl_ip}} {{rolename}} {{role_metadata}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
   delegate_to: localhost
   register: rolemap_log
 
