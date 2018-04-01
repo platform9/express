@@ -5,7 +5,6 @@
 
 basedir=$(dirname $0)
 platform=""
-flag_installKubectl=0
 flag_attachCluster=0
 config_file=${basedir}/isv.conf
 
@@ -73,6 +72,15 @@ attach_node() {
   if [ $? -ne 0 ]; then return 1; fi
 }
 
+create_cluster() {
+  export LD_LIBRARY_PATH="/opt/pf9/python/pf9-lib:/opt/pf9/python/pf9-hostagent-lib:${LD_LIBRARY_PATH}"
+  export PYTHONPATH="/opt/pf9/python/lib/python2.7:${PYTHONPATH}"
+  banner "Creating Cluster : ${cluster_name} | ${cluster_fqdn}" -n
+  /opt/pf9/setupd/bin/add-cluster --ctrl-ip ${ctrl_ip} --admin-user ${admin_user} --admin-password ${admin_password} \
+      --cluster-fqdn ${cluster_fqdn} --cluster-name ${cluster_name}
+  if [ $? -ne 0 ]; then exit 1; fi
+}
+
 ## validate commandline
 if [ $# -lt 6 ]; then usage; fi
 ctrl_ip=${1}
@@ -86,15 +94,32 @@ admin_password=${6}
 shift 6
 while [ $# -gt 0 ]; do
   case ${1} in
-  -k)
-    flag_installKubectl=1
-    shift
+  --clusterName)
+    if [ $# -lt 2 ]; then usage; fi
+    cluster_name=${2}
+    shift 2
+    ;;
+  --clusterFqdn)
+    if [ $# -lt 2 ]; then usage; fi
+    cluster_fqdn=${2}
+    shift 2
     ;;
   *)
     usage
     ;;
   esac
 done
+
+## log parameters
+echo "[Input Parameters]"
+echo "--> ctrl_ip = ${ctrl_ip}"
+echo "--> role = ${role}"
+echo "--> role_metadata = ${role_metadata}"
+echo "--> host_id = ${host_id}"
+echo "--> admin_user = ${admin_user}"
+echo "--> admin_password = ${admin_password}"
+echo "--> cluster_name = ${cluster_name}"
+echo "--> cluster_fqdn = ${cluster_fqdn}"
 
 ## validate role
 case ${role} in
@@ -115,27 +140,6 @@ auth_url=https://${ctrl_ip}/keystone/v3
 validate_platform
 
 ####################################################################################################
-## Install Kubctl
-####################################################################################################
-if [ ${flag_installKubectl} -eq 1 ]; then
-  banner "Installing Kubectl"
-  curl -o /usr/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/kubectl
-  if [ $? -ne 0 ]; then exit 1; fi
-  chmod 0755 /usr/bin/kubectl
-  echo -e "\nExecuting: /opt/pf9/setupd/bin/qb.py --admin-user ${admin_user} --admin-password ${admin_password} \
-       --mgmt-ip ${ctrl_ip}  get-kubeconfig --name ${cluster_name}"
-  /opt/pf9/setupd/bin/qb.py --admin-user ${admin_user} --admin-password ${admin_password} \
-      --mgmt-ip ${ctrl_ip}  get-kubeconfig --name ${cluster_name} > /tmp/kubeconfig
-  if [ $? -ne 0 ]; then
-    cat /tmp/kubeconfig
-    exit 1
-  fi
-  echo -e "Executing: kubectl --kubeconfig=/tmp/kubeconfig cluster-info"
-  kubectl --kubeconfig=/tmp/kubeconfig cluster-info
-  exit 0
-fi
-
-####################################################################################################
 ## Attach to Cluster
 ####################################################################################################
 if [ ${flag_attachCluster} -eq 1 ]; then
@@ -153,10 +157,10 @@ token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?no
 ####################################################################################################
 # Wait for Host Agent to Register
 ####################################################################################################
-banner "Waiting for Host Agent to Register" -n
-wait_n 45
-curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
-if [ $? -ne 0 ]; then exit 1; fi
+#banner "Waiting for Host Agent to Register" -n
+#wait_n 45
+#curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
+#if [ $? -ne 0 ]; then exit 1; fi
 
 ####################################################################################################
 # Display ROle Metadata
@@ -171,10 +175,21 @@ echo "--------------------------------------------------------------------------
 if [ "${role}" == "pf9-kube" ]; then
   banner "Assigning Role : ${role}" -n
   curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-      -d "@{role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
-  if [ $? -ne 0 ]; then exit 1; fi
+      -d "@{role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role} > /dev/null 2>&1
+  #if [ $? -ne 0 ]; then exit 1; fi
 
-  # Attach Node to Cluster
+  # create cluster (if not exist)
+  curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+        https://${ctrl_ip}/qbert/v1/clusters/${object_id} | python -m json.tool | grep name | grep "${cluster_name}" > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo "cluster validated (cluster '${cluster_name}' already exists)"
+  else
+    echo "INFO: cluster does not exists - creating"
+    cluster_fqdn="c2.ilabs.net"
+    create_cluster
+  fi
+
+  # attach node to cluster
   # NOTE: If k8s containers fail to start, run: 'systemctl restart pf9-kubelet.service'
   banner "Attaching Node to Cluster" -n
   wait_n 60
