@@ -28,10 +28,10 @@
 - hosts: containervisors
   become: true
   roles:
-    - common
-    - ntp
-    - pf9-auth
-    - pf9-hostagent
+    #- common
+    #- ntp
+    #- pf9-auth
+    #- pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube" }
 
 # Optional Role Assignments

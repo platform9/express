@@ -18,7 +18,7 @@ hv1 ansible_host=172.16.7.63 ansible_user=centos nova_cluster_ip=172.16.7.63
 [containervisors]
 cv1 ansible_host=172.16.7.64 ansible_user=centos pf9_clusterName=defaultCluster
 cv2 ansible_host=172.16.7.65 ansible_user=centos pf9_clusterName=defaultCluster
-p9m0 ansible_host=10.238.0.12 ansible_user=cmadmin ansible_ssh_pass=cm@dmin ansible_sudo_pass=cm@dmin pf9_clusterName=defaultCluster
+p9m0 ansible_host=10.238.0.12 ansible_user=cmadmin ansible_ssh_pass=cm@dmin ansible_sudo_pass=cm@dmin pf9_clusterName=c2 pf9_clusterFqdn=c2.platform9.net
 
 ## Containervisors-Ubuntu : Add Ubuntu kubernetes nodes (in addition to 'containervisors' group)
 [containervisors-ubuntu]

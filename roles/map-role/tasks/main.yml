@@ -41,10 +41,28 @@
     dest: "{{role_metadata}}"
   delegate_to: localhost
 
-- debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
+- name: validate required role params (sourced from inventory)
+  fail: msg="role 'pf9-kube' is missing required parameter - 'pf9_clusterName'"
+  when: rolename == "pf9-kube" and pf9_clusterName is undefined
+    
+- name: validate required role params (sourced from inventory)
+  fail: msg="role 'pf9-kube' is missing required parameter - 'pf9_clusterFqdn'"
+  when: rolename == "pf9-kube" and pf9_clusterFqdn is undefined
+    
+- name: initialize role_params to null
+  set_fact:
+    role_params: ""
+  when: rolename != "pf9-kube"
+
+- name: assign role_params for pf9-kube role
+  set_fact:
+    role_params: "--clusterName {{pf9_clusterName}} --clusterFqdn {{pf9_clusterFqdn}}"
+  when: rolename == "pf9-kube"
+
+- debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}}"
 
 - name: "Assigning Role - {{rolename}}"
-  script: "map-role.sh {{ctrl_ip}} {{rolename}} {{role_metadata}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
+  script: "map-role.sh {{ctrl_ip}} {{rolename}} {{role_metadata}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}}"
   delegate_to: localhost
   register: rolemap_log
 
