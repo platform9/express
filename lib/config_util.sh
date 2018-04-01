@@ -141,6 +141,7 @@ run_setup() {
   v7=$(grep ^manage_resolver ${pf9_config} | cut -d \| -f2)
   v8=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
   v9=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
+  v10=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
 
   pf9_nv_pairs=(
     "du_url|Instance URL|${v1}"
@@ -152,6 +153,7 @@ run_setup() {
     "manage_resolver|Manage DNS Resolver [true,false]|${v7}|true,false"
     "dns_resolver1|DNS Resolver 1|${v8}"
     "dns_resolver2|DNS Resolver 2|${v9}"
+    "nova_dns_domain|DNS Domain for Nova Hypervisors|${v10}"
   )
 
   for config_nv in "${pf9_nv_pairs[@]}"; do
@@ -174,7 +176,7 @@ build_config() {
   rm -f ${pf9_group_vars} && touch ${pf9_group_vars}
   if [ $? -ne 0 ]; then assert "failed to initialize group vars: ${pf9_group_vars}"; fi
   
-  # read current confif values
+  # read current config values
   local du_url=$(grep ^du_url ${pf9_config} | cut -d \| -f2)
   local os_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
   local os_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
@@ -184,6 +186,7 @@ build_config() {
   local manage_resolver=$(grep ^manage_resolver ${pf9_config} | cut -d \| -f2)
   local dns_resolver1=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
   local dns_resolver2=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
+  local nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
 
   echo "---" > ${pf9_group_vars}
   echo "# Set hostname equal to inventory_hostname" >> ${pf9_group_vars}
@@ -216,6 +219,7 @@ validate_config() {
   os_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
   os_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
   os_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
+  nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
 
   # validate manage_hostname
   if [ -z "${manage_hostname}" ]; then assert "config:manage_hostname : illegal value - run './INSTALL -s'\n"; fi
@@ -240,6 +244,9 @@ validate_config() {
 
   # validate dns_resolver2
   if [ -z "${dns_resolver2}" ]; then assert "config:dns_resolver2 : illegal value - run './INSTALL -s'\n"; fi
+
+  # validate nova_dns_domain
+  if [ -z "${nova_dns_domain}" ]; then assert "config:nova_dns_domain : illegal value - run './INSTALL -s'\n"; fi
 
   # validate os_tenant
   if [ -z "${os_tenant}" ]; then assert "config:os_tenant : illegal value - run './INSTALL -s'\n"; fi

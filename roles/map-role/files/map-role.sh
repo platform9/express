@@ -13,7 +13,7 @@ config_file=${basedir}/isv.conf
 cluster_name="defaultCluster"
 
 usage() {
-  echo -e "usage: `basename $0` <ctrl_ip> <role> <host_id> <admin_user> <admin_password> [args]\n"
+  echo -e "usage: `basename $0` <ctrl_ip> <role> <role_metadata> <host_id> <admin_user> <admin_password> [args]\n"
   echo "-k               : download/install/configure Kubectl from management server"
   echo "-a               : attach node to cluster"
   echo
@@ -74,15 +74,16 @@ attach_node() {
 }
 
 ## validate commandline
-if [ $# -lt 5 ]; then usage; fi
+if [ $# -lt 6 ]; then usage; fi
 ctrl_ip=${1}
 role=${2}
-host_id=${3}
-admin_user=${4}
-admin_password=${5}
+role_metadata=${3}
+host_id=${4}
+admin_user=${5}
+admin_password=${6}
 
 ## process optional arguments
-shift 5
+shift 6
 while [ $# -gt 0 ]; do
   case ${1} in
   -k)
@@ -97,7 +98,7 @@ done
 
 ## validate role
 case ${role} in
-pf9-kube|pf9-ostackhost|pf9-ostackhost-neutron)
+pf9-kube|pf9-ostackhost|pf9-ostackhost-neutron|pf9-neutron-ovs-agent|pf9-neutron-metadata-agent|pf9-neutron-l3-agent|pf9-neutron-dhcp-agent|pf9-neutron-base)
   ;;
 *)
   assert "invalid role: ${role}"
@@ -158,12 +159,19 @@ token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?no
 #if [ $? -ne 0 ]; then exit 1; fi
 
 ####################################################################################################
+# Display ROle Metadata
+####################################################################################################
+echo "--- ROLE METADATA --------------------------------------------------------------"
+cat ${role_metadata} | python -m json.tool
+echo "--------------------------------------------------------------------------------"
+
+####################################################################################################
 # Assign Role : pf9-kube
 ####################################################################################################
 if [ "${role}" == "pf9-kube" ]; then
   banner "Assigning Role : ${role}" -n
   curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-      -d "{}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
+      -d "@{role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
   if [ $? -ne 0 ]; then exit 1; fi
 
   # Attach Node to Cluster
@@ -180,20 +188,71 @@ fi
 if [ "${role}" == "pf9-ostackhost" ]; then
   banner "Assigning Role : ${role}" -n
   curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-      -d "{}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
+       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
   if [ $? -ne 0 ]; then exit 1; fi
 fi
 
 ####################################################################################################
-# Assign Role : pf9-ostackhost
+# Assign Role : pf9-ostackhost-neutron
 ####################################################################################################
 if [ "${role}" == "pf9-ostackhost-neutron" ]; then
   banner "Assigning Role : ${role}" -n
-  json_data="{\"cluster_ip\": {\"default\": \"\", \"path\": \"config/nova/PF9\"}, \"reclaim_instance_interval\": {\"default\": \"0\", \"path\": \"config/nova/DEFAULT\"}, \"find_orphaned_vms_interval\": {\"default\": \"-1\", \"path\": \"config/nova/PF9\"}, \"cpu_allocation_ratio\": {\"default\": \"0.0\", \"path\": \"config/nova/DEFAULT\"}, \"instances_path\": {\"default\": \"/opt/pf9/data/instances/\", \"path\": \"config/nova/DEFAULT\"}, \"novncproxy_base_url\": {\"default\": \"http://localhost:6080/vnc_auto.html\", \"path\": \"config/nova/DEFAULT\"}, \"consul_ip\": {\"default\": \"\", \"path\": \"config/nova/PF9\"}, \"images_type\": {\"default\": \"default\", \"path\": \"config/nova/libvirt\"}, \"ram_allocation_ratio\": {\"default\": \"0.0\", \"path\": \"config/nova/DEFAULT\"}, \"ssl_only\": {\"default\": \"False\", \"path\": \"config/nova/DEFAULT\"}}"
-  echo curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-      -d ${json_data} https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
+  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
   if [ $? -ne 0 ]; then exit 1; fi
 fi
+
+####################################################################################################
+# Assign Role : pf9-neutron-base
+####################################################################################################
+if [ "${role}" == "pf9-neutron-base" ]; then
+  banner "Assigning Role : ${role}" -n
+  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
+  if [ $? -ne 0 ]; then exit 1; fi
+fi
+
+####################################################################################################
+# Assign Role : pf9-neutron-ovs-agent
+####################################################################################################
+if [ "${role}" == "pf9-neutron-ovs-agent" ]; then
+  banner "Assigning Role : ${role}" -n
+  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
+  if [ $? -ne 0 ]; then exit 1; fi
+fi
+
+####################################################################################################
+# Assign Role : pf9-neutron-metadata-agent
+####################################################################################################
+if [ "${role}" == "pf9-neutron-metadata-agent" ]; then
+  banner "Assigning Role : ${role}" -n
+  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
+  if [ $? -ne 0 ]; then exit 1; fi
+fi
+
+####################################################################################################
+# Assign Role : pf9-neutron-l3-agent
+####################################################################################################
+if [ "${role}" == "pf9-neutron-l3-agent" ]; then
+  banner "Assigning Role : ${role}" -n
+  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
+  if [ $? -ne 0 ]; then exit 1; fi
+fi
+
+####################################################################################################
+# Assign Role : pf9-neutron-dhcp-agent
+####################################################################################################
+if [ "${role}" == "pf9-neutron-dhcp-agent" ]; then
+  banner "Assigning Role : ${role}" -n
+  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
+  if [ $? -ne 0 ]; then exit 1; fi
+fi
+
+# curl -v -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://danwright.platform9.horse/resmgr/v1/services/neutron-server/
 
 echo -e "\n[ COMPLETE ]\n"
 exit 0
