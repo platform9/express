@@ -6,6 +6,7 @@
 
 # initialize variables
 basedir=$(dirname $0)
+platform=""
 min_ansible_version="2.2"
 inventory=${basedir}/inventory/hosts
 autodeplopy_script=${basedir}/pf9-autodeploy.yml
@@ -26,6 +27,24 @@ usage() {
     :
   else
     exit 1
+  fi
+}
+
+validate_platform() {
+  # check if running CentOS 7.4
+  if [ -r /etc/centos-release ]; then
+    release=$(cat /etc/centos-release | cut -d ' ' -f 4)
+    if [[ ! "${release}" == 7.4.* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    platform="centos"
+    host_os_info=$(cat /etc/centos-release)
+  elif [ -r /etc/lsb-release ]; then
+    release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
+    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    platform="ubuntu"
+    ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
+    host_os_info="${platform} ${ubuntu_release}"
+  else
+    assert "unsupported platform"
   fi
 }
 
@@ -72,6 +91,9 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+# validate platform (CentOS 7.4 or Ubuntu 16.04)
+validate_platform
 
 ## enforce setup/custom-config mutual exclusivity
 if [ ${flag_setup} -eq 1 -a -n "${pf9_custom_configFile}" ]; then assert "'-s' and '-c' are mutually exclusive"; fi
@@ -127,17 +149,31 @@ validate_config
 
 # install Ansibl (and dependencies)
 echo -n "--> Validating package dependencies: "
-for pkg in epel-release ansible gcc python-devel python2-pip bc; do
-  echo -n "${pkg} "
-  rpm -q ${pkg} > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    sudo yum -y install ${pkg} > ${log} 2>&1
+if [ "${platform}" == "centos" ]; then
+  for pkg in epel-release ansible gcc python-devel python2-pip bc; do
+    echo -n "${pkg} "
+    rpm -q ${pkg} > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-      echo -e "ERROR: failed to install ${pkg} - here's the log:\n"
-      cat ${log}; exit 1
+      sudo yum -y install ${pkg} > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "ERROR: failed to install ${pkg} - here's the log:\n"
+        cat ${log}; exit 1
+      fi
     fi
-  fi
-done
+  done
+elif [ "${platform}" == "ubuntu" ]; then
+  for pkg in epel-release ansible gcc python-devel python2-pip bc; do
+    echo -n "${pkg} "
+    dpkg -l | grep ${pkg} > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      sudo apt-get -y install ${pkg} > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "ERROR: failed to install ${pkg} - here's the log:\n"
+        cat ${log}; exit 1
+      fi
+    fi
+  done
+fi
 
 ## upgrade pip
 sudo pip install --upgrade pip > ${log} 2>&1
