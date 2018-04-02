@@ -1,0 +1,728 @@
+#!/bin/bash
+####################################################################################################
+# Install Platform9 On-Prem Kubernetes for Bare-Metal
+####################################################################################################
+
+phase="all"
+platform=""
+flag_installKubectl=0
+flag_attachCluster=0
+flag_imageImport=1
+flag_install_mysql=1
+onprem_archive=/tmp/pf9-isv-v0.3.tar.gz
+
+# set defaults
+admin_user="admin"
+admin_password="Platform99"
+integration_dbuser="p9_intuser"
+integration_dbpassword="platform9"
+dbhost_fqdn="127.0.0.1"
+org_shortname="cspi"
+org_fullname="cspi"
+ctrl_fqdn="ctl.cspi.net"
+cluster_fqdn="cluster1.cspi.net"
+cluster_name="defaultCluster"
+hostid=""
+
+usage() {
+  echo -e "usage: `basename $0` <ctrl|node> <ctrl_ip> [args]\n"
+  echo "--phase build    : install software components and prerequisites"
+  echo "--phase deploy   : configure the controller/nodes"
+  echo "--hostid <uuid>  : use <uuid> to pre-authorize node to bypass resmgr registration"
+  echo "--archive <path> : path to distribution archive"
+  echo "--skipDbInstall  : skip installation of MySQL (for external database configurations)"
+  echo "-k               : download/install/configure Kubectl from management server"
+  echo "-a               : attach node to cluster"
+  echo -e "-s               : skip importing of Docker images and tags\n"
+  exit 1
+}
+
+assert() {
+  if [ $# -eq 1 ]; then echo "ASSERT: ${1}"; fi
+  exit 1
+}
+
+validate_platform() {
+  # check if running CentOS 7.4
+  if [ -r /etc/centos-release ]; then
+    release=$(cat /etc/centos-release | cut -d ' ' -f 4)
+    if [[ ! "${release}" == 7.4.* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    platform="centos"
+    host_os_info=$(cat /etc/centos-release)
+  elif [ -r /etc/lsb-release ]; then
+    release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
+    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    platform="ubuntu"
+    ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
+    host_os_info="${platform} ${ubuntu_release}"
+  else
+    assert "unsupported platform"
+  fi
+}
+
+banner() {
+  if [ $# -ge 1 ]; then title=${1}; fi
+  if [ $# -eq 2 -a "${2}" == "-n" ]; then echo; fi
+  echo "********************************************************************************"
+  echo "*** ${title}"
+  echo "********************************************************************************"
+}
+
+wait_n() {
+  time_to_wait=10
+  if [ $# -eq 1 ]; then time_to_wait=${1}; fi
+
+  local cnt=0
+  while [ ${cnt} -lt ${time_to_wait} ]; do
+    echo -n "."
+    sleep 1
+    ((cnt++))
+  done
+  echo
+}
+
+attach_cluster() {
+  export LD_LIBRARY_PATH="/opt/pf9/python/pf9-lib:/opt/pf9/python/pf9-hostagent-lib:${LD_LIBRARY_PATH}"
+  export PYTHONPATH="/opt/pf9/python/lib/python2.7:${PYTHONPATH}"
+  if [ ! -r /opt/pf9/setupd/bin/attach-node ]; then assert "attach-node not found - do you run deploy phase?"; fi
+  /opt/pf9/setupd/bin/attach-node --mgmt-fqdn ${ctrl_fqdn} --admin-user ${admin_user} --admin-password ${admin_password} \
+      --cluster-name ${cluster_name} --mgmt-ip ${ctrl_ip}
+  if [ $? -ne 0 ]; then return 1; fi
+}
+
+pre_authorize() {
+  banner "Pre-Authorize Node" -n
+
+  # create group : pf9group
+  echo "--> validating pf9group group"
+  grep ^pf9group /etc/group > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    if [ "${platform}" == "centos" ]; then
+      groupadd pf9group
+    elif [ "${platform}" == "ubuntu" ]; then
+      groupadd pf9group
+    fi
+  fi
+
+  # create user : pf9
+  echo "--> validating pf9 user"
+  grep ^pf9 /etc/passwd > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    if [ "${platform}" == "centos" ]; then
+      useradd -d /opt/pf9/home -g pf9group -c "Platform9 user" -s /sbin/nologin pf9
+    elif [ "${platform}" == "ubuntu" ]; then
+      useradd -d /opt/pf9/home -g pf9group -c "Platform9 user" -s /sbin/nologin pf9
+    fi
+  fi
+
+  # validate /etc/pf9 exists
+  if [ ! -d /etc/pf9 ]; then
+    mkdir -p /etc/pf9
+    if [ ! -d /etc/pf9 ]; then assert "failed to create /etc/pf9"; fi
+  fi
+
+  # confirm hostid is unique (in resmgr database)
+  echo "--> validating unique hostid: ${hostid}"
+  db_str="use resmgr; select id from hosts where id='${hostid}'"
+  mysql -h ${ctrl_ip} -u ${integration_dbuser} -p${integration_dbpassword} <<< "${db_str}" | grep ${hostid} > /dev/null 2>&1
+  if [ $? -eq 0 ]; then assert "hostid exists in database"; fi
+
+  host_os_family=$(uname)
+  # update hosts table (in controller database)
+  echo "--> updating database table: ${integration_dbuser}@${ctrl_ip}:hosts"
+  db_str="use resmgr; insert into hosts values ('${hostid}', '`hostname`', '${host_os_family}', 'x86-64', '${host_os_info}', NULL, '1', \
+         '{\"pf9-kube\": {\"CNI_BRIDGE\": \"cni0\", \"CLUSTER_ID\": \"\", \"KEYSTONE_ENABLED\": \"false\", \"RUNTIME_CONFIG\": \"\", \
+         \"SERVICES_CIDR\": \"0.0.0.0/32\", \"CLOUD_PROVIDER_TYPE\": \"\", \"EXTERNAL_DNS_NAME\": \"\", \"PF9_NETWORK_PLUGIN\": \"flannel\", \
+         \"CONTAINERS_CIDR\": \"0.0.0.0/32\", \"pf9-kube\": false, \"OS_REGION\": \"\", \"FLANNEL_PUBLIC_IFACE_LABEL\": \"\", \
+         \"MASTER_IP\": \"0.0.0.0\", \"KEYSTONE_DOMAIN\": \"*.platform9.horse\", \"EXTRA_OPTS\": \"\", \"AUTHZ_ENABLED\": \"false\", \
+         \"ROLE\": \"none\", \"OS_USERNAME\": \"\", \"OS_USER_DOMAIN_NAME\": \"\", \"CLUSTER_PROJECT_ID\": \"\", \"DEBUG\": \"false\", \
+         \"OS_PASSWORD\": \"\", \"FLANNEL_IFACE_LABEL\": \"\", \"APP_CATALOG_ENABLED\": \"false\", \"PRIVILEGED\": \"false\", \
+         \"ETCD_DATA_DIR\": \"/var/opt/pf9/kube/etcd/data\", \"ALLOW_WORKLOADS_ON_MASTER\": \"true\", \
+         \"ETCD_DISCOVERY_URL\": \"\", \"DOCKER_ROOT\": \"/var/lib\"}}');"
+  mysql -h ${ctrl_ip} -u ${integration_dbuser} -p${integration_dbpassword} <<< "${db_str}"
+
+  # confirm host_role_map is unique (in resmgr database)
+  pf9_kube_ver="pf9-kube_3.4.0-4643"
+  echo "--> validating host_role_map: ${pf9_kube_ver}"
+  db_str="use resmgr; select res_id from host_role_map where res_id='${hostid}'"
+  mysql -h ${ctrl_ip} -u ${integration_dbuser} -p${integration_dbpassword} <<< "${db_str}" | grep ${hostid} > /dev/null 2>&1
+  if [ $? -eq 0 ]; then assert "host_role_map exists in database"; fi
+
+  # update host_role_map table (in controller database)
+  echo "--> updating database table: ${integration_dbuser}@${ctrl_ip}:host_role_map"
+  db_str="use resmgr; insert into host_role_map values ('${hostid}', '${pf9_kube_ver}', 'applied');"
+  mysql -h ${ctrl_ip} -u ${integration_dbuser} -p${integration_dbpassword} <<< "${db_str}"
+
+  # configure host_id.conf
+  echo "--> configuring /etc/pf9/host_id.conf"
+  echo "[hostagent]" > /etc/pf9/host_id.conf
+  if [ $? -ne 0 ]; then assert "failed to write /etc/pf9/host_id.conf"; fi
+  echo "host_id = ${hostid}" >> /etc/pf9/host_id.conf
+  chown pf9:pf9group /etc/pf9/host_id.conf
+
+  # configure kube.env
+  echo "--> configuring /etc/pf9/kube.env"
+  touch /etc/pf9/kube.env
+  if [ ! -r /etc/pf9/kube.env ]; then assert "failed to create /etc/pf9/kube.env"; fi
+  chown pf9:pf9group /etc/pf9/kube.env
+
+  # configure muster.conf
+  echo "--> configuring /etc/pf9/muster.conf"
+  echo "task dispatcher" > /etc/pf9/muster.conf
+  if [ $? -ne 0 ]; then assert "failed to write /etc/pf9/muster.conf"; fi
+  echo "task collector" >> /etc/pf9/muster.conf
+  echo "task pingmaker" >> /etc/pf9/muster.conf
+  echo "task upstream" >> /etc/pf9/muster.conf
+  echo "task streamer" >> /etc/pf9/muster.conf
+  echo "task remote" >> /etc/pf9/muster.conf
+  echo "task logger" >> /etc/pf9/muster.conf
+  echo "task jobs" >> /etc/pf9/muster.conf
+  echo "task cindervol" >> /etc/pf9/muster.conf
+  echo "task docker" >> /etc/pf9/muster.conf
+  echo "logger_logroot /var/log/pf9/muster.log" >> /etc/pf9/muster.conf
+  echo "logger_size 10000000" >> /etc/pf9/muster.conf
+  echo "logger_keep 5" >> /etc/pf9/muster.conf
+  echo "rabbit_host 127.0.0.1" >> /etc/pf9/muster.conf
+  echo "rabbit_port 5672" >> /etc/pf9/muster.conf
+  echo "rabbit_user bbslave" >> /etc/pf9/muster.conf
+  echo "rabbit_password o5qTcexX7cuAWOaC" >> /etc/pf9/muster.conf
+  echo "jobs_interval 300" >> /etc/pf9/muster.conf
+  echo "du_fqdn ." >> /etc/pf9/muster.conf
+  echo "host_id ${hostid}" >> /etc/pf9/muster.conf
+  chown pf9:pf9group /etc/pf9/muster.conf
+
+  # create /var/cache/pf9apps
+  cache_dir=/var/cache/pf9apps
+  echo "--> validate ${cache_dir} exists"
+  if [ ! -d ${cache_dir} ]; then
+    mkdir -p ${cache_dir}
+    if [ ! -d ${cache_dir} ]; then assert "failed to create directory ${cache_dir}"; fi
+    chown pf9:pf9group ${cache_dir}
+    if [ $? -ne 0 ]; then assert "failed to set permissions on ${cache_dir}"; fi
+  fi
+
+  # pre-cache required packages: pf9-hostagent, pf9-comms, pf9-muster, pf9-kube
+  echo "--> installing/caching packages"
+  if [ "${platform}" == "centos" ]; then
+    pkg_list="pf9-hostagent-3.4.0-333.ea45544.x86_64.rpm \
+              pf9-comms-3.4.0-588.b576380.x86_64.rpm \
+              pf9-muster-3.4.0-213.x86_64.rpm \
+              pf9-kube-3.4.0-4643.x86_64.rpm"
+
+    for p in ${pkg_list}; do
+      i=/opt/pf9-onprem/agent-preauth/${p}
+      f1=`echo ${p} | cut -d - -f1-2`
+      f2=`echo ${p} | cut -d - -f3-`
+      f3=`echo ${f2} | cut -d . -f1-4`
+
+      # install package
+      rpm -qa | grep ${f1} > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "--> installing ${f1}"
+        yum -y install ${i} > /dev/null 2>&1
+        if [ $? -ne 0 ]; then assert "failed to install package ${f1}"; fi
+      fi
+
+      # cache package (to avoid pull during hostagent startup)
+      if [ ! -r ${cache_dir}/${f1}/${f3} ]; then
+        echo "--> pre-caching: ${cache_dir}/${f1}/${f3}"
+        mkdir -p ${cache_dir}/${f1}
+        mkdir -p ${cache_dir}/${f1}/${f3}
+        /bin/cp -f ${i} ${cache_dir}/${f1}/${f3}/ && chown -R pf9:pf9group ${cache_dir}/${f1}
+        if [ $? -ne 0 ]; then assert "failed to populate cache"; fi
+      fi
+    done
+  elif [ "${platform}" == "ubuntu" ]; then
+    pkg_list="pf9-hostagent-3.4.0-333.ea45544.x86_64.deb \
+              pf9-comms-3.4.0-588.b576380.x86_64.deb \
+              pf9-muster-3.4.0-213.x86_64.deb \
+              pf9-kube-3.4.0-4643.x86_64.deb"
+
+    for p in ${pkg_list}; do
+      i=/opt/pf9-onprem/agent-preauth/${p}
+      f1=`echo ${p} | cut -d - -f1-2`
+      f2=`echo ${p} | cut -d - -f3-`
+      f3=`echo ${f2} | cut -d . -f1-4`
+
+      # install package
+      rpm -qa | grep ${f1} > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        echo "--> installing ${f1}"
+        apt-get -y install ${i} > /dev/null 2>&1
+        if [ $? -ne 0 ]; then assert "failed to install package ${f1}"; fi
+      fi
+
+      # cache package (to avoid pull during hostagent startup)
+      echo "--> pre-caching: ${cache_dir}/${f1}/${f3}"
+      mkdir -p ${cache_dir}/${f1}
+      mkdir -p ${cache_dir}/${f1}/${f3}
+      /bin/cp -f ${i} ${cache_dir}/${f1}/${f3}/ && chown -R pf9:pf9group ${cache_dir}/${f1}
+      if [ $? -ne 0 ]; then assert "failed to populate cache"; fi
+    done
+  fi
+
+  # start host agent
+  echo "--> starting host agent"
+  if [ "${platform}" == "centos" ]; then
+    systemctl start pf9-hostagent
+    if [ $? -ne 0 ]; then assert "failed to start host agent"; fi
+  elif [ "${platform}" == "ubuntu" ]; then
+    systemctl start pf9-hostagent
+    if [ $? -ne 0 ]; then assert "failed to start host agent"; fi
+  fi
+}
+
+# validate commandline
+if [ $# -lt 2 ]; then usage; fi
+node_type=${1}
+ctrl_ip=${2}
+
+# process optional arguments
+shift 2
+while [ $# -gt 0 ]; do
+  case ${1} in
+  -k)
+    flag_installKubectl=1
+    shift
+    ;;
+  -s)
+    flag_imageImport=0
+    shift
+    ;;
+  -a)
+    flag_attachCluster=1
+    shift
+    ;;
+  --skipDbInstall)
+    flag_install_mysql=0
+    shift
+    ;;
+  --archive)
+    if [ $# -lt 2 ]; then usage; fi
+    if [ ! -r ${2} ]; then assert "invalid archive '${2}'"; fi
+    onprem_archive=${2}
+    shift 2
+    ;;
+  --hostid)
+    if [ $# -lt 2 ]; then usage; fi
+    hostid=${2}
+    shift 2
+    ;;
+  --phase)
+    if [ $# -lt 2 ]; then usage; fi
+    case ${2} in
+    build|deploy)
+      phase=${2}
+      shift 2
+      ;;
+    *)
+      usage
+      ;;
+    esac
+    ;;
+  *)
+    usage
+    ;;
+  esac
+done
+
+# validate node_type
+case ${node_type} in
+ctrl|node)
+  ;;
+*)
+  assert "invalid node_type: ${node_type}"
+esac
+
+## validate logged in as root
+uid=$(id -u)
+if [ ${uid} -ne 0 ]; then assert "this operation must be run as root"; fi
+
+# validate platform (CentOS 7.4 or Ubuntu 16.04)
+validate_platform
+
+# validate archive
+if [ ${flag_attachCluster} -eq 1 ]; then
+  :
+elif [ ${flag_installKubectl} -eq 1 ]; then
+  :
+elif [ "${phase}" == "build" -o "${phase}" == "all" ]; then
+  if [ ! -r ${onprem_archive} ]; then assert "cannot open archive '${onprem_archive}', use '--archive <path>'"; fi
+fi
+
+# validate phase
+if [ "${phase}" == "deploy" -a ! -d /opt/pf9-onprem ]; then assert "build phase must be run before deploy phase"; fi
+
+# validate SE Linux is disabled
+case ${platform} in
+centos)
+  selinux_status=$(getenforce)
+  if [ "${selinux_status}" == "Enforcing" ]; then
+    banner "Disabling SE Linux"
+    setenforce 0
+    echo "--> SE Linux = `getenforce`"
+  fi
+  ;;
+ubuntu)
+  ;;
+*)
+  ;;
+esac
+
+####################################################################################################
+## Install Kubctl
+####################################################################################################
+if [ ${flag_installKubectl} -eq 1 ]; then
+  banner "Installing Kubectl"
+  curl -o /usr/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/kubectl
+  if [ $? -ne 0 ]; then exit 1; fi
+  chmod 0755 /usr/bin/kubectl
+  echo -e "\nExecuting: /opt/pf9/setupd/bin/qb.py --admin-user ${admin_user} --admin-password ${admin_password} \
+       --mgmt-ip ${ctrl_ip}  get-kubeconfig --name ${cluster_name}"
+  /opt/pf9/setupd/bin/qb.py --admin-user ${admin_user} --admin-password ${admin_password} \
+      --mgmt-ip ${ctrl_ip}  get-kubeconfig --name ${cluster_name} > /tmp/kubeconfig
+  if [ $? -ne 0 ]; then
+    cat /tmp/kubeconfig
+    exit 1
+  fi
+  echo -e "Executing: kubectl --kubeconfig=/tmp/kubeconfig cluster-info"
+  kubectl --kubeconfig=/tmp/kubeconfig cluster-info
+  exit 0
+fi
+
+####################################################################################################
+## Attach to Cluster
+####################################################################################################
+if [ ${flag_attachCluster} -eq 1 ]; then
+  attach_cluster
+  exit 0
+fi
+
+####################################################################################################
+## Build Phase
+####################################################################################################
+if [ "${phase}" == "all" -o ${phase} == "build" ]; then
+  # validate Ethernet interface is named 'eth0'
+  if [ "${node_type}" == "node" ]; then
+    ifconfig eth0 > /dev/null 2>&1
+    if [ $? -ne 0 ]; then assert "Ethernet interface eth0 does not exist - aborting."; fi
+  fi
+  
+  # disable firewall
+  banner "Disabling Firewall" -n
+  case ${platform} in
+  centos)
+    rpm -qa | grep firewalld > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      systemctl stop firewalld
+      systemctl disable firewalld
+    fi
+    ;;
+  ubuntu)
+    systemctl stop ufw
+    systemctl disable ufw
+    ;;
+  *)
+    assert "upsupported platform: ${platform}"
+    ;;
+  esac
+
+  banner "Unpacking Distribution Archive" -n
+  if [ ! -d /opt/pf9-onprem ]; then
+    echo "tar xvf ${onprem_archive} -C /opt/pf9-onprem"
+    mkdir /opt/pf9-onprem
+    tar xvf ${onprem_archive} -C /opt/pf9-onprem > /dev/null 2>&1
+  fi
+
+  # 3.1.1.1 - Dependencies
+  banner "Installing Prerequisite Packages" -n
+  if [ "${platform}" == "centos" ]; then
+    for i in epel-release ntp python-pip yum-utils device-mapper-persistent-data lvm2 unzip socat net-tools bridge-utils mysql; do
+      yum -y install $i
+    done
+    pip install --upgrade pip
+    pip install docker
+  elif [ "${platform}" == "ubuntu" ]; then
+    apt-get -y update
+    apt-get -y install ntp python2.7 python-minimal build-essential
+    apt-get -y install libssl-dev libncurses5-dev libgdbm-dev
+    apt-get -y install libbz2-dev libreadline-gplv2-dev libpython2.7
+    apt-get -y install python-pip
+    pip install --upgrade pip
+    apt-get -y install libmysqlclient-dev
+    pip uninstall -y mysqlclient
+    pip install --no-binary mysqlclient mysqlclient
+  fi
+  if [ ! -d /var/log/pf9 ]; then mkdir -p /var/log/pf9; fi
+
+  # check if docker is installed and validate version
+  flag_install_docker=1
+  docker -h > /dev/null 2>&1
+  if [ $? -eq 0 ]; then 
+    docker_version=$(docker --version | cut -d ' ' -f3 | cut -d , -f1)
+    if [ "${docker_version}" == "17.09.1-ce" ]; then
+      flag_install_docker=0
+    else
+      assert "Docker is installed but is the wrong version - please remove it to continue the installation"
+    fi
+  fi
+
+  # 3.1.1.2 - Install Docker
+  banner "Installing Docker" -n
+  if [ "${platform}" == "centos" -a ${flag_install_docker} -eq 1 ]; then
+    curl -SsL https://download.docker.com/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
+    yum makecache fast
+    yum -y install docker-ce-17.09.1.ce
+    if [ ! -d /etc/docker ]; then mkdir -p /etc/docker; fi
+    echo "{\"storage-driver\": \"devicemapper\"}" > /etc/docker/daemon.json
+    systemctl enable docker
+    systemctl start docker
+    if [ $? -ne 0 ]; then exit 1; fi
+  elif [ "${platform}" == "ubuntu" -a ${flag_install_docker} -eq 1 ]; then
+    apt-get -y install apt-transport-https ca-certificates
+    apt-key add /opt/pf9-onprem/setupd-updates/apt_dockerproject_org_repo.asc
+    echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+    apt-get -y update
+    apt-get -y purge docker lxc-docker docker-engine
+    apt-get -y --allow-unauthenticated install "docker-ce=17.09.1~ce-0~ubuntu"
+    systemctl enable docker
+    systemctl start docker
+    if [ $? -ne 0 ]; then exit 1; fi
+  else
+    echo "--> skipping (version ${docker_version} is already installed)"
+  fi
+
+  # 3.1.1.3 - Populate Docker Cache
+  banner "Populating Docker Cache" -n
+  if [ ${flag_imageImport} -eq 1 ]; then
+    #for i in /opt/pf9-onprem/pf9-export/*.tar; do docker load -i ${i}; done
+
+    export PYTHONPATH=/opt/pf9/setupd/lib/python2.7/site-packages
+    if [ ! -d /opt/pf9 ]; then mkdir -p /opt/pf9; fi
+
+    if [ "${platform}" == "centos" ]; then
+      yum -y install /opt/pf9-onprem/setupd.rpm
+      /bin/cp -f /opt/pf9-onprem/setupd-updates/import_image_tags /opt/pf9/setupd/bin/
+      /opt/pf9/setupd/bin/import_image_tags --image-dir /opt/pf9-onprem/pf9-export
+      if [ $? -ne 0 ]; then exit 1; fi
+    elif [ "${platform}" == "ubuntu" ]; then
+      /bin/cp -r /opt/pf9-onprem/setupd /opt/pf9
+      /bin/cp -f /opt/pf9-onprem/setupd-updates/import_image_tags /opt/pf9/setupd/bin/
+      /opt/pf9/setupd/bin/import_image_tags --image-dir /opt/pf9-onprem/pf9-export
+      if [ $? -ne 0 ]; then exit 1; fi
+    fi
+  else
+    echo "--> skipping"
+  fi
+
+  banner "Updating Setupd Packages" -n
+  echo "--> updating pf9_master_setup.py"
+  /bin/cp -f /opt/pf9-onprem/setupd-updates/pf9_master_setup.py /opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/
+  echo "--> updating pf9_utils.py"
+  /bin/cp -f /opt/pf9-onprem/setupd-updates/pf9_utils.py /opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/
+  echo "--> updating attach-node"
+  /bin/cp -f /opt/pf9-onprem/setupd-updates/attach-node /opt/pf9/setupd/bin
+
+  # 3.1.1.4 - Configure Requestor
+  banner "Configure Requestor" -n
+  if [ ! -d /opt/pf9/pf9-kube/bin/requester ]; then mkdir -p /opt/pf9/pf9-kube/bin/requester; fi
+  curl -o /opt/pf9/pf9-kube/bin/requester/easy-rsa.tar.gz https://storage.googleapis.com/kubernetes-release/easy-rsa/easy-rsa.tar.gz
+
+  ####################################################################################################
+  ## Controller Components
+  ####################################################################################################
+  if [ "${node_type}" == "ctrl" ]; then
+    # 3.1.2.1 - Install Consul
+    banner "Installing Consul" -n
+    TMPDIR=$(mktemp -d)
+    curl -o ${TMPDIR}/consul.zip https://releases.hashicorp.com/consul/0.9.0/consul_0.9.0_linux_amd64.zip
+    unzip -o ${TMPDIR}/consul.zip -d /usr/local/bin
+    chmod 0755 /usr/local/bin/consul
+
+    grep ^consul /etc/group > /dev/null 2>&1
+    if [ $? -ne 0 ]; then groupadd consul; fi
+
+    grep ^consul /etc/passwd > /dev/null 2>&1
+    if [ $? -ne 0 ]; then useradd -g consul consul; fi
+
+    if [ ! -d /var/lib/consul ]; then mkdir -p /var/lib/consul; fi
+    if [ ! -d /etc/consul ]; then mkdir -p /etc/consul; fi
+    chown consul:consul /var/lib/consul
+    chown consul:consul /etc/consul
+
+    echo "[Unit]" > /etc/systemd/system/consul-server.service
+    echo "Description=Consul Server Agent" >> /etc/systemd/system/consul-server.service
+    echo "After=network.target" >> /etc/systemd/system/consul-server.service
+    echo "[Service]" >> /etc/systemd/system/consul-server.service
+    echo "Type=simple" >> /etc/systemd/system/consul-server.service
+    echo "User=consul" >> /etc/systemd/system/consul-server.service
+    echo "Group=consul" >> /etc/systemd/system/consul-server.service
+    echo "PIDFile=/run/consul-server.pid" >> /etc/systemd/system/consul-server.service
+    echo "ExecStart=/usr/local/bin/consul agent -server -bind 127.0.0.1 -bootstrap-expect 1 -syslog -config-dir /etc/consul" \
+         >> /etc/systemd/system/consul-server.service
+    echo "Restart=on-failure" >> /etc/systemd/system/consul-server.service
+    echo "[Install]" >> /etc/systemd/system/consul-server.service
+    echo "WantedBy=multi-user.target" >> /etc/systemd/system/consul-server.service
+
+    echo "{" > /etc/consul/config.json
+    echo "  \"datacenter\": \"platform9\"," >> /etc/consul/config.json
+    echo "  \"data_dir\": \"/var/lib/consul\"," >> /etc/consul/config.json
+    echo "  \"server\": true," >> /etc/consul/config.json
+    echo "  \"addresses\": {" >> /etc/consul/config.json
+    echo "      \"http\": \"127.0.0.1\"" >> /etc/consul/config.json
+    echo "  }" >> /etc/consul/config.json
+    echo "}" >> /etc/consul/config.json
+
+    systemctl daemon-reload
+    systemctl enable consul-server
+    systemctl start consul-server
+    if [ $? -ne 0 ]; then exit 1; fi
+
+    # 3.1.2.2 - Install MySQL
+    banner "Installing MySQL" -n
+    if [ ${flag_install_mysql} -eq 1 ]; then
+      echo "[mysql-community-5.6]" >  /etc/yum.repos.d/mysql.repo
+      echo "name=MySQL" >> /etc/yum.repos.d/mysql.repo
+      echo "baseurl=http://repo.mysql.com/yum/mysql-5.6-community/el/7/x86_64/" >> /etc/yum.repos.d/mysql.repo
+      echo "enabled=1" >> /etc/yum.repos.d/mysql.repo
+      echo "gpgcheck=1" >> /etc/yum.repos.d/mysql.repo
+      echo "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-MYSQL56" >> /etc/yum.repos.d/mysql.repo
+
+      yum makecache fast
+      /bin/cp -f /opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/misc/RPM-GPG-KEY-MYSQL56 /etc/pki/rpm-gpg
+      yum -y install mysql-community-server
+      systemctl enable mysqld
+      systemctl start mysqld
+      if [ $? -ne 0 ]; then exit 1; fi
+
+      mysql -u root -pplatform9 <<< "show databases;" > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        mysqladmin -u root password platform9
+        mysql -u root -pplatform9 <<< "GRANT ALL PRIVILEGES ON *.* TO 'p9_dbuser'@'localhost' IDENTIFIED BY 'platform9' with GRANT OPTION;"
+        mysql -u root -pplatform9 <<< "GRANT ALL PRIVILEGES ON *.* TO 'p9_dbuser'@'127.0.0.1' IDENTIFIED BY 'platform9' with GRANT OPTION;"
+        mysql -u root -pplatform9 <<< "DELETE from mysql.user where user='';"
+  
+        # remote database access for integration user (p9_intuser)
+        # this user will perform database updates required for host agent pre-authorization
+        mysql -u root -pplatform9 <<< "GRANT ALL PRIVILEGES ON *.* TO 'p9_intuser'@'%' IDENTIFIED BY 'platform9' with GRANT OPTION;"
+      fi
+    else
+      echo "--> skipping"
+    fi
+  fi
+
+  ####################################################################################################
+  ## Node Components
+  ####################################################################################################
+  if [ "${node_type}" == "node" ]; then
+    # 3.1.3.1 - Disable Swap
+    banner "Disabling Swap" -n
+    swapoff -a
+  fi
+fi
+
+####################################################################################################
+## Deploy Phase
+####################################################################################################
+if [ "${phase}" == "all" -o ${phase} == "deploy" ]; then
+  # Controller
+  if [ "${node_type}" == "ctrl" ]; then
+    # 3.2.1.1 - Configure & Start Components
+    banner "Starting Management Server" -n
+    /bin/cp -f /opt/pf9-onprem/setupd.images.in /etc/setupd.images.in
+    /opt/pf9/setupd/bin/pf9_setup.py \
+        --fullname ${org_fullname} \
+        --shortname ${org_shortname} \
+        --fqdn ${ctrl_ip} \
+        --admin-user ${admin_user} \
+        --admin-password ${admin_password} \
+        --db-host ${dbhost_fqdn} \
+        --db-user p9_dbuser \
+        --db-password platform9 \
+        --region default
+    if [ $? -ne 0 ]; then exit 1; fi
+
+    # 3.2.1.2 - Create Default Cluster
+    banner "Creating Default Cluster" -n
+    /bin/cp -f /opt/pf9-onprem/setupd-updates/add-cluster /opt/pf9/setupd/bin/
+    /opt/pf9/setupd/bin/add-cluster --admin-user ${admin_user} --admin-password ${admin_password} \
+        --cluster-fqdn ${cluster_fqdn} --cluster-name ${cluster_name}
+    if [ $? -ne 0 ]; then exit 1; fi
+  fi
+
+  # Node
+  if [ "${node_type}" == "node" ]; then
+    # 3.2.2.1- Install Platform9 Host Agent
+    if [ -z "${hostid}" ]; then
+      ################################################################################
+      ## standard host agent installation
+      ################################################################################
+      banner "Installing Host Agent (Standard Method)" -n
+      if [ ! -d /opt/pf9/hostagent ]; then
+        if [ "${platform}" == "centos" ]; then
+          curl -k -O -L https://${ctrl_ip}/clarity/platform9-install-redhat.sh
+          if [ $? -ne 0 ]; then exit 1; fi
+          chmod 755 platform9-install-redhat.sh
+          ./platform9-install-redhat.sh --insecure --ntpd --skip-os-check --controller=${ctrl_ip} \
+              --username=${admin_user} --password=${admin_password} --project-name=service --no-proxy
+          if [ $? -ne 0 ]; then exit 1; fi
+        elif [ "${platform}" == "ubuntu" ]; then
+          curl -k -O -L https://${ctrl_ip}/clarity/platform9-install-debian.sh
+          if [ $? -ne 0 ]; then exit 1; fi
+          chmod 755 platform9-install-debian.sh
+          ./platform9-install-debian.sh --insecure --ntpd --skip-os-check --controller=${ctrl_ip} \
+              --username=${admin_user} --password=${admin_password} --project-name=service --no-proxy
+          if [ $? -ne 0 ]; then exit 1; fi
+        fi
+      else
+        echo -e "\n--> pf9-hostagent is already installed"
+      fi
+
+      # validate host agent is running
+      systemctl status pf9-hostagent > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        systemctl start pf9-hostagent
+        if [ $? -ne 0 ]; then exit 1; fi
+      fi
+
+      # 3.2.2.2 - Get Keystone Token
+      banner "Getting Keystone Token" -n
+      curl -k -i -H "Content-Type: application/json" https://${ctrl_ip}/keystone/v3/auth/tokens?nocatalog \
+          -d '{ "auth": { "identity": { "methods": ["password"], "password": { "user": { "name": "admin", "domain": {"id": "default"}, "password": "Platform99" } } }, "scope": { "project": { "name": "service", "domain": {"id": "default"}}}}}'
+  
+      # get token from user
+      echo -e "\n\n********************************************************************************"
+      echo -n "*** ENTER TOKEN: "
+      read token
+
+      # 3.2.2.3 - Wait for Host Agent to Register
+      banner "Waiting for Host Agent to Register" -n
+      wait_n 45
+      host_id=$(cat /etc/pf9/host_id.conf | grep ^host_id | cut -d = -f2 | cut -d ' ' -f2)
+      curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
+      if [ $? -ne 0 ]; then exit 1; fi
+
+      # 3.2.2.4 - Authorize Node with Resmgr
+      banner "Authorizing Node with Resmgr" -n
+      curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+          -d "{}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/pf9-kube
+      if [ $? -ne 0 ]; then exit 1; fi
+
+      # 3.2.2.5 - Attach Node to Cluster
+      # If k8s containers fail to start, run: 'systemctl restart pf9-kubelet.service'
+      banner "Attaching Node to Cluster" -n
+      wait_n 60
+      attach_cluster
+      if [ $? -ne 0 ]; then exit 1; fi
+    else
+      ################################################################################
+      ## agent pre-authorization
+      ################################################################################
+      banner "Installing Host Agent (Pre-Authorization Method)" -n
+      pre_authorize
+    fi
+  fi
+fi
+
+echo -e "\n[ COMPLETE ]\n"
+exit 0

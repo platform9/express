@@ -147,13 +147,13 @@ validate_config
 # install Ansibl (and dependencies)
 echo -n "--> Validating package dependencies: "
 if [ "${platform}" == "centos" ]; then
-  for pkg in epel-release ansible gcc python-devel python2-pip bc; do
+  for pkg in epel-release nginx ansible gcc python-devel python2-pip bc; do
     echo -n "${pkg} "
     rpm -q ${pkg} > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       sudo yum -y install ${pkg} > ${log} 2>&1
       if [ $? -ne 0 ]; then
-        echo -e "ERROR: failed to install ${pkg} - here's the log:\n"
+        echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
         cat ${log}; exit 1
       fi
     fi
@@ -166,7 +166,7 @@ elif [ "${platform}" == "ubuntu" ]; then
     sudo apt-get update> /dev/null 2>&1
     sudo apt-get -y install ansible > ${log} 2>&1
     if [ $? -ne 0 ]; then
-      echo -e "ERROR: failed to install ${pkg} - here's the log:\n"
+      echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
       cat ${log}; exit 1
     fi
   fi
@@ -177,7 +177,7 @@ elif [ "${platform}" == "ubuntu" ]; then
     if [ $? -ne 0 ]; then
       sudo apt -y install ${pkg} > ${log} 2>&1
       if [ $? -ne 0 ]; then
-        echo -e "ERROR: failed to install ${pkg} - here's the log:\n"
+        echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
         cat ${log}; exit 1
       fi
     fi
@@ -187,7 +187,7 @@ fi
 ## upgrade pip
 sudo pip install --upgrade pip > ${log} 2>&1
 if [ $? -ne 0 ]; then
-  echo -e "ERROR: failed to upgrade pip - here's the log:\n"
+  echo -e "\nERROR: failed to upgrade pip - here's the log:\n"
   cat ${log}; exit 1
 fi
 
@@ -195,7 +195,15 @@ fi
 echo -n "python-shade "
 sudo pip install shade > ${log} 2>&1
 if [ $? -ne 0 ]; then
-  echo -e "ERROR: failed to install python shade - here's the log:\n"
+  echo -e "\nERROR: failed to install python shade - here's the log:\n"
+  cat ${log}; exit 1
+fi
+
+## install setupd
+echo -n "setupd"
+sudo yum -y install ${basedir}/pkg/setupd.rpm > ${log} 2>&1
+if [ ! -d /opt/pf9/setupd ]; then
+  echo -e "\nERROR: failed to install setupd\n"
   cat ${log}; exit 1
 fi
 echo
@@ -204,6 +212,8 @@ echo
 ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
 echo "ansible_version = ${ansible_version}"
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
+
+echo "early exit..."; exit 1
 
 ## call pf9-autopdeplopy
 echo -e "\n[Executing: ansible-playbook -i ${inventory} -l ${target} ${autodeplopy_script}]"
