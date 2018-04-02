@@ -213,8 +213,6 @@ ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
 echo "ansible_version = ${ansible_version}"
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
 
-echo "early exit..."; exit 1
-
 ## call pf9-autopdeplopy
 echo -e "\n[Executing: ansible-playbook -i ${inventory} -l ${target} ${autodeplopy_script}]"
 ansible-playbook -i ${inventory} -l ${target} ${autodeplopy_script}

@@ -3,13 +3,15 @@
 # Install Platform9 On-Prem Kubernetes for Bare-Metal
 ####################################################################################################
 
+basedir=$(dirname $0)
 phase="all"
 platform=""
 flag_installKubectl=0
 flag_attachCluster=0
 flag_imageImport=1
 flag_install_mysql=1
-onprem_archive=/tmp/pf9-isv-v0.3.tar.gz
+config_file=${basedir}/isv.conf
+onprem_archive=/tmp/pf9-isv-v0.4.tar.gz
 
 # set defaults
 admin_user="admin"
@@ -338,6 +340,15 @@ esac
 uid=$(id -u)
 if [ ${uid} -ne 0 ]; then assert "this operation must be run as root"; fi
 
+# read config file (if present; otherwise, use hard-codes username/password)
+if [ -r ${config_file} ]; then
+  admin_user=$(grep ^du_username\| ${config_file} | cut -d \| -f2)
+  admin_password=$(grep ^du_password\| ${config_file} | cut -d \| -f2 | openssl enc -base64 -d)
+fi
+
+# set auth url
+auth_url=https://${ctrl_ip}/keystone/v3
+
 # validate platform (CentOS 7.4 or Ubuntu 16.04)
 validate_platform
 
@@ -351,7 +362,7 @@ elif [ "${phase}" == "build" -o "${phase}" == "all" ]; then
 fi
 
 # validate phase
-if [ "${phase}" == "deploy" -a ! -d /opt/pf9-onprem ]; then assert "build phase must be run before deploy phase"; fi
+#if [ "${phase}" == "deploy" -a ! -d /opt/pf9-onprem ]; then assert "build phase must be run before deploy phase"; fi
 
 # validate SE Linux is disabled
 case ${platform} in
@@ -687,8 +698,8 @@ if [ "${phase}" == "all" -o ${phase} == "deploy" ]; then
 
       # 3.2.2.2 - Get Keystone Token
       banner "Getting Keystone Token" -n
-      curl -k -i -H "Content-Type: application/json" https://${ctrl_ip}/keystone/v3/auth/tokens?nocatalog \
-          -d '{ "auth": { "identity": { "methods": ["password"], "password": { "user": { "name": "admin", "domain": {"id": "default"}, "password": "Platform99" } } }, "scope": { "project": { "name": "service", "domain": {"id": "default"}}}}}'
+      curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?nocatalog \
+          -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}"
   
       # get token from user
       echo -e "\n\n********************************************************************************"
