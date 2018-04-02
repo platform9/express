@@ -9,12 +9,12 @@ ansible_sudo_pass=Pl@tform9
 ####################################################################################################
 ## Hypervisors
 [hypervisors]
-hv01 ansible_host=172.16.7.95 ansible_user=centos nova_cluster_ip=172.16.7.95
-hv02 ansible_host=172.16.7.96 ansible_user=centos nova_cluster_ip=172.16.7.96
+hv01 ansible_host=172.16.7.95 ansible_user=centos ha_cluster_ip=172.16.7.95 dhcp=on snat=on
+hv02 ansible_host=172.16.7.96 ansible_user=centos ha_cluster_ip=172.16.7.96 dhcp=off snat=off
 
 [hypervisors-ubuntu]
-hv03 ansible_host=172.16.7.94 ansible_user=ubuntu nova_cluster_ip=172.16.7.94
-hv04 ansible_host=172.16.7.87 ansible_user=ubuntu nova_cluster_ip=172.16.7.87
+hv03 ansible_host=172.16.7.94 ansible_user=ubuntu ha_cluster_ip=172.16.7.94 dhcp=off snat=off
+hv04 ansible_host=172.16.7.87 ansible_user=ubuntu ha_cluster_ip=172.16.7.87 dhcp=off snat=off
 
 ####################################################################################################
 ## Containervisors

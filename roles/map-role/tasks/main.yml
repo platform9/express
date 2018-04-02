@@ -2,6 +2,10 @@
 
 # default facts (can be over-ridden by using extra-vars)
 - set_fact:
+    NEUTRON_AGENT_MODE: "dvr_snat"
+  when: NEUTRON_AGENT_MODE is undefined
+
+- set_fact:
     NOVA_BRIDGE_MAPPING: "external:br-pf9"
   when: NOVA_BRIDGE_MAPPING is undefined
 
@@ -15,8 +19,8 @@
 
 # discovered facts
 - set_fact:
-    NOVA_CLUSTER_IP: "{{nova_cluster_ip}}"
-    PF9_NOVNCPROXY_BASE_URL: "http://{{nova_cluster_ip}}:6080/vnc_auto.html"
+    NOVA_CLUSTER_IP: "{{ha_cluster_ip}}"
+    PF9_NOVNCPROXY_BASE_URL: "http://{{ha_cluster_ip}}:6080/vnc_auto.html"
     NOVA_DNS_DOMAIN: "{{nova_dns_domain}}"
   when: rolename != "pf9-kube"
 
