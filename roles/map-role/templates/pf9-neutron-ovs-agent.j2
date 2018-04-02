@@ -1,7 +1,7 @@
 {
-    "allow_dhcp_vms": "False",
-    "bridge_mappings": "{{NOVA_BRIDGE_MAPPING}}",
-    "enable_distributed_routing": "True",
-    "enable_tunneling": "False",
-    "net_type": "vlan"
+    "allow_dhcp_vms": "{{neutron_ovs_allow_dhcp_vms}}",
+    "bridge_mappings": "{{neutron_ovs_bridge_mappings}}",
+    "enable_distributed_routing": "{{neutron_ovs_enable_distributed_routing}}",
+    "enable_tunneling": "{{neutron_ovs_enable_tunneling}}",
+    "net_type": "{{neutron_ovs_net_type}}"
 }

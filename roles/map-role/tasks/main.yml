@@ -1,28 +1,26 @@
 ---
-
-# default facts (can be over-ridden by using extra-vars)
+################################################################################
+# Dynamically-Assigned Role Values (static values are initialized in inventory)
 - set_fact:
-    NEUTRON_AGENT_MODE: "dvr_snat"
-  when: NEUTRON_AGENT_MODE is undefined
-
+    glance_endpoint_address: "{{ha_cluster_ip}}"
 - set_fact:
-    NOVA_BRIDGE_MAPPING: "external:br-pf9"
-  when: NOVA_BRIDGE_MAPPING is undefined
-
+    neutron_l3_agent_mode: "dvr_snat"
+  when: dvr == "on" and snat == "on"
 - set_fact:
-    NOVA_INSTANCES_PATH: "/opt/pf9/data/instances/"
-  when: NOVA_INSTANCES_PATH is undefined
-
+    neutron_l3_agent_mode: "dvr"
+  when: dvr == "on" and snat == "off"
 - set_fact:
-    NOVA_DNSMASQ_DNS_SERVERS: "8.8.8.8"
-  when: NOVA_DNSMASQ_DNS_SERVERS is undefined
-
-# discovered facts
+    neutron_l3_agent_mode: "dvr"
+  when: neutron_l3_agent_mode is undefined
 - set_fact:
-    NOVA_CLUSTER_IP: "{{ha_cluster_ip}}"
-    PF9_NOVNCPROXY_BASE_URL: "http://{{ha_cluster_ip}}:6080/vnc_auto.html"
-    NOVA_DNS_DOMAIN: "{{nova_dns_domain}}"
-  when: rolename != "pf9-kube"
+    neutron_ovs_enable_distributed_routing: "True"
+  when: dvr == "on"
+- set_fact:
+    neutron_ovs_enable_distributed_routing: "False"
+  when: dvr is undefined
+- set_fact:
+    neutron_novncproxy_base_url: "http://{{ha_cluster_ip}}:6080/vnc_auto.html"
+  when: neutron_novncproxy_base_url is undefined
 
 - name: validate pf9/host_id.conf
   stat:
@@ -46,12 +44,12 @@
   delegate_to: localhost
 
 - name: validate required role params (sourced from inventory)
-  fail: msg="role 'pf9-kube' is missing required parameter - 'pf9_clusterName'"
-  when: rolename == "pf9-kube" and pf9_clusterName is undefined
+  fail: msg="role 'pf9-kube' is missing required parameter - 'clusterName'"
+  when: rolename == "pf9-kube" and clusterName is undefined
     
 - name: validate required role params (sourced from inventory)
-  fail: msg="role 'pf9-kube' is missing required parameter - 'pf9_clusterFqdn'"
-  when: rolename == "pf9-kube" and pf9_clusterFqdn is undefined
+  fail: msg="role 'pf9-kube' is missing required parameter - 'clusterFqdn'"
+  when: rolename == "pf9-kube" and clusterFqdn is undefined
     
 - name: initialize role_params to null
   set_fact:
@@ -60,7 +58,7 @@
 
 - name: assign role_params for pf9-kube role
   set_fact:
-    role_params: "--clusterName {{pf9_clusterName}} --clusterFqdn {{pf9_clusterFqdn}}"
+    role_params: "--clusterName {{clusterName}} --clusterFqdn {{clusterFqdn}}"
   when: rolename == "pf9-kube"
 
 - debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}}"
