@@ -30,6 +30,7 @@ usage() {
   echo "-i|--installPrereqs      : install pre-requisites and exit"
   echo "-s|--setup               : run setup and exit"
   echo "-c|--config <configFile> : use custom configuration file"
+  echo "-e|--extra-vars <string> : ansible extra-vars <name=val,...>"
   echo -e "-h|--help                : display this message\n"
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
     :
