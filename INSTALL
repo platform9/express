@@ -110,9 +110,6 @@ if [ -n "${pf9_custom_configFile}" ]; then pf9_config=${pf9_custom_configFile}; 
 ## validate target
 if [ -z "${target}" ]; then usage; fi
 
-## validate running on CentOS
-if [ ! -r /etc/redhat-release ]; then assert "This script only runs on RedHat or CentOS"; fi
-
 ## validate sudo priviledges
 sudo bash <<< "exit 200"
 if [ $? -ne 200 ]; then assert "you need sudo privilidges to run this script - please update /etc/sudoers"; fi
@@ -162,11 +159,23 @@ if [ "${platform}" == "centos" ]; then
     fi
   done
 elif [ "${platform}" == "ubuntu" ]; then
-  for pkg in epel-release ansible gcc python-devel python2-pip bc; do
-    echo -n "${pkg} "
-    dpkg -l | grep ${pkg} > /dev/null 2>&1
+  # add ansible repository
+  dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    sudo apt-add-repository -y ppa:ansible/ansible > /dev/null 2>&1
+    sudo apt-get update> /dev/null 2>&1
+    sudo apt-get -y install ansible > ${log} 2>&1
     if [ $? -ne 0 ]; then
-      sudo apt-get -y install ${pkg} > ${log} 2>&1
+      echo -e "ERROR: failed to install ${pkg} - here's the log:\n"
+      cat ${log}; exit 1
+    fi
+  fi
+
+  for pkg in ansible bc ntp python-pip; do
+    echo -n "${pkg} "
+    dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      sudo apt -y install ${pkg} > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "ERROR: failed to install ${pkg} - here's the log:\n"
         cat ${log}; exit 1
@@ -193,6 +202,7 @@ echo
 
 ## validate minimum Ansible version
 ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
+echo "ansible_version = ${ansible_version}"
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
 
 ## call pf9-autopdeplopy
