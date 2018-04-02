@@ -1,0 +1,68 @@
+--- Hypervisor ---
+Location for storing VM content: /opt/pf9/data/instances/
+Access point for CM console access: 172.16.7.95
+Cluster IP: 172.16.7.95
+Run DHCP: yes
+Enable SNAT: yes
+Physical Network Config Label: external
+Mapping Bridge Device: br-pf9
+
+--- Glance ---
+Make Host an Image Libray: yes
+Location for storing images: /var/opt/pf9/imagelibrary/data
+Access point for image ibrary access: 172.16.7.95
+Use as a public Glance Endpoint: yes
+
+--- Cinder ---
+Enable Cinder: yes
+Volume back-end name: VMAX-V1 (user-defined-string)
+Driver Type: [LVM|SolidFire|NetApp|QNAP|Ceph|Other]
+
+xx pf9-ostackhost-neutron
+{
+  cluster_ip : "172.16.7.96",
+  instances_path : "/opt/pf9/data/instances/",
+  novncproxy_base_url : "http://172.16.7.96:6080/vnc_auto.html"
+}
+
+xx pf9-neutron-base
+{ }
+
+xx pf9-glance-role
+{
+  endpoint_address : "172.16.7.96",
+  filesystem_store_datadir : "/var/opt/pf9/imagelibrary/data",
+  update_public_glance_endpoint : "false"
+}
+
+xx pf9-ceilometer
+Enable Telemetry: yes
+{
+  kvm_instance_disk_path: "/opt/pf9/data/instances/"
+}
+
+xx pf9-neutron-ovs-agent
+{
+  allow_dhcp_vms: "False",
+  bridge_mappings: "external:br-pf9",
+  enable_distributed_routing : "True",
+  enable_tunneling: "False",
+  net_type: "vlan"
+}
+
+xx pf9-neutron-l3-agent
+{
+  agent_mode : "dvr_snat" # snat = on
+  agent_mode : "dvr"      # snat = off
+}
+
+xx pf9-neutron-metadata-agent
+{
+}
+
+xx pf9-neutron-dhcp-agent # dhcp = on
+{
+  dns_domain : "dev.platform9.io",
+  dnsmasq_dns_servers : "8.8.8.8"
+}
+

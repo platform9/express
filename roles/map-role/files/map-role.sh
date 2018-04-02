@@ -123,7 +123,7 @@ echo "--> cluster_fqdn = ${cluster_fqdn}"
 
 ## validate role
 case ${role} in
-pf9-kube|pf9-ostackhost|pf9-ostackhost-neutron|pf9-neutron-ovs-agent|pf9-neutron-metadata-agent|pf9-neutron-l3-agent|pf9-neutron-dhcp-agent|pf9-neutron-base)
+pf9-kube|pf9-ostackhost|pf9-ostackhost-neutron|pf9-glance-role|pf9-celiometer-role|pf9-neutron-ovs-agent|pf9-neutron-metadata-agent|pf9-neutron-l3-agent|pf9-neutron-dhcp-agent|pf9-neutron-base)
   ;;
 *)
   assert "invalid role: ${role}"
