@@ -18,6 +18,8 @@ LOG = logging.getLogger(__name__)
 def _parse_args():
     ap = argparse.ArgumentParser(sys.argv[0],
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ap.add_argument('--ctrl-ip', required=True, dest='ctrl_ip',
+                    help='')
     ap.add_argument('--admin-user', required=True, dest='admin_user',
                     help='')
     ap.add_argument('--admin-password', required=True, dest='admin_password',
@@ -28,8 +30,8 @@ def _parse_args():
                     help='')
     return ap.parse_args()
 
-def _run_add_cluster(admin_user, admin_password, cluster_fqdn, cluster_name):
-    mgmt_cluster_create(admin_user, admin_password, cluster_fqdn, cluster_name)
+def _run_add_cluster(ctrl_ip, admin_user, admin_password, cluster_fqdn, cluster_name):
+    mgmt_cluster_create(ctrl_ip, admin_user, admin_password, cluster_fqdn, cluster_name)
 
 
 def main():
@@ -37,6 +39,7 @@ def main():
     setup_logs('/var/log/pf9/management.log')
 
     _run_add_cluster(
+	args.ctrl_ip,
         args.admin_user,
         args.admin_password,
         args.cluster_fqdn,
