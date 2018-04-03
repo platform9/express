@@ -1,0 +1,9 @@
+---
+
+- debug: var=ctrl_ip
+
+- name: "Assigning Role - {{rolename}}"
+  script: "map-role.sh {{ctrl_ip}} {{rolename}}"
+  register: rolemap_log
+
+- debug: var=rolemap_log

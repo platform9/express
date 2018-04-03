@@ -22,7 +22,7 @@ flag_setup=0
 
 # functions
 usage() {
-  echo -e "usage: $0 [-h|--help] [-s|--setup] [-c|--config <configFile>] <target>\n"
+  echo -e "usage: $0 [-h|--help] [-s|--setup] [-c|--config <configFile>] <ctrl_ip> <target>\n"
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
     :
   else
@@ -87,7 +87,11 @@ while [ $# -gt 0 ]; do
     shift
     ;;
   *)
-    target=${1} ;;
+    if [ $# -ne 2 ]; then usage; fi
+    ctrl_ip=${1}
+    target=${2}
+    shift
+    ;;
   esac
   shift
 done
@@ -215,7 +219,7 @@ if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "An
 
 ## call pf9-autopdeplopy
 echo -e "\n[Executing: ansible-playbook -i ${inventory} -l ${target} ${autodeplopy_script}]"
-ansible-playbook -i ${inventory} -l ${target} ${autodeplopy_script}
+ansible-playbook -i ${inventory} -l ${target} -e "ctrl_ip=${ctrl_ip}" ${autodeplopy_script}
 
 ## exit cleanly
 exit 0
