@@ -41,6 +41,11 @@
     - name: clientkey.pem
       src: hostagent/key.pem
 
+- name: Create /etc/libvirt/libvirtd.conf
+  file:
+    path: /etc/libvirt/libvirtd.conf
+    state: touch
+
 - name: Set libvirtd configuration
   lineinfile:
     state: present
