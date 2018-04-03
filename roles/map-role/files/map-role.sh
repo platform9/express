@@ -71,7 +71,7 @@ wait_n() {
 attach_cluster() {
   export LD_LIBRARY_PATH="/opt/pf9/python/pf9-lib:/opt/pf9/python/pf9-hostagent-lib:${LD_LIBRARY_PATH}"
   export PYTHONPATH="/opt/pf9/python/lib/python2.7:${PYTHONPATH}"
-  if [ ! -r /opt/pf9/setupd/bin/attach-node ]; then assert "attach-node not found - do you run deploy phase?"; fi
+  if [ ! -r /opt/pf9/setupd/bin/attach-node ]; then assert "attach-node not found"; fi
   /opt/pf9/setupd/bin/attach-node --mgmt-fqdn ${ctrl_fqdn} --admin-user ${admin_user} --admin-password ${admin_password} \
       --cluster-name ${cluster_name} --mgmt-ip ${ctrl_ip}
   if [ $? -ne 0 ]; then return 1; fi
@@ -109,6 +109,7 @@ uid=$(id -u)
 if [ ${uid} -ne 0 ]; then assert "this operation must be run as root"; fi
 
 ## read config file (if present; otherwise, use hard-codes username/password)
+echo "config_file = ${config_file}"
 if [ -r ${config_file} ]; then
   admin_user=$(grep ^du_username\| ${config_file} | cut -d \| -f2)
   admin_password=$(grep ^du_password\| ${config_file} | cut -d \| -f2 | openssl enc -base64 -d)
@@ -162,13 +163,8 @@ fi
 # Get Keystone Token
 ####################################################################################################
 banner "Getting Keystone Token" -n
-curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?nocatalog \
-    -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}"
-  
-# get token from user
-echo -e "\n\n********************************************************************************"
-echo -n "*** ENTER TOKEN: "
-read token
+token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?nocatalog \
+    -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}" 2>/dev/null | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
 
 ####################################################################################################
 # Wait for Host Agent to Register
