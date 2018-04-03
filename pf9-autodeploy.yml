@@ -10,10 +10,7 @@
       register: os_distr
     - name: install python2
       raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
-<<<<<<< HEAD
     - debug: msg="Detected OS Distr = {{os_distr.stdout.strip()}}"
-=======
->>>>>>> b2160bdb94891218dd6799b3824cee095c2886a5
 
 - hosts: hypervisors
   become: true
@@ -26,11 +23,7 @@
     - pf9-auth
     - pf9-hostagent
     - neutron-prerequisites
-<<<<<<< HEAD
     - { role: "secure-live-migration", when: os_distr.stdout.strip() == "centos" }
-=======
-    - secure-live-migration
->>>>>>> b2160bdb94891218dd6799b3824cee095c2886a5
     - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" and glance == "on" }
