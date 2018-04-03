@@ -1,27 +1,43 @@
 ---
 ################################################################################
 # Dynamically-Assigned Role Values (static values are initialized in inventory)
-- set_fact:
-    glance_endpoint_address: "{{ha_cluster_ip}}"
-- set_fact:
-    neutron_l3_agent_mode: "dvr_snat"
-  when: dvr == "on" and snat == "on"
-- set_fact:
-    neutron_l3_agent_mode: "dvr"
-  when: dvr == "on" and snat == "off"
-- set_fact:
-    neutron_l3_agent_mode: "dvr"
-  when: neutron_l3_agent_mode is undefined
-- set_fact:
-    neutron_ovs_enable_distributed_routing: "True"
-  when: dvr == "on"
-- set_fact:
-    neutron_ovs_enable_distributed_routing: "False"
-  when: dvr is undefined
-- set_fact:
-    neutron_novncproxy_base_url: "http://{{ha_cluster_ip}}:6080/vnc_auto.html"
-  when: neutron_novncproxy_base_url is undefined
+################################################################################
+# glance_endpoint_address
+- block:
+  - set_fact:
+      glance_endpoint_address: "{{ha_cluster_ip}}"
 
+  # neutron_l3_agent_mode
+  - set_fact:
+      neutron_l3_agent_mode: "dvr_snat"
+    when: dvr == "on" and snat == "on"
+  - set_fact:
+      neutron_l3_agent_mode: "dvr"
+    when: dvr == "on" and snat == "off"
+  - set_fact:
+      neutron_l3_agent_mode: "dvr"
+    when: neutron_l3_agent_mode is undefined
+
+  # neutron_ovs_enable_distributed_routing
+  - set_fact:
+      neutron_ovs_enable_distributed_routing: "True"
+    when: dvr == "on"
+  - set_fact:
+      neutron_ovs_enable_distributed_routing: "False"
+    when: dvr == "off"
+  - set_fact:
+      neutron_ovs_enable_distributed_routing: "True"
+    when: dvr is undefined
+
+  # neutron_novncproxy_base_url
+  - set_fact:
+      neutron_novncproxy_base_url: "http://{{ha_cluster_ip}}:6080/vnc_auto.html"
+    when: neutron_novncproxy_base_url is undefined
+  when: rolename != "pf9-kube"
+
+################################################################################
+# Configure Role Metadata
+################################################################################
 - name: validate pf9/host_id.conf
   stat:
     path: /etc/pf9/host_id.conf
@@ -37,12 +53,14 @@
 - set_fact:
     role_metadata: "/tmp/{{inventory_hostname}}.{{rolename}}.json"
 
+# Build template JSON
 - name: prepare role json data
   template:
     src: "{{rolename}}.j2"
     dest: "{{role_metadata}}"
   delegate_to: localhost
 
+# Enforce required role parameters
 - name: validate required role params (sourced from inventory)
   fail: msg="role 'pf9-kube' is missing required parameter - 'clusterName'"
   when: rolename == "pf9-kube" and clusterName is undefined
@@ -63,6 +81,9 @@
 
 - debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}}"
 
+################################################################################
+# Apply Role to Server
+################################################################################
 - name: "Assigning Role - {{rolename}}"
   script: "map-role.sh {{ctrl_ip}} {{rolename}} {{role_metadata}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}}"
   delegate_to: localhost

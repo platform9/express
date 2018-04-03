@@ -1,17 +1,17 @@
 ---
 - hosts:
-    - hypervisors-ubuntu
-    - containervisors-ubuntu
+    - hypervisors
+    - containervisors
   become: true
   gather_facts: False
   pre_tasks:
     - name: install python2
-      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+      raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
 
-- hosts:
-    - hypervisors
-    - hypervisors-ubuntu
+- hosts: hypervisors
   become: true
+  vars_files:
+    - pf9-role-metadata.yml
   roles:
     - common
     - ntp
@@ -20,12 +20,13 @@
     - neutron-prerequisites
     - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
-    - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" and glance == "on"}
-    - { role: "map-role", rolename: "pf9-celiometer-role", when: autoreg == "on" and ceilometer == "on"}
+    - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" and glance == "on" }
+    - { role: "map-role", rolename: "pf9-celiometer-role", when: autoreg == "on" and ceilometer == "on" }
     - { role: "map-role", rolename: "pf9-neutron-ovs-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
-    - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on"}
+    - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
+    - { role: "glance-host", when: autoreg == "on" and glance == "on" }
 
 - hosts: containervisors
   become: true
@@ -34,10 +35,4 @@
     - ntp
     - pf9-auth
     - pf9-hostagent
-    - { role: "map-role", rolename: "pf9-kube" }
-
-# Optional Role Assignments
-- hosts: pf9-glance
-  become: true
-  roles:
-    - glance-host
+    - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }

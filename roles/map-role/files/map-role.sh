@@ -170,7 +170,7 @@ cat ${role_metadata} | python -m json.tool
 echo "--------------------------------------------------------------------------------"
 
 ####################################################################################################
-# Assign Role : pf9-kube
+# Assign Kubernetes Roles
 ####################################################################################################
 if [ "${role}" == "pf9-kube" ]; then
   banner "Assigning Role : ${role}" -n
@@ -196,76 +196,14 @@ if [ "${role}" == "pf9-kube" ]; then
 fi
 
 ####################################################################################################
-# Assign Role : pf9-ostackhost
+# Assign Openstack Roles
 ####################################################################################################
-if [ "${role}" == "pf9-ostackhost" ]; then
+if [ "${role}" != "pf9-kube" ]; then
   banner "Assigning Role : ${role}" -n
   curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
        -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
   if [ $? -ne 0 ]; then exit 1; fi
 fi
-
-####################################################################################################
-# Assign Role : pf9-ostackhost-neutron
-####################################################################################################
-if [ "${role}" == "pf9-ostackhost-neutron" ]; then
-  banner "Assigning Role : ${role}" -n
-  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
-  if [ $? -ne 0 ]; then exit 1; fi
-fi
-
-####################################################################################################
-# Assign Role : pf9-neutron-base
-####################################################################################################
-if [ "${role}" == "pf9-neutron-base" ]; then
-  banner "Assigning Role : ${role}" -n
-  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
-  if [ $? -ne 0 ]; then exit 1; fi
-fi
-
-####################################################################################################
-# Assign Role : pf9-neutron-ovs-agent
-####################################################################################################
-if [ "${role}" == "pf9-neutron-ovs-agent" ]; then
-  banner "Assigning Role : ${role}" -n
-  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
-  if [ $? -ne 0 ]; then exit 1; fi
-fi
-
-####################################################################################################
-# Assign Role : pf9-neutron-metadata-agent
-####################################################################################################
-if [ "${role}" == "pf9-neutron-metadata-agent" ]; then
-  banner "Assigning Role : ${role}" -n
-  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
-  if [ $? -ne 0 ]; then exit 1; fi
-fi
-
-####################################################################################################
-# Assign Role : pf9-neutron-l3-agent
-####################################################################################################
-if [ "${role}" == "pf9-neutron-l3-agent" ]; then
-  banner "Assigning Role : ${role}" -n
-  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
-  if [ $? -ne 0 ]; then exit 1; fi
-fi
-
-####################################################################################################
-# Assign Role : pf9-neutron-dhcp-agent
-####################################################################################################
-if [ "${role}" == "pf9-neutron-dhcp-agent" ]; then
-  banner "Assigning Role : ${role}" -n
-  curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-       -d "@${role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role}
-  if [ $? -ne 0 ]; then exit 1; fi
-fi
-
-# curl -v -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://danwright.platform9.horse/resmgr/v1/services/neutron-server/
 
 echo -e "\n[ COMPLETE ]\n"
 exit 0
