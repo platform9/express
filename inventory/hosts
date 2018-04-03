@@ -6,45 +6,25 @@
 ansible_ssh_pass=Pl@tform9
 ansible_sudo_pass=Pl@tform9
 
-#####################################################################
-# User-Configurable Parameters
-neutron_instances_path=/opt/pf9/data/instances/
-neutron_dhcp_dns_domain=cs.platform9.net
-neutron_dhcp_dnsmasq_dns_servers=8.8.8.8
-neutron_ovs_allow_dhcp_vms='False'
-neutron_ovs_bridge_mappings='external:br-pf9'
-neutron_ovs_enable_tunneling='False'
-neutron_ovs_net_type=vlan
-ceilometer_kvm_instance_disk_path=/opt/pf9/data/instances/
-glance_filesystem_store_datadir=/var/opt/pf9/imagelibrary/data
-glance_update_public_glance_endpoint='False'
-
 ####################################################################################################
 ## Hypervisors
 [hypervisors]
-hv01 ansible_host=172.16.7.95 ansible_user=centos ha_cluster_ip=172.16.7.95 dvr=on dhcp=on snat=on ceilometer=on glance=on
-hv02 ansible_host=172.16.7.96 ansible_user=centos ha_cluster_ip=172.16.7.96 dvr=on dhcp=off snat=off ceilometer=on glance=off
-
-[hypervisors-ubuntu]
-hv03 ansible_host=172.16.7.94 ansible_user=ubuntu ha_cluster_ip=172.16.7.94 dvr=on dhcp=off snat=off ceilometer=on glance=off
-hv04 ansible_host=172.16.7.87 ansible_user=ubuntu ha_cluster_ip=172.16.7.87 dvr=on dhcp=off snat=off ceilometer=on glance=off
+hv01 ansible_host=172.16.7.123 ansible_user=centos ha_cluster_ip=172.16.7.123 dvr=on  dhcp=on  snat=on  ceilometer=on glance=on
+hv02 ansible_host=172.16.7.119 ansible_user=centos ha_cluster_ip=172.16.7.119 dvr=on  dhcp=off snat=off ceilometer=on glance=off
+hv03 ansible_host=172.16.7.121 ansible_user=centos ha_cluster_ip=172.16.7.121 dvr=on  dhcp=off snat=off ceilometer=on glance=off
+hv04 ansible_host=172.16.7.120 ansible_user=centos ha_cluster_ip=172.16.7.120 dvr=on  dhcp=off snat=off ceilometer=on glance=off
+hv05 ansible_host=172.16.7.70 ansible_user=ubuntu ha_cluster_ip=172.16.7.70   dvr=on dhcp=on  snat=on  ceilometer=on glance=on
+hv06 ansible_host=172.16.7.71 ansible_user=ubuntu ha_cluster_ip=172.16.7.71   dvr=on dhcp=off snat=off ceilometer=on glance=off
+hv07 ansible_host=172.16.7.125 ansible_user=ubuntu ha_cluster_ip=172.16.7.125 dvr=on dhcp=off snat=off ceilometer=on glance=off
+hv08 ansible_host=172.16.7.72 ansible_user=ubuntu ha_cluster_ip=172.16.7.72   dvr=on dhcp=off snat=off ceilometer=on glance=off
 
 ####################################################################################################
 ## Containervisors
 [containervisors]
-cv01 ansible_host=172.16.7.89 ansible_user=centos clusterName=c1 clusterFqdn=c1.cs.platform9.net
+cv01 ansible_host=172.16.7.116 ansible_user=centos clusterName=c1 clusterFqdn=c1.cs.platform9.net
 cv02 ansible_host=172.16.7.88 ansible_user=centos clusterName=c1 clusterFqdn=c1.cs.platform9.net
 
-## Containervisors-Ubuntu : Add Ubuntu kubernetes nodes (in addition to 'containervisors' group)
-[containervisors-ubuntu]
-
 ####################################################################################################
-## Optional Role Assignments
-[pf9-glance]
-
 ## Group Variables
 [hypervisors:vars]
-[hypervisors-ubuntu:vars]
 [containervisors:vars]
-[containervisors-ubuntu:vars]
-[pf9-glance:vars]
