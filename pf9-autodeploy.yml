@@ -20,3 +20,8 @@
   become: true
   roles:
     - glance-host
+
+- hosts: role_pf9_kube
+  become: true
+  roles:
+    - { role: "map-role", rolename: "pf9-kube" }
