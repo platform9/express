@@ -10,11 +10,10 @@ ansible_sudo_pass=Pl@rform9
 ## Hypervisors : Add CentOS/Ubuntu nodes that require Compute/Neutron Roles
 [hypervisors]
 hv1 ansible_host=172.16.7.46 ansible_user=centos
-hv2 ansible_host=172.16.7.49 ansible_user=ubuntu
+hv2 ansible_host=172.16.7.51 ansible_user=centos
 
 ## Hypervisors-Ubuntu : Add Ubuntu nodes (in addition to 'hypervisors' group)
 [hypervisors-ubuntu]
-hv2
 
 ## Image Libraries : Add nodes that require Glance Role
 [image_storage]
