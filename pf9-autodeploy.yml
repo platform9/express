@@ -5,8 +5,12 @@
   become: true
   gather_facts: False
   pre_tasks:
+    - name: get os distribution
+      raw: if [ -e /etc/lsb-release ]; then echo "ubuntu"; elif [ -e /etc/centos-release ]; then echo "centos"; fi
+      register: os_distr
     - name: install python2
       raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
+    - debug: msg="Detected OS Distr = {{os_distr.stdout.strip()}}"
 
 - hosts: hypervisors
   become: true
@@ -19,7 +23,7 @@
     - pf9-auth
     - pf9-hostagent
     - neutron-prerequisites
-    - secure-live-migration
+    - { role: "secure-live-migration", when: os_distr.stdout.strip() == "centos" }
     - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" and glance == "on" }
