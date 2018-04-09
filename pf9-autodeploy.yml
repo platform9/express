@@ -15,9 +15,11 @@
   roles:
     - common
     - ntp
+    - qemu-kvm-ev
     - pf9-auth
     - pf9-hostagent
     - neutron-prerequisites
+    - secure-live-migration
     - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" and glance == "on"}
