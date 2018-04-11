@@ -224,9 +224,9 @@ build_config
 ## validate target
 if [ -z "${target}" ]; then usage; fi
 
-## validate sudo priviledges
-sudo bash <<< "exit 200"
-if [ $? -ne 200 ]; then assert "you need sudo privilidges to run this script - please update /etc/sudoers"; fi
+## validate running as root
+uid=$(id -u)
+if [ ${uid} -ne 0 ]; then assert "you must run this script as root (or sudo)"; fi
 
 ## search for target in Ansible inventory
 grep ^${target} ${inventory} > /dev/null 2>&1

@@ -7,17 +7,16 @@
   pre_tasks:
     - name: install python2
       raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
-
-- hosts: hypervisors
-  become: true
-  vars_files:
-    - pf9-role-metadata.yml
   roles:
     - common
     - ntp
-    - qemu-kvm-ev
     - pf9-auth
     - pf9-hostagent
+
+- hosts: hypervisors
+  become: true
+  roles:
+    - qemu-kvm-ev
     - neutron-prerequisites
     - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
@@ -33,8 +32,4 @@
 - hosts: containervisors
   become: true
   roles:
-    - common
-    - ntp
-    - pf9-auth
-    - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }

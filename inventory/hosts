@@ -7,19 +7,15 @@ ansible_ssh_pass=Pl@tform9
 ansible_sudo_pass=Pl@tform9
 
 ####################################################################################################
-## Hypervisors
+## Openstack
 [hypervisors]
-hv01 ansible_host=172.16.7.123 ansible_user=centos ha_cluster_ip=172.16.7.123 dvr=on  dhcp=on  snat=on  ceilometer=on glance=on
-hv02 ansible_host=172.16.7.119 ansible_user=centos ha_cluster_ip=172.16.7.119 dvr=on  dhcp=off snat=off ceilometer=on glance=off
-hv03 ansible_host=172.16.7.117 ansible_user=ubuntu ha_cluster_ip=172.16.7.121 dvr=on  dhcp=off snat=off ceilometer=on glance=off
+hv01 ansible_host=172.16.7.123 ansible_user=centos ha_cluster_ip=172.16.7.123 dhcp=on snat=on glance=on
+hv02 ansible_host=172.16.7.119 ansible_user=centos ha_cluster_ip=172.16.7.119
+hv03 ansible_host=172.16.7.120 ansible_user=centos ha_cluster_ip=172.16.7.120
+hv04 ansible_host=172.16.7.121 ansible_user=centos ha_cluster_ip=172.16.7.121
 
 ####################################################################################################
-## Containervisors
+## Kubernetes
 [containervisors]
-cv01 ansible_host=172.16.7.116 ansible_user=centos clusterName=c1 clusterFqdn=c1.cs.platform9.net
-cv02 ansible_host=172.16.7.88 ansible_user=centos clusterName=c1 clusterFqdn=c1.cs.platform9.net
-
-####################################################################################################
-## Group Variables
-[hypervisors:vars]
-[containervisors:vars]
+cv01 ansible_host=172.16.7.116 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
+cv02 ansible_host=172.16.7.88 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
