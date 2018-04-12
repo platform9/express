@@ -44,6 +44,7 @@ Proxy URL:
 
 **Step 2 : Configure Your Inventory**
 * vi inventory/hosts 
+
 NOTE: The above file is a sample starting point, with a reference configuration for both Openstack and Kubernetes. You'll need change the hostnames and IP addresses to reflect your environment.
 
 * Ansible Inventory Example
