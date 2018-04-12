@@ -7,15 +7,21 @@ ansible_ssh_pass=Pl@tform9
 ansible_sudo_pass=Pl@tform9
 
 ####################################################################################################
-## Openstack
+## Openstack Groups
+####################################################################################################
+## global variables defined in group_vars/hypervisors.yml
 [hypervisors]
-hv01 ansible_host=172.16.7.123 ansible_user=centos ha_cluster_ip=172.16.7.123 dhcp=on snat=on glance=on
-hv02 ansible_host=172.16.7.119 ansible_user=centos ha_cluster_ip=172.16.7.119
-hv03 ansible_host=172.16.7.120 ansible_user=centos ha_cluster_ip=172.16.7.120
-hv04 ansible_host=172.16.7.121 ansible_user=centos ha_cluster_ip=172.16.7.121
+hv10 ansible_host=172.16.7.172 ansible_user=centos ha_cluster_ip=172.16.7.172 dhcp=on snat=on glance=on
+hv11 ansible_host=172.16.7.166 ansible_user=ubuntu ha_cluster_ip=172.16.7.166
+
+## global variables defined in group_vars/glance.yml
+[glance]
+hv10
 
 ####################################################################################################
-## Kubernetes
+## Kubernetes Groups
+####################################################################################################
+## global variables defined in group_vars/containervisors.yml
 [containervisors]
 cv01 ansible_host=172.16.7.116 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
 cv02 ansible_host=172.16.7.88 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net

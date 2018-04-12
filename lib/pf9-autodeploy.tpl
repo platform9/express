@@ -6,5 +6,6 @@ os_tenant|service
 du_url|
 os_username|
 os_password|
-os_region|kvm01
+os_region|
 nova_dns_domain|
+proxy_url|

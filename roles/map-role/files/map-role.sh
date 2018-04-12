@@ -104,6 +104,12 @@ while [ $# -gt 0 ]; do
     cluster_fqdn=${2}
     shift 2
     ;;
+  --proxy)
+    if [ $# -lt 2 ]; then usage; fi
+    export http_proxy=${2}
+    export https_proxy=${2}
+    shift 2
+    ;;
   *)
     usage
     ;;
