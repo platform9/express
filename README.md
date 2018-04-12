@@ -5,17 +5,46 @@ GitHub Repository : [https://github.com/platform9/autodeploy.git](https://github
 
 ## Installation/Setup Instructions
 
-**Step 1 : Define SSH connection details for hypervisors**
-* vi inventory/hosts
+**Step 1 : Run Setup**
+```
+$ ./INSTALL -s
+Instance URL: https://acme.platform9.horse
+--> accepted: https://acme.platform9.horse
 
-**Step 2: Run Auto-Deploy**
-* ./INSTALL [-a] \<target\>
+Admin Username: admin@platform9.net
+--> accepted: admin@platform9.net
 
-Where '\<target\>' is a hostname or group defined in Ansible inventory file.
+Admin Password: ---masked---
+--> accepted: ---masked---
 
-NOTE: if you include the '-a' flag, Autodeploy will perform pre-authorization and role deployment for the hypervisor or containervisor.
+Region: master
+--> accepted: master
 
-The first time you run ./INSTALL it will prompt you for various settings related to the Platform9 Control Plane.  If you need to change any settings after the initial run, you can use './INSTALL -s' to re-enter any values.
+Tennant [service]: admin
+--> accepted: admin
+
+Manage Hostname [true false] [false]:
+--> accepted: false
+
+Manage DNS Resolver [true false] [false]:
+--> accepted: false
+
+DNS Resolver 1 [8.8.8.8]:
+--> accepted: 8.8.8.8
+
+DNS Resolver 2 [8.8.4.4]:
+--> accepted: 8.8.4.4
+
+DNS Domain for Nova Hypervisors: cs.platform9.net
+--> accepted: cs.platform9.net
+
+Proxy URL:
+--> accepted: -
+```
+
+**Step 2 : Configure Your Inventory**
+* vi inventory/hosts 
+NOTE: The above file is a sample starting point, with a reference configuration for both Openstack and Kubernetes. You'll need change the hostnames and IP addresses to reflect your environment.
 
 * Ansible Inventory Example
 ```
@@ -46,6 +75,13 @@ hv10
 [containervisors]
 cv01 ansible_host=172.16.7.116 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.netcv02 ansible_host=172.16.7.88 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
 ```
+
+**Step 3: Run Auto-Deploy**
+* ./INSTALL [-a] \<target\>
+
+Where '\<target\>' is a hostname or group defined in Inventory file.
+
+NOTE: if you include the '-a' flag, Autodeploy will perform pre-authorization and role deployment for the hypervisor or containervisor.
 
 ## License
 
