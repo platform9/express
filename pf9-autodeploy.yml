@@ -13,31 +13,31 @@
 - hosts: hypervisors
   become: true
   roles:
-    - common
+#    - common
     - ntp
-    - pf9-auth
-    - pf9-hostagent
-    - qemu-kvm-ev
-    - neutron-prerequisites
-    - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
-    - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
-    - { role: "map-role", rolename: "pf9-celiometer-role", when: autoreg == "on" and ceilometer == "on" }
-    - { role: "map-role", rolename: "pf9-neutron-ovs-agent", when: autoreg == "on" }
-    - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
-    - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
-    - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
-    - secure-live-migration
+#    - pf9-auth
+#    - pf9-hostagent
+#    - qemu-kvm-ev
+#    - neutron-prerequisites
+#    - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
+#    - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
+#    - { role: "map-role", rolename: "pf9-celiometer-role", when: autoreg == "on" and ceilometer == "on" }
+#    - { role: "map-role", rolename: "pf9-neutron-ovs-agent", when: autoreg == "on" }
+#    - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
+#    - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
+#    - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
+#    - secure-live-migration
 
 # Openstack Roles
 - hosts: glance
   become: true
   roles:
-    - common
-    - ntp
-    - pf9-auth
-    - pf9-hostagent
-    - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" and glance == "on" }
-    - { role: "glance-host", when: autoreg == "on" and glance == "on" }
+#    - common
+#    - ntp
+#    - pf9-auth
+#    - pf9-hostagent
+    - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
+    - { role: "glance-host", when: autoreg == "on" }
 
 # Kubernetes Roles
 - hosts: containervisors

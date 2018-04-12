@@ -2,8 +2,8 @@
 ################################################################################
 # Dynamically-Assigned Role Values (static values are initialized in inventory)
 ################################################################################
-# glance_endpoint_address
 - block:
+  # glance_endpoint_address
   - set_fact:
       glance_endpoint_address: "{{ha_cluster_ip}}"
 
