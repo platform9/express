@@ -109,6 +109,7 @@ If you have more than one Platform9 DU to manage, you can create a configuration
 **Overriding Inventory Variable**
 If you want to override an Ansible variable defined in Inventory or dynamically within playbooks, you can invoke INSTALL with the '-e' flag:
 ```
+./INSTALL -c ~/pf9-autodeploy.conf -a -e "proxy_url=https://proxy1.platform9.net" hv01
 ```
 NOTE: Variables passed as extra-vars have the highest precedence.
 
