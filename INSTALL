@@ -21,6 +21,7 @@ pf9_custom_configFile=""
 flag_setup=0
 flag_prereqs=0
 flag_autoregister=0
+extra_vars=""
 
 # functions
 usage() {
@@ -189,6 +190,11 @@ while [ $# -gt 0 ]; do
     pf9_custom_configFile=${2}
     shift
     ;;
+  -e|--extra-vars)
+    if [ $# -lt 2 ]; then usage; fi
+    extra_vars=${2}
+    shift
+    ;;
   *)
     if [ $# -ne 1 ]; then usage; fi
     target=${1}
@@ -199,6 +205,10 @@ done
 
 # validate platform (CentOS 7.4 or Ubuntu 16.04)
 validate_platform
+
+## validate running as root
+uid=$(id -u)
+if [ ${uid} -ne 0 ]; then assert "you must run this script as root (or sudo)"; fi
 
 ## enforce setup/custom-config mutual exclusivity
 if [ ${flag_setup} -eq 1 -a -n "${pf9_custom_configFile}" ]; then assert "'-s' and '-c' are mutually exclusive"; fi
@@ -223,10 +233,6 @@ build_config
 
 ## validate target
 if [ -z "${target}" ]; then usage; fi
-
-## validate running as root
-uid=$(id -u)
-if [ ${uid} -ne 0 ]; then assert "you must run this script as root (or sudo)"; fi
 
 ## search for target in Ansible inventory
 grep ^${target} ${inventory} > /dev/null 2>&1
@@ -270,6 +276,10 @@ if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "An
 du_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
 du_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
 nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
+proxy_url=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
+
+## append proxy_url to extra_args
+if [ "${proxy_url}" != "-" ]; then extra_vars="${extra_vars} proxy_url=${proxy_url}"; fi
 
 ## assign/validate ctrl_ip from config file and resolve IP for ctrl_hostname
 ctrl_hostname=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
@@ -287,7 +297,7 @@ fi
 echo -e "\n[Executing: ansible-playbook ${autodeplopy_script}]"
 
 ## call pf9-autopdeplopy
-ansible-playbook -i ${inventory} -l ${target} -e "autoreg=${autoreg} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password}" ${autodeplopy_script}
+ansible-playbook -i ${inventory} -l ${target} -e "autoreg=${autoreg} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${autodeplopy_script}
 
 ## exit cleanly
 exit 0

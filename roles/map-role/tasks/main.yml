@@ -79,13 +79,23 @@
     role_params: "--clusterName {{cluster_name}} --clusterFqdn {{cluster_fqdn}}"
   when: rolename == "pf9-kube"
 
-- debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}}"
+- name: initialize proxy_params to null
+  set_fact: 
+    proxy_params: ""
+  when: proxy_url is undefined
+
+- name: initialize proxy_params
+  set_fact: 
+    proxy_params: "--proxy {{proxy_url}}"
+  when: proxy_url is defined
+
+- debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}} {{proxy_params}}"
 
 ################################################################################
 # Apply Role to Server
 ################################################################################
 - name: "Assigning Role - {{rolename}}"
-  script: "map-role.sh {{ctrl_ip}} {{rolename}} {{role_metadata}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}}"
+  script: "map-role.sh {{ctrl_ip}} {{rolename}} {{role_metadata}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}} {{proxy_params}}"
   delegate_to: localhost
   register: rolemap_log
 

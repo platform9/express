@@ -1,4 +1,5 @@
 ---
+# Global Variables for 'glance' Inventory Group
 
 glance_filesystem_store_datadir: /var/opt/pf9/imagelibrary/data
 glance_update_public_glance_endpoint: "False"

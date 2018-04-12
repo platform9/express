@@ -142,6 +142,7 @@ run_setup() {
   v8=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
   v9=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
   v10=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
+  v11=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
 
   pf9_nv_pairs=(
     "du_url|Instance URL|${v1}"
@@ -154,17 +155,14 @@ run_setup() {
     "dns_resolver1|DNS Resolver 1|${v8}"
     "dns_resolver2|DNS Resolver 2|${v9}"
     "nova_dns_domain|DNS Domain for Nova Hypervisors|${v10}"
+    "proxy_url|Proxy URL|${v11}"
   )
 
+  echo "NOTE: to enter a NULL value for prompt, enter '-'"
   for config_nv in "${pf9_nv_pairs[@]}"; do
     echo
     prompt_user "${config_nv}"
   done
-
-  getYN "\nSave settings? "; echo
-  if [ $? -eq 0 ]; then
-    build_config
-  fi
 }
 
 init_config() {
@@ -187,7 +185,9 @@ build_config() {
   local dns_resolver1=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
   local dns_resolver2=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
   local nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
+  local proxy_url=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
 
+  # build group_vars/all.yml
   echo "---" > ${pf9_group_vars}
   echo "# Set hostname equal to inventory_hostname" >> ${pf9_group_vars}
   echo "manage_hostname: ${manage_hostname}" >> ${pf9_group_vars}
@@ -220,6 +220,7 @@ validate_config() {
   os_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
   os_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
   nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
+  proxy_url=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
 
   # validate manage_hostname
   if [ -z "${manage_hostname}" ]; then assert "config:manage_hostname : illegal value - run './INSTALL -s'\n"; fi

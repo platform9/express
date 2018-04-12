@@ -1,4 +1,6 @@
 ---
+- debug: var=proxy_url
+# download pf9-hostagent
 - name: Download Platform9 installers
   become: no
   get_url:
@@ -6,6 +8,23 @@
     dest: "/tmp/platform9-install-{{ item }}.sh"
     headers: "X-Auth-Token: {{ hostvars[inventory_hostname]['os_auth_token'] }}"
     validate_certs: no
+  when: proxy_url is undefined
+  with_items:
+    - debian
+    - redhat
+
+# download pf9-hostagent via proxy
+- name: Download Platform9 installers
+  become: no
+  environment:
+    http_proxy: "{{proxy_url}}"
+    https_proxy: "{{proxy_url}}"
+  get_url:
+    url: "{{ du_url }}/private/platform9-install-{{ item }}.sh"
+    dest: "/tmp/platform9-install-{{ item }}.sh"
+    headers: "X-Auth-Token: {{ hostvars[inventory_hostname]['os_auth_token'] }}"
+    validate_certs: no
+  when: proxy_url is defined
   with_items:
     - debian
     - redhat
