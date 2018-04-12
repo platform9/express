@@ -162,7 +162,9 @@ run_setup() {
   for config_nv in "${pf9_nv_pairs[@]}"; do
     echo
     prompt_user "${config_nv}"
-  done
+  done; echo
+
+  build_config
 }
 
 init_config() {
@@ -171,6 +173,14 @@ init_config() {
 }
 
 build_config() {
+  # copy template for inventory/hosts
+  if [ -r ${basedir}/inventory/hosts ]; then
+    getYN "Ansible inventory file exists - overwrite with template? "
+    if [ $? -eq 0 ]; then /bin/cp -f ${basedir}/lib/hosts.tpl ${basedir}/inventory/hosts; fi
+  else
+    /bin/cp -f ${basedir}/lib/hosts.tpl ${basedir}/inventory/hosts
+  fi
+
   rm -f ${pf9_group_vars} && touch ${pf9_group_vars}
   if [ $? -ne 0 ]; then assert "failed to initialize group vars: ${pf9_group_vars}"; fi
   
