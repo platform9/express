@@ -222,9 +222,6 @@ fi
 ## use custom config (if specified on commandline)
 if [ -n "${pf9_custom_configFile}" ]; then pf9_config=${pf9_custom_configFile}; fi
 
-## build group_vars/all.yml
-build_config
-
 ## validate target
 if [ -z "${target}" ]; then usage; fi
 
