@@ -213,14 +213,20 @@ if [ ${flag_setup} -eq 1 ]; then
   exit 0
 fi
 
+## use custom config (if specified on commandline)
+if [ -n "${pf9_custom_configFile}" ]; then pf9_config=${pf9_custom_configFile}; fi
+
+# run setup if config file missing
+if [ ! -r ${pf9_config} ]; then
+  init_config
+  run_setup
+fi
+
 ## install prequisite packages
 if [ ${flag_prereqs} -eq 1 ]; then
   install_prereqs; echo
   exit 0
 fi
-
-## use custom config (if specified on commandline)
-if [ -n "${pf9_custom_configFile}" ]; then pf9_config=${pf9_custom_configFile}; fi
 
 ## validate target
 if [ -z "${target}" ]; then usage; fi
@@ -245,12 +251,6 @@ esac
 
 ## display banner
 banner
-
-# run setup if config file missing
-if [ ! -r ${pf9_config} ]; then
-  init_config
-  run_setup
-fi
 
 # validate all config values are set
 validate_config
