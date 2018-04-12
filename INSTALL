@@ -9,11 +9,11 @@ basedir=$(dirname $0)
 min_ansible_version="2.2"
 inventory=${basedir}/inventory/hosts
 autodeplopy_script=${basedir}/pf9-autodeploy.yml
-help_file=${basedir}/lib/help.txt
 platform=""
 target=""
 target_type=""
-log=${basedir}/lib/INSTALL.log
+log=/tmp/pf9-INSTALL.log
+install_log="${basedir}/log/pf9-autodeploy.`date "+%Y-%m-%d_%H:%M:%S"`.log"
 pf9_config=${basedir}/pf9-autodeploy.conf
 pf9_config_tpl=${basedir}/lib/pf9-autodeploy.tpl
 pf9_group_vars=${basedir}/group_vars/all.yml
@@ -64,17 +64,10 @@ banner() {
   echo "################################################################"
 }
 
-help() {
-  if [ -r ${help_file} ]; then 
-    usage -q
-    cat ${help_file}
-  else
-    assert "help file missing"
-  fi
-  exit 0
-}
-
 install_prereqs() {
+  # display log
+  echo "--> Installation Log: ${install_log}"
+
   # install Ansibl (and dependencies)
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
@@ -140,13 +133,14 @@ install_prereqs() {
   echo
 
   # create log directory
-  if [ ! -d /var/log/pf9 ]; then mkdir -p /var/log/pf9; fi
+  if [ ! -d /var/log/pf9 ]; then sudo mkdir -p /var/log/pf9; fi
 
   # update setupd packages
   echo -n "--> Updating setupd libraries: "
   for pkg in pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py; do
     echo -n "${pkg} "
-    /bin/cp -f ${basedir}/scripts/setupd-updates/${pkg} /opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/${pkg} > /dev/null 2>&1
+    sudo /bin/cp -f ${basedir}/scripts/setupd-updates/${pkg} \
+         /opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/${pkg} > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo; assert "failed to update ${pkg}"
     fi
@@ -154,7 +148,7 @@ install_prereqs() {
 
   for pkg in attach-node add-cluster; do
     echo -n "${pkg} "
-    /bin/cp -f ${basedir}/scripts/setupd-updates/${pkg} /opt/pf9/setupd/bin/${pkg} > /dev/null 2>&1
+    sudo /bin/cp -f ${basedir}/scripts/setupd-updates/${pkg} /opt/pf9/setupd/bin/${pkg} > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo; assert "failed to update ${pkg}"
     fi
@@ -174,7 +168,7 @@ if [ $# -lt 1 ]; then usage; fi
 while [ $# -gt 0 ]; do
   case ${1} in
   -h|--help)
-    help ;;
+    usage ;;
   -s|--setup)
     if [ ! -r ${pf9_config} ]; then init_config; fi
     flag_setup=1
@@ -206,9 +200,9 @@ done
 # validate platform (CentOS 7.4 or Ubuntu 16.04)
 validate_platform
 
-## validate running as root
-uid=$(id -u)
-if [ ${uid} -ne 0 ]; then assert "you must run this script as root (or sudo)"; fi
+## validate sudo priviledges
+sudo bash <<< "exit 200"
+if [ $? -ne 200 ]; then assert "you need sudo privilidges to run this script - please update /etc/sudoers"; fi
 
 ## enforce setup/custom-config mutual exclusivity
 if [ ${flag_setup} -eq 1 -a -n "${pf9_custom_configFile}" ]; then assert "'-s' and '-c' are mutually exclusive"; fi
@@ -297,7 +291,10 @@ fi
 echo -e "\n[Executing: ansible-playbook ${autodeplopy_script}]"
 
 ## call pf9-autopdeplopy
-ansible-playbook -i ${inventory} -l ${target} -e "autoreg=${autoreg} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${autodeplopy_script}
+sudo ansible-playbook -i ${inventory} -l ${target} -e "autoreg=${autoreg} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${autodeplopy_script} 2>&1 | tee ${install_log}
+
+## display log path
+echo -e "Installation Log: ${install_log}\n"
 
 ## exit cleanly
 exit 0

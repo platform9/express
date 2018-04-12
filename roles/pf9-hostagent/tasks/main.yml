@@ -1,5 +1,4 @@
 ---
-- debug: var=proxy_url
 # download pf9-hostagent
 - name: Download Platform9 installers
   become: no
