@@ -84,6 +84,34 @@ Where '\<target\>' is a hostname or group defined in Inventory file.
 
 NOTE: if you include the '-a' flag, Autodeploy will perform pre-authorization and role deployment for the hypervisor or containervisor.
 
+## Usage Notes
+Here's the usage statement for the Autodeploy installer:
+```
+$ ./INSTALL
+Usage: ./INSTALL [Args] <target>
+
+Args (Optional):
+
+-a|--autoRegister        : auto-register host with control plane
+-i|--installPrereqs      : install pre-requisites and exit
+-s|--setup               : run setup and exit
+-c|--config <configFile> : use custom configuration file
+-e|--extra-vars <string> : ansible extra-vars <name=val,...>
+-h|--help                : display this message
+```
+
+**Managing Multiple DUs**
+If you have more than one Platform9 DU to manage, you can create a configuration file for each one (using pf9-autodeploy.conf as a template) and start INSTALL with the '-c' flag:
+```
+./INSTALL -c ~/pf9-site1.conf -a hv01
+```
+
+**Overriding Inventory Variable**
+If you want to override an Ansible variable defined in Inventory or dynamically within playbooks, you can invoke INSTALL with the '-e' flag:
+```
+```
+NOTE: Variables passed as extra-vars have the highest precedence.
+
 ## License
 
 Commerical
