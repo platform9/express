@@ -2,6 +2,7 @@ pf9-autodeploy.conf
 platform9-install-redhat.sh
 group_vars/all.yml
 lib/INSTALL.log
+inventory/hosts
 log/*.log
 *.pyc
 *.swp
