@@ -177,6 +177,7 @@ build_config() {
   if [ -r ${basedir}/inventory/hosts ]; then
     getYN "Ansible inventory file exists - overwrite with template? "
     if [ $? -eq 0 ]; then /bin/cp -f ${basedir}/lib/hosts.tpl ${basedir}/inventory/hosts; fi
+    echo
   else
     /bin/cp -f ${basedir}/lib/hosts.tpl ${basedir}/inventory/hosts
   fi
