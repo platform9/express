@@ -11,7 +11,6 @@ inventory=${basedir}/inventory/hosts
 autodeplopy_script=${basedir}/pf9-autodeploy.yml
 platform=""
 target=""
-target_type=""
 log=/tmp/pf9-INSTALL.log
 install_log="${basedir}/log/pf9-autodeploy.`date "+%Y-%m-%d_%H:%M:%S"`.log"
 pf9_config=${basedir}/pf9-autodeploy.conf
@@ -230,24 +229,6 @@ fi
 
 ## validate target
 if [ -z "${target}" ]; then usage; fi
-
-## search for target in Ansible inventory
-grep ^${target} ${inventory} > /dev/null 2>&1
-if [ $? -eq 0 ]; then
-  target_type="host"
-else
-  grep "^\[${target}\]" ${inventory} > /dev/null 2>&1
-  if [ $? -eq 0 ]; then target_type="group"; fi
-fi
-
-## validate target found
-case ${target_type} in
-host|group)
-  ;;
-*)
-  assert "target not found in Ansible inventory"
-  ;;
-esac
 
 ## display banner
 banner

@@ -1,0 +1,15 @@
+---
+
+- name: install lvm2
+  yum:
+    name: lvm2
+    state: latest
+
+- name: configuring lvm (device filters in lvm.conf)
+  template:
+    src: lvm.conf.j2
+    dest: /etc/lvm/lvm.conf
+
+- name: running vgscan
+  shell: vgscan
+
