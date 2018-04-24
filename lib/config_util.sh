@@ -174,12 +174,16 @@ init_config() {
 
 build_config() {
   # copy template for inventory/hosts
-  if [ -r ${basedir}/inventory/hosts ]; then
-    getYN "Ansible inventory file exists - overwrite with template? "
-    if [ $? -eq 0 ]; then /bin/cp -f ${basedir}/lib/hosts.tpl ${basedir}/inventory/hosts; fi
-    echo
+  if [ $# -eq 1 -a "${1}" == "--skip-inventory-check" ]; then
+    :
   else
-    /bin/cp -f ${basedir}/lib/hosts.tpl ${basedir}/inventory/hosts
+    if [ -r ${basedir}/inventory/hosts ]; then
+      getYN "Ansible inventory file exists - overwrite with template? "
+      if [ $? -eq 0 ]; then /bin/cp -f ${basedir}/lib/hosts.tpl ${basedir}/inventory/hosts; fi
+      echo
+    else
+      /bin/cp -f ${basedir}/lib/hosts.tpl ${basedir}/inventory/hosts
+    fi
   fi
 
   rm -f ${pf9_group_vars} && touch ${pf9_group_vars}
