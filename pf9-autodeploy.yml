@@ -9,7 +9,7 @@
     - name: install python2
       raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
 
-# Openstack Hypervisors
+# Openstack Hypervisor Nodes
 - hosts: hypervisors
   become: true
   roles:
@@ -26,20 +26,24 @@
     - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
-    - secure-live-migration
+    - { role: "secure-live-migration", when: autoreg == "on" }
 
-# Openstack Roles
+# Openstack Image Nodes
 - hosts: glance
   become: true
   roles:
-    - common
-    - ntp
-    - pf9-auth
-    - pf9-hostagent
-    - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
     - { role: "glance-host", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
 
-# Kubernetes Roles
+# Openstack Block Storage Nodes
+- hosts: cinder
+  become: true
+  roles:
+    - lvm
+    - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
+
+# Kubernetes Master & Worker Nodes
 - hosts: containervisors
   become: true
   roles:
@@ -48,3 +52,4 @@
     - pf9-auth
     - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
+

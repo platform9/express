@@ -2,6 +2,7 @@
 ################################################################################
 # Dynamically-Assigned Role Values (static values are initialized in inventory)
 ################################################################################
+- debug: msg="*** DEPLOYING ROLE - {{rolename}}"
 - block:
   # glance_endpoint_address
   - set_fact:
@@ -33,7 +34,17 @@
   - set_fact:
       neutron_novncproxy_base_url: "http://{{ha_cluster_ip}}:6080/vnc_auto.html"
     when: neutron_novncproxy_base_url is undefined
-  when: rolename != "pf9-kube"
+  when: rolename != "pf9-kube" and rolename != "pf9-cindervolume-lvm" and rolename != "pf9-cindervolume-base"
+
+- block:
+  # cinder_iscsi_ip_address
+  - set_fact:
+      cinder_iscsi_ip_address: "{{cinder_ip}}"
+
+  # cinder_volume_backend_name
+  - set_fact:
+      cinder_volume_backend_name: "{{cinder_backend_name}}"
+  when: rolename == "pf9-cindervolume-lvm"
 
 ################################################################################
 # Configure Role Metadata
@@ -60,7 +71,10 @@
     dest: "{{role_metadata}}"
   delegate_to: localhost
 
+##############################################################################
 # Enforce required role parameters
+##############################################################################
+# pf0-kube
 - name: validate required role params (sourced from inventory)
   fail: msg="role 'pf9-kube' is missing required parameter - 'cluster_name'"
   when: rolename == "pf9-kube" and cluster_name is undefined
@@ -69,6 +83,13 @@
   fail: msg="role 'pf9-kube' is missing required parameter - 'cluster_fqdn'"
   when: rolename == "pf9-kube" and cluster_fqdn is undefined
     
+# pf9-cindervolume-lvm
+- fail: msg="role 'pf9-kube' is missing required parameter - pvs"
+  when: rolename == "pf9-cindervolume-lvm" and pvs is undefined
+
+##############################################################################
+# Manage role_params
+##############################################################################
 - name: initialize role_params to null
   set_fact:
     role_params: ""
@@ -90,6 +111,23 @@
   when: proxy_url is defined
 
 - debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}} {{proxy_params}}"
+
+##############################################################################
+# For cinder, perform SCSI discovery and LVM configuration
+##############################################################################
+- name: discover volumes
+  script: files/pf9-scsi-rescan
+  register: scsi_rescan
+  when: rolename == "pf9-cindervolume-lvm"
+- debug: var=scsi_rescan
+  when: rolename == "pf9-cindervolume-lvm"
+
+- name: configure LVM
+  script: "files/pf9-configure-lvm cinder-volumes {{pvs}}"
+  register: config_lvm
+  when: rolename == "pf9-cindervolume-lvm"
+- debug: var=config_lvm
+  when: rolename == "pf9-cindervolume-lvm"
 
 ################################################################################
 # Apply Role to Server
