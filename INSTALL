@@ -213,13 +213,18 @@ if [ ${flag_setup} -eq 1 ]; then
 fi
 
 ## use custom config (if specified on commandline)
-if [ -n "${pf9_custom_configFile}" ]; then pf9_config=${pf9_custom_configFile}; fi
+if [ -n "${pf9_custom_configFile}" ]; then
+  pf9_config=${pf9_custom_configFile}
+fi
 
 # run setup if config file missing
 if [ ! -r ${pf9_config} ]; then
   init_config
   run_setup
 fi
+
+## build group_vars/all.yml
+build_config --skip-inventory-check
 
 ## install prequisite packages
 if [ ${flag_prereqs} -eq 1 ]; then
@@ -269,7 +274,7 @@ fi
 echo -e "\n[Executing: ansible-playbook ${autodeplopy_script}]"
 
 ## call pf9-autopdeplopy
-sudo ansible-playbook -i ${inventory} -l ${target} -e "autoreg=${autoreg} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${autodeplopy_script} 2>&1 | tee ${install_log}
+sudo ansible-playbook -i ${inventory} -l ${target} -e "autoreg=${autoreg} du_fqdn=${ctrl_hostname} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${autodeplopy_script} 2>&1 | tee ${install_log}
 
 ## display log path
 echo -e "Installation Log: ${install_log}\n"
