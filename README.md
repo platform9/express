@@ -67,14 +67,19 @@ hv11 ansible_host=172.16.7.171 ansible_user=ubuntu ha_cluster_ip=172.16.7.171
 
 ## global variables defined in group_vars/glance.yml
 [glance]
-hv10
+hv10 glance_public_endpoint=True
+
+## global variables defined in group_vars/cinder.yml
+[cinder]
+hv11 cinder_ip=172.16.7.196 cinder_backend_name=cinder-volumes pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 
 ################################################################################################
 ## Kubernetes Groups
 ################################################################################################
 ## global variables defined in group_vars/containervisors.yml
 [containervisors]
-cv01 ansible_host=172.16.7.116 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.netcv02 ansible_host=172.16.7.88 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
+cv01 ansible_host=172.16.7.116 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
+cv02 ansible_host=172.16.7.88 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
 ```
 
 **Step 3: Run Auto-Deploy**
@@ -112,6 +117,12 @@ If you want to override an Ansible variable defined in Inventory or dynamically 
 ./INSTALL -c ~/pf9-autodeploy.conf -a -e "proxy_url=https://proxy1.platform9.net" hv01
 ```
 NOTE: Variables passed as extra-vars have the highest precedence.
+
+**Support for Nested Virtualization**
+To support nested virtualization, add the following name/value pair to the Ansible inventory file.  This can be done at the group level or individual server level:
+```
+nested_virt=True
+```
 
 ## License
 
