@@ -27,6 +27,7 @@
     - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
     - { role: "secure-live-migration", when: autoreg == "on" }
+    - { role: "enable-nested-virt", when: autoreg == "on" and nested_virt == True }
 
 # Openstack Image Nodes
 - hosts: glance
