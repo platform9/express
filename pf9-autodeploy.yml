@@ -13,28 +13,28 @@
 - hosts: hypervisors
   become: true
   roles:
-    #- common
-    #- ntp
-    #- pf9-auth
-    #- pf9-hostagent
-    #- qemu-kvm-ev
-    #- neutron-prerequisites
-    #- { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
-    #- { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
-    #- { role: "map-role", rolename: "pf9-celiometer-role", when: autoreg == "on" and ceilometer == "on" }
-    #- { role: "map-role", rolename: "pf9-neutron-ovs-agent", when: autoreg == "on" }
-    #- { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
-    #- { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
-    #- { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
+    - common
+    - ntp
+    - pf9-auth
+    - pf9-hostagent
+    - qemu-kvm-ev
+    - neutron-prerequisites
+    - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-celiometer-role", when: autoreg == "on" and ceilometer == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-ovs-agent", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
     - { role: "secure-live-migration", when: autoreg == "on" }
-    #- { role: "enable-nested-virt", when: autoreg == "on" and nested_virt == True }
+    - { role: "enable-nested-virt", when: autoreg == "on" and nested_virt == True }
 
 # Openstack Image Nodes
 - hosts: glance
   become: true
   roles:
-    #- { role: "glance-host", when: autoreg == "on" }
-    #- { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
+    - { role: "glance-host", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
 
 # Openstack Block Storage Nodes
 - hosts: cinder
