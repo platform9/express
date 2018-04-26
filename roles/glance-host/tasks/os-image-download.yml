@@ -3,7 +3,7 @@
 - name: Download OpenStack images
   get_url:
     url: "{{ item }}"
-    dest: "{{ glance_datadir }}{{ item | basename }}"
+    dest: "{{ glance_filesystem_store_datadir }}/{{ item | basename }}"
   async: 300
   register: image_downloads
   with_items: "{{ glance_images }}"
@@ -15,3 +15,10 @@
   register: job_result
   until: job_result.finished
   with_items: "{{ image_downloads.results }}"
+
+- name: set permissions on images (pf9:pf9group)
+  file:
+    path: "{{ glance_filesystem_store_datadir }}/{{ item | basename }}"
+    owner: pf9
+    group: pf9group
+  with_items: "{{ glance_images }}"
