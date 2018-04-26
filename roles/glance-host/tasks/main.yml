@@ -8,4 +8,4 @@
     owner: pf9
     group: pf9group
 
-#- include: os-image-download.yml
+- include: os-image-download.yml

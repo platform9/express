@@ -3,3 +3,6 @@
 
 glance_filesystem_store_datadir: /var/opt/pf9/imagelibrary/data
 glance_public_endpoint: False
+glance_images:
+  -
+  -
