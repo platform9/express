@@ -16,7 +16,7 @@ hv11 ansible_host=172.16.7.171 ansible_user=ubuntu ha_cluster_ip=172.16.7.171
 
 ## global variables defined in group_vars/glance.yml
 [glance]
-hv10
+hv10 glance_public_endpoint=True
 
 ################################################################################################
 ## Kubernetes Groups
