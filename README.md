@@ -1,5 +1,5 @@
-# Platform9 Autodeplopy
-Autodeploy aims to automate the prerequisite tasks required to bring Openstack hypervisors and Kubernetes containervisors under management by a Platform9 control plane, including package/service prerequisites, host agent(s), and control plane authorization.
+# Platform9 Autodeploy
+Autodeploy aims to automate the prerequisite tasks required to bring OpenStack hypervisors and Kubernetes containervisors under management by a Platform9 control plane, including package/service prerequisites, host agent(s), and control plane authorization.
 
 GitHub Repository : [https://github.com/platform9/autodeploy.git](https://github.com/platform9/autodeploy.git)
 
@@ -8,11 +8,11 @@ GitHub Repository : [https://github.com/platform9/autodeploy.git](https://github
 **Step 1 : Run Setup**
 ```
 $ ./INSTALL -s
-Instance URL: https://acme.platform9.horse
---> accepted: https://acme.platform9.horse
+Instance URL: https://acme.platform9.net
+--> accepted: https://acme.platform9.net
 
-Admin Username: admin@platform9.net
---> accepted: admin@platform9.net
+Admin Username: admin-user@platform9.net
+--> accepted: admin-user@platform9.net
 
 Admin Password: ---masked---
 --> accepted: ---masked---
@@ -20,7 +20,7 @@ Admin Password: ---masked---
 Region: master
 --> accepted: master
 
-Tennant [service]: admin
+Tenant [service]: admin
 --> accepted: admin
 
 Manage Hostname [true false] [false]:
@@ -45,7 +45,7 @@ Proxy URL:
 **Step 2 : Configure Your Inventory**
 * vi inventory/hosts 
 
-NOTE: The above file is a sample starting point, with a reference configuration for both Openstack and Kubernetes. You'll need change the hostnames and IP addresses to reflect your environment.
+NOTE: The above file is a sample starting point, with a reference configuration for both OpenStack and Kubernetes. You'll need change the hostnames and IP addresses to reflect your environment.
 
 * Ansible Inventory Example
 ```
@@ -77,7 +77,7 @@ hv10
 cv01 ansible_host=172.16.7.116 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.netcv02 ansible_host=172.16.7.88 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
 ```
 
-**Step 3: Run Auto-Deploy**
+**Step 3: Run Autodeploy**
 * ./INSTALL [-a] \<target\>
 
 Where '\<target\>' is a hostname or group defined in Inventory file.
@@ -101,7 +101,7 @@ Args (Optional):
 ```
 
 **Managing Multiple DUs**
-If you have more than one Platform9 DU to manage, you can create a configuration file for each one (using pf9-autodeploy.conf as a template) and start INSTALL with the '-c' flag:
+If you have more than one Platform9 region to manage, you can create a configuration file for each one (using pf9-autodeploy.conf as a template) and start INSTALL with the '-c' flag:
 ```
 ./INSTALL -c ~/pf9-site1.conf -a hv01
 ```
