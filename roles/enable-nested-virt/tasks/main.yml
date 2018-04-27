@@ -1,0 +1,5 @@
+---
+
+- name: update Nova to support nested virtualization
+  script: files/update-nova.sh
+
