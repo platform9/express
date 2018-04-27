@@ -27,11 +27,6 @@
       bridge: br-pf9
       state: present
 
-  - name: Set br-pf9 external bridge ID
-    openvswitch_bridge:
-      bridge: br-pf9
-      state: present
-
   - name: Set br-pf9 port as bond0
     openvswitch_port:
       bridge: br-pf9
