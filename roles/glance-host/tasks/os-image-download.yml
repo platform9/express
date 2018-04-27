@@ -21,4 +21,5 @@
     path: "{{ glance_filesystem_store_datadir }}/{{ item | basename }}"
     owner: pf9
     group: pf9group
+    mode: 0744
   with_items: "{{ glance_images }}"
