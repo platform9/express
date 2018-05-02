@@ -70,14 +70,39 @@ install_prereqs() {
   # install Ansibl (and dependencies)
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
-    for pkg in epel-release nginx ansible gcc python-devel python2-pip bc; do
+    for pkg in epel-release nginx ansible gcc; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         sudo yum -y install ${pkg} > ${log} 2>&1
         if [ $? -ne 0 ]; then
-          echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
-          cat ${log}; exit 1
+          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+          tail -10 ${log}; exit 1
+        fi
+      fi
+    done
+
+    # check for packages with known conflicts
+    conflict_pkgs="PyYAML python-requests python-ipaddress"
+    for pkg in ${conflict_pkgs}; do
+      rpm -qa | grep "${pkg}" > /dev/null 2>&1
+      if [ $? -eq 0 ]; then
+        sudo yum -y erase ${pkg} > ${log} 2>&1
+        if [ $? -ne 0 ]; then
+          echo -e "\nERROR: failed to uninstall ${pkg} - here's the last 10 lines of the log:\n"
+          tail -10 ${log}; exit 1
+        fi
+      fi
+    done
+
+    for pkg in python-devel python2-pip bc; do
+      echo -n "${pkg} "
+      rpm -q ${pkg} > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        sudo yum -y install ${pkg} > ${log} 2>&1
+        if [ $? -ne 0 ]; then
+          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+          tail -10 ${log}; exit 1
         fi
       fi
     done
@@ -89,8 +114,8 @@ install_prereqs() {
       sudo apt-get update> /dev/null 2>&1
       sudo apt-get -y install ansible > ${log} 2>&1
       if [ $? -ne 0 ]; then
-        echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
-        cat ${log}; exit 1
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
       fi
     fi
 
@@ -100,8 +125,8 @@ install_prereqs() {
       if [ $? -ne 0 ]; then
         sudo apt -y install ${pkg} > ${log} 2>&1
         if [ $? -ne 0 ]; then
-          echo -e "\nERROR: failed to install ${pkg} - here's the log:\n"
-          cat ${log}; exit 1
+          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+          tail -10 ${log}; exit 1
         fi
       fi
     done
@@ -110,16 +135,16 @@ install_prereqs() {
   ## upgrade pip
   sudo pip install --upgrade pip > ${log} 2>&1
   if [ $? -ne 0 ]; then
-    echo -e "\nERROR: failed to upgrade pip - here's the log:\n"
-    cat ${log}; exit 1
+    echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
+    tail -10 ${log}; exit 1
   fi
 
   ## install python shade
   echo -n "python-shade "
   sudo pip install shade > ${log} 2>&1
   if [ $? -ne 0 ]; then
-    echo -e "\nERROR: failed to install python shade - here's the log:\n"
-    cat ${log}; exit 1
+    echo -e "\nERROR: failed to install python shade - here's the last 10 lines of the log:\n"
+    tail -10 ${log}; exit 1
   fi
 
   ## install setupd
@@ -127,7 +152,7 @@ install_prereqs() {
   sudo yum -y install ${basedir}/lib/setupd.rpm > ${log} 2>&1
   if [ ! -d /opt/pf9/setupd ]; then
     echo -e "\nERROR: failed to install setupd\n"
-    cat ${log}; exit 1
+    tail -10 ${log}; exit 1
   fi
   echo
 
