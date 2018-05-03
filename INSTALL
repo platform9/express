@@ -26,6 +26,10 @@ flag_prereqs=0
 flag_ui=0
 flag_autoregister=0
 extra_vars=""
+awx_pf9_user="pf9"
+awx_pf9_password="Pl@tform9"
+awx_pf9_email="user@company.com"
+awx_projects_dir=/var/lib/awx/projects
 
 # functions
 usage() {
@@ -82,18 +86,64 @@ install_ui() {
     git clone ${awx_repo} ${awx_repo_dir} > ${log} 2>&1
   fi
 
-  # clone tower-cli repo
-  echo -n "--> validating tower-cli repository: "
-  if [ -r ${awxcli_repo_dir} ]; then
-    echo "present"
-  else
-    echo "missing - cloning..."
-    git clone ${awxcli_repo} ${awxcli_repo_dir} > ${log} 2>&1
+  # Install Tower CLI
+  echo "--> installing tower-cli"
+  pip install ansible-tower-cli > ${log} 2>&1
+  if [ $? -ne 0 ]; then assert "failed to pip install ansible-tower-cli"; fi
+  /bin/cp -f ${basedir}/lib/tower_cli.cfg.tpl /root/.tower_cli.cfg
+  if [ $? -ne 0 ]; then assert "failed to copy lib/tower_cli.cfg.tpl"; fi
+
+  # Validate Tower CLI
+  echo "--> validating tower-cli"
+  tower-cli version > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "    Failed to connect to awx instance - here's the config:"
+    while read line; do
+      echo "    ${line}"
+    done < /root/.tower_cli.cfg
+    exit 1
   fi
 
   # Install AWX (Docker-based)
-  echo "--> installing AWS (this will take a while - monitor log for status)"
+  echo "--> installing AWX (this will take a while - monitor log for status)"
   (cd ${awx_repo_dir}/installer && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
+
+  # Configure Tower
+  echo "--> configuring AWX (add user, configure inventory, import playbooks)"
+  tower-cli user list | grep ${awx_pf9_user} > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    tower-cli user create --username=${awx_pf9_user} --email=${awx_pf9_email} --password ${awx_pf9_password} --is-superuser true
+    if [ $? -ne 0 ]; then assert "failed to create tower user 'pf9'"; fi
+  fi
+
+  # Configure Projects Directory
+  echo -n "--> validating awx projects directory: "
+  dockout=$(docker exec -it awx_web /bin/bash -c "if [ -r ${awx_projects_dir} ]; then echo true; else echo false; fi")
+  if [ "${dockout}" == "true" ]; then
+    echo "present"
+  else
+    echo "creating"
+    dockout=$(docker exec -it awx_web /bin/bash -c "mkdir -p ${awx_projects_dir}")
+  fi
+
+  # Configure Auto-Deploy Project Directory
+  echo -n "--> validating auto-deploy project directory: "
+  dockout=$(docker exec -it awx_web /bin/bash -c "if [ -r ${awx_projects_dir}/pf9-autodeploy ]; then echo true; else echo false; fi")
+  if [ "${dockout}" == "true" ]; then
+    echo "present"
+  else
+    echo "creating"
+    dockout=$(docker exec -it awx_web /bin/bash -c "mkdir -p ${awx_projects_dir}/pf9-autodeploy")
+  fi
+
+  # Copy pf9-autodeploy.yml to Auto-Deploy project directory
+  echo -n "--> copying/updating pf9-autodeploy.yml, roles/"
+  docker cp ${basedir}/pf9-autodeploy.yml awx_web:/var/lib/awx/projects/pf9-autodeploy
+  docker cp ${basedir}/roles awx_web:/var/lib/awx/projects/pf9-autodeploy
+
+  # Create Auto-Deploy Project
+  echo "--> creating awx project (scm-type = local)"
+  tower-cli project create -n 'Auto-Deploy' --scm-type manual --organization Default --local-path '/var/lib/awx/projects/pf9-autodeploy' -d "Platform9 deployment tool"
 }
 
 install_prereqs() {
