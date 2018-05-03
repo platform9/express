@@ -92,6 +92,12 @@ install_ui() {
   if [ $? -ne 0 ]; then assert "failed to pip install ansible-tower-cli"; fi
   /bin/cp -f ${basedir}/lib/tower_cli.cfg.tpl /root/.tower_cli.cfg
   if [ $? -ne 0 ]; then assert "failed to copy lib/tower_cli.cfg.tpl"; fi
+  chmod 0400 /root/.tower_cli.cfg
+  if [ $? -ne 0 ]; then assert "failed to set permissions on /root/.tower_cli.cfg"; fi
+
+  # Install AWX (Docker-based)
+  echo "--> installing AWX (this will take a while - monitor log for status)"
+  (cd ${awx_repo_dir}/installer && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
 
   # Validate Tower CLI
   echo "--> validating tower-cli"
@@ -103,10 +109,6 @@ install_ui() {
     done < /root/.tower_cli.cfg
     exit 1
   fi
-
-  # Install AWX (Docker-based)
-  echo "--> installing AWX (this will take a while - monitor log for status)"
-  (cd ${awx_repo_dir}/installer && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
 
   # Configure Tower
   echo "--> configuring AWX (add user, configure inventory, import playbooks)"
