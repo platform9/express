@@ -17,8 +17,10 @@ pf9_config=${basedir}/pf9-autodeploy.conf
 pf9_config_tpl=${basedir}/lib/pf9-autodeploy.tpl
 pf9_group_vars=${basedir}/group_vars/all.yml
 pf9_custom_configFile=""
+awx_repo_dir=/opt/awx
 awx_repo=https://github.com/ansible/awx.git
-awx_repo_dir=~/awx
+awxcli_repo_dir=/opt/tower-cli
+awxcli_repo=https://github.com/ansible/tower-cli.git
 flag_setup=0
 flag_prereqs=0
 flag_ui=0
@@ -72,17 +74,26 @@ install_ui() {
   echo "--> Installation Log: ${log}"
 
   # clone AWX repo
-  echo -n "--> validating repository: "
+  echo -n "--> validating awx repository: "
   if [ -r ${awx_repo_dir} ]; then
     echo "present"
   else
     echo "missing - cloning..."
-    (cd ~ && git clone ${awx_repo} > ${log} 2>&1)
+    git clone ${awx_repo} ${awx_repo_dir} > ${log} 2>&1
+  fi
+
+  # clone tower-cli repo
+  echo -n "--> validating tower-cli repository: "
+  if [ -r ${awxcli_repo_dir} ]; then
+    echo "present"
+  else
+    echo "missing - cloning..."
+    git clone ${awxcli_repo} ${awxcli_repo_dir} > ${log} 2>&1
   fi
 
   # Install AWX (Docker-based)
   echo "--> installing AWS (this will take a while - monitor log for status)"
-  (cd ${awx_repo_dir} && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
+  sudo ${awx_repo_dir}/ansible-playbook -i inventory install.yml > ${log} 2>&1
 }
 
 install_prereqs() {
