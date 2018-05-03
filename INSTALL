@@ -17,8 +17,11 @@ pf9_config=${basedir}/pf9-autodeploy.conf
 pf9_config_tpl=${basedir}/lib/pf9-autodeploy.tpl
 pf9_group_vars=${basedir}/group_vars/all.yml
 pf9_custom_configFile=""
+awx_repo=https://github.com/ansible/awx.git
+awx_repo_dir=~/awx
 flag_setup=0
 flag_prereqs=0
+flag_ui=0
 flag_autoregister=0
 extra_vars=""
 
@@ -29,6 +32,7 @@ usage() {
   echo "-a|--autoRegister        : auto-register host with control plane"
   echo "-i|--installPrereqs      : install pre-requisites and exit"
   echo "-s|--setup               : run setup and exit"
+  echo "-u|--ui                  : install web UI (Ansible AWX)"
   echo "-c|--config <configFile> : use custom configuration file"
   echo "-e|--extra-vars <string> : ansible extra-vars <name=val,...>"
   echo -e "-h|--help                : display this message\n"
@@ -61,6 +65,24 @@ banner() {
   echo "################################################################"
   echo "# Platform9 Auto-Deplopy Utility (Version 0.1)"
   echo "################################################################"
+}
+
+install_ui() {
+  echo "[ Installing Web UI (Ansible AWX) ]"
+  echo "--> Installation Log: ${log}"
+
+  # clone AWX repo
+  echo -n "--> validating repository: "
+  if [ -r ${awx_repo_dir} ]; then
+    echo "present"
+  else
+    echo "missing - cloning..."
+    (cd ~ && git clone ${awx_repo} > ${log} 2>&1)
+  fi
+
+  # Install AWX (Docker-based)
+  echo "--> installing AWS (this will take a while - monitor log for status)"
+  (cd ${awx_repo_dir} && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
 }
 
 install_prereqs() {
@@ -175,6 +197,9 @@ while [ $# -gt 0 ]; do
   -i|--installPrereqs)
     flag_prereqs=1
     ;;
+  -u|--ui)
+    flag_ui=1
+    ;;
   -a|--autoRegister)
     flag_autoregister=1
     ;;
@@ -226,9 +251,18 @@ fi
 ## build group_vars/all.yml
 build_config --skip-inventory-check
 
+# validate all config values are set
+validate_config
+
 ## install prequisite packages
 if [ ${flag_prereqs} -eq 1 ]; then
   install_prereqs; echo
+  exit 0
+fi
+
+## install web ui
+if [ ${flag_ui} -eq 1 ]; then
+  install_ui; echo
   exit 0
 fi
 
@@ -237,9 +271,6 @@ if [ -z "${target}" ]; then usage; fi
 
 ## display banner
 banner
-
-# validate all config values are set
-validate_config
 
 # install prerequisite packages
 install_prereqs
