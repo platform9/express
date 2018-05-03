@@ -99,16 +99,27 @@ install_ui() {
   echo "--> installing AWX (this will take a while - monitor log for status)"
   (cd ${awx_repo_dir}/installer && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
 
-  # Validate Tower CLI
-  echo "--> validating tower-cli"
-  tower-cli version > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "    Failed to connect to awx instance - here's the config:"
-    while read line; do
-      echo "    ${line}"
-    done < /root/.tower_cli.cfg
-    exit 1
+  # Validate Tower CLI (timeout loop)
+  echo "--> waiting for aws to initialize"
+  TIMEOUT=300
+  start_time=`date +%s`
+  elapsedTime=0
+  while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
+    tower-cli version > /dev/null 2>&1
+    if [ $? -eq 0 ]; then break; fi
+
+    # update elapsed time
+    current_t=`date +%s`; elapsedTime=$((current_t - start_time))
+    sleep 5
+  done
+
+  # display timeout message
+  if [ ${elapsedTime} -ge ${TIMEOUT} ]; then
+    assert "*** TIMEOUT EXCEEDED *** waiting to connect to awx"
   fi
+
+  echo "early exit..."
+  exit 0
 
   # Configure Tower
   echo "--> configuring AWX (add user, configure inventory, import playbooks)"
