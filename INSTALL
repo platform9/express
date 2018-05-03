@@ -118,9 +118,6 @@ install_ui() {
     assert "*** TIMEOUT EXCEEDED *** waiting to connect to awx"
   fi
 
-  echo "early exit..."
-  exit 0
-
   # Configure Tower
   echo "--> configuring AWX (add user, configure inventory, import playbooks)"
   tower-cli user list | grep ${awx_pf9_user} > /dev/null 2>&1
@@ -155,8 +152,8 @@ install_ui() {
   docker cp ${basedir}/roles awx_web:/var/lib/awx/projects/pf9-autodeploy
 
   # Create Auto-Deploy Project
-  echo "--> creating awx project (scm-type = local)"
-  tower-cli project create -n 'Auto-Deploy' --scm-type manual --organization Default --local-path '/var/lib/awx/projects/pf9-autodeploy' -d "Platform9 deployment tool"
+  #echo "--> creating awx project (scm-type = local)"
+  #tower-cli project create -n 'Auto-Deploy' --scm-type manual --organization Default --local-path '/var/lib/awx/projects/pf9-autodeploy' -d "Platform9 deployment tool"
 }
 
 install_prereqs() {
