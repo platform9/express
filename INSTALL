@@ -93,7 +93,7 @@ install_ui() {
 
   # Install AWX (Docker-based)
   echo "--> installing AWS (this will take a while - monitor log for status)"
-  (cd ${awx_repo_dir} && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
+  (cd ${awx_repo_dir}/installer && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
 }
 
 install_prereqs() {
