@@ -29,7 +29,6 @@ extra_vars=""
 awx_pf9_user="pf9"
 awx_pf9_password="Pl@tform9"
 awx_pf9_email="user@company.com"
-awx_projects_dir=/var/lib/awx/projects
 
 # functions
 usage() {
@@ -125,31 +124,6 @@ install_ui() {
     tower-cli user create --username=${awx_pf9_user} --email=${awx_pf9_email} --password ${awx_pf9_password} --is-superuser true
     if [ $? -ne 0 ]; then assert "failed to create tower user 'pf9'"; fi
   fi
-
-  # Configure Projects Directory
-  echo -n "--> validating awx projects directory: "
-  dockout=$(docker exec -it awx_web /bin/bash -c "if [ -r ${awx_projects_dir} ]; then echo true; else echo false; fi")
-  if [ "${dockout}" == "true" ]; then
-    echo "present"
-  else
-    echo "creating"
-    dockout=$(docker exec -it awx_web /bin/bash -c "mkdir -p ${awx_projects_dir}")
-  fi
-
-  # Configure Auto-Deploy Project Directory
-  echo -n "--> validating auto-deploy project directory: "
-  dockout=$(docker exec -it awx_web /bin/bash -c "if [ -r ${awx_projects_dir}/pf9-autodeploy ]; then echo true; else echo false; fi")
-  if [ "${dockout}" == "true" ]; then
-    echo "present"
-  else
-    echo "creating"
-    dockout=$(docker exec -it awx_web /bin/bash -c "mkdir -p ${awx_projects_dir}/pf9-autodeploy")
-  fi
-
-  # Copy pf9-autodeploy.yml to Auto-Deploy project directory
-  echo -n "--> copying/updating pf9-autodeploy.yml, roles/"
-  docker cp ${basedir}/pf9-autodeploy.yml awx_web:/var/lib/awx/projects/pf9-autodeploy
-  docker cp ${basedir}/roles awx_web:/var/lib/awx/projects/pf9-autodeploy
 
   # Create Auto-Deploy Project
   #echo "--> creating awx project (scm-type = local)"
