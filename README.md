@@ -113,6 +113,51 @@ If you want to override an Ansible variable defined in Inventory or dynamically 
 ```
 NOTE: Variables passed as extra-vars have the highest precedence.
 
+**AWX Configuration**
+* Create Organization : Platform9
+* Create Inventory    : Platform9
+** Define Global Inventory Variables
+```
+#nested_virt=True
+#live_migration_hosts=["hv401","hv402","hv403"]
+```
+* Create Groups (within Platform9 Inventory)
+** hypervisors
+```
+dvr: "on"
+dhcp: "off"
+snat: "off"
+ceilometer: "on"
+glance: "off"
+nova_instances_path: /opt/pf9/data/instances/
+neutron_dhcp_dns_domain: cs.platform9.net
+neutron_dhcp_dnsmasq_dns_servers: 8.8.8.8
+neutron_ovs_allow_dhcp_vms: "False"
+neutron_ovs_bridge_mappings: "external:br-pf9"
+neutron_ovs_enable_tunneling: "False"
+neutron_ovs_net_type: vlan
+ceilometer_kvm_instance_disk_path: /opt/pf9/data/instances/
+```
+** containervisors
+** glance
+```
+glance_filesystem_store_datadir: /var/opt/pf9/imagelibrary/data
+glance_public_endpoint: False
+glance_images:
+  - https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1802.qcow2
+  - http://images.platform9.com/ubuntu-14.04-cloudinit.qcow2
+```
+* Add Hosts to Inventory
+* Create Credentials
+** Platform9 Centos
+** Platform9 Ubuntu
+* Create Project (Auto-Deploy)
+** SCM Type = git (https://github.com/platform9/autodeploy.git)
+* Create Templates
+** Auto-Deploy Hypervisor
+** Auto-Deploy Containervisor
+** Auto-Deploy Glance
+
 ## License
 
 Commerical

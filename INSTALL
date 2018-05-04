@@ -121,7 +121,7 @@ install_ui() {
   echo "--> configuring AWX (add user, configure inventory, import playbooks)"
   tower-cli user list | grep ${awx_pf9_user} > /dev/null 2>&1
   if [ $? -ne 0 ]; then
-    tower-cli user create --username=${awx_pf9_user} --email=${awx_pf9_email} --password ${awx_pf9_password} --is-superuser true
+    tower-cli user create --username=${awx_pf9_user} --email=${awx_pf9_email} --password ${awx_pf9_password}
     if [ $? -ne 0 ]; then assert "failed to create tower user 'pf9'"; fi
   fi
 
@@ -307,6 +307,7 @@ fi
 
 ## install web ui
 if [ ${flag_ui} -eq 1 ]; then
+  build_config
   install_ui; echo
   exit 0
 fi

@@ -3,6 +3,10 @@
 # Dynamically-Assigned Role Values (static values are initialized in inventory)
 ################################################################################
 - debug: msg="*** DEPLOYING ROLE - {{rolename}}"
+  when: autoreg == "on"
+- debug: msg="*** SKIPPING ROLE - {{rolename}}"
+  when: autoreg == "off"
+
 - block:
   # glance_endpoint_address
   - set_fact:
