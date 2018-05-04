@@ -6,6 +6,7 @@
   become: true
   gather_facts: False
   pre_tasks:
+    - debug: var=autoreg
     - name: install python2
       raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
 
