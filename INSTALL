@@ -118,16 +118,18 @@ install_ui() {
   fi
 
   # Configure Tower
-  echo "--> configuring AWX (add user, configure inventory, import playbooks)"
-  tower-cli user list | grep ${awx_pf9_user} > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    tower-cli user create --username=${awx_pf9_user} --email=${awx_pf9_email} --password ${awx_pf9_password}
-    if [ $? -ne 0 ]; then assert "failed to create tower user 'pf9'"; fi
-  fi
+  #echo "--> configuring AWX (add user, configure inventory, import playbooks)"
+  #tower-cli user list | grep ${awx_pf9_user} > /dev/null 2>&1
+  #if [ $? -ne 0 ]; then
+  #  tower-cli user create --username=${awx_pf9_user} --email=${awx_pf9_email} --password ${awx_pf9_password}
+  #  if [ $? -ne 0 ]; then assert "failed to create tower user 'pf9'"; fi
+  #fi
 
-  # Create Auto-Deploy Project
-  #echo "--> creating awx project (scm-type = local)"
-  #tower-cli project create -n 'Auto-Deploy' --scm-type manual --organization Default --local-path '/var/lib/awx/projects/pf9-autodeploy' -d "Platform9 deployment tool"
+  # stop tower service
+  docker cp ${basedir}/lib/awx-db.pgsql postgres:/tmp
+
+  # import awx database
+  docker exec postgres bash -c "su - postgres -c 'psql -U postgres < /tmp/awx-db.pgsql'"
 }
 
 install_prereqs() {
