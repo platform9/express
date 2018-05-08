@@ -2,3 +2,4 @@
 # Global Variables for 'cinder' Inventory Group
 
 cinder_volume_driver: cinder.volume.drivers.lvm.LVMVolumeDriver
+cinder_backend_name: cinder-volumes

@@ -164,7 +164,7 @@ token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?no
 # Wait for Host Agent to Register
 ####################################################################################################
 banner "Waiting for Host Agent to Register" -n
-wait_n 45
+wait_n 5
 curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
 if [ $? -ne 0 ]; then exit 1; fi
 
@@ -173,9 +173,6 @@ if [ $? -ne 0 ]; then exit 1; fi
 ####################################################################################################
 echo "--- ROLE METADATA (raw) -----------------------------------------------------"
 cat ${role_metadata}
-echo "--------------------------------------------------------------------------------"
-echo "--- ROLE METADATA (pretty) -----------------------------------------------------"
-cat ${role_metadata} | python -m json.tool
 echo "--------------------------------------------------------------------------------"
 
 ####################################################################################################

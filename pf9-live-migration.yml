@@ -1,0 +1,7 @@
+---
+
+# Openstack Live Migration Nodes
+- hosts: live-migration
+  become: true
+  roles:
+    - { role: "secure-live-migration", when: autoreg == "on" }

@@ -27,7 +27,6 @@
     - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
-    - { role: "secure-live-migration", when: autoreg == "on" }
     - { role: "enable-nested-virt", when: autoreg == "on" and nested_virt == True }
 
 # Openstack Image Nodes
@@ -41,7 +40,7 @@
 - hosts: cinder
   become: true
   roles:
-    - lvm
+    - { role: "lvm", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
 

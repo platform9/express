@@ -2,7 +2,6 @@
 ################################################################################
 # Dynamically-Assigned Role Values (static values are initialized in inventory)
 ################################################################################
-- debug: var=autoreg
 - debug: msg="DEPLOYING ROLE - {{rolename}}"
   when: autoreg == "on"
 - debug: msg="SKIPPING ROLE - {{rolename}}"
@@ -89,7 +88,7 @@
   when: rolename == "pf9-kube" and cluster_fqdn is undefined
     
 # pf9-cindervolume-lvm
-- fail: msg="role 'pf9-kube' is missing required parameter - pvs"
+- fail: msg="role 'pf9-cindervolume-lvm' is missing required parameter - pvs"
   when: rolename == "pf9-cindervolume-lvm" and pvs is undefined
 
 ##############################################################################
