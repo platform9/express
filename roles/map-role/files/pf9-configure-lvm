@@ -20,7 +20,7 @@ pv_list=(${pvs})
 # validate PVs
 for pv in "${pv_list[@]}"; do
   if [ ! -r ${pv} ]; then
-    echo "PV not found: ${pv}"
+    echo "PV not found: [${pv}]"
     exit 1
   fi
 done
