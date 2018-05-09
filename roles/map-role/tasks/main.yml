@@ -127,7 +127,7 @@
 - set_fact:
     pvs_string: ""
 - set_fact:
-    pvs_string: "{{pvs_string}} {{item}}"
+    pvs_string: "{{pvs_string}},{{item}}"
   with_items: "{{pvs}}"
 
 - debug: var=pvs_string
