@@ -87,11 +87,11 @@ install_ui() {
 
   # Install Tower CLI
   echo "--> installing tower-cli"
-  pip install ansible-tower-cli > ${log} 2>&1
+  sudo pip install ansible-tower-cli > ${log} 2>&1
   if [ $? -ne 0 ]; then assert "failed to pip install ansible-tower-cli"; fi
-  /bin/cp -f ${basedir}/lib/tower_cli.cfg.tpl /root/.tower_cli.cfg
+  sudo /bin/cp -f ${basedir}/lib/tower_cli.cfg.tpl /root/.tower_cli.cfg
   if [ $? -ne 0 ]; then assert "failed to copy lib/tower_cli.cfg.tpl"; fi
-  chmod 0400 /root/.tower_cli.cfg
+  sudo chmod 0400 /root/.tower_cli.cfg
   if [ $? -ne 0 ]; then assert "failed to set permissions on /root/.tower_cli.cfg"; fi
 
   # Install AWX (Docker-based)
@@ -129,7 +129,7 @@ install_ui() {
   docker cp ${basedir}/lib/awx-db.pgsql postgres:/tmp
 
   # import awx database
-  docker exec postgres bash -c "su - postgres -c 'psql -U postgres < /tmp/awx-db.pgsql'"
+  #docker exec postgres bash -c "su - postgres -c 'psql -U postgres < /tmp/awx-db.pgsql'"
 }
 
 install_prereqs() {
