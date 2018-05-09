@@ -13,10 +13,8 @@ pvs=${2}
 
 # process pvs (which is formatted as a yml list)
 echo "ARG.pvs=${pvs}"
-pvs=${pvs:2:${#pvs}}
+pvs=${pvs:1:${#pvs}}
 echo "0.pvs=${pvs}"
-pvs=${pvs:0:((${#pvs}-1))}
-echo "1.pvs=${pvs}"
 IFS=","
 pv_list=(${pvs})
 
