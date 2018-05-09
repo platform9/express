@@ -125,7 +125,7 @@
   when: rolename == "pf9-cindervolume-lvm"
 
 - name: configure LVM
-  script: "files/pf9-configure-lvm cinder-volumes {{pvs}}"
+  script: "files/pf9-configure-lvm cinder-volumes '{{pvs}}'"
   register: config_lvm
   when: rolename == "pf9-cindervolume-lvm"
 - debug: var=config_lvm
