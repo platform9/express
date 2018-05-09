@@ -76,13 +76,18 @@ install_ui() {
   echo "[ Installing Web UI (Ansible AWX) ]"
   echo "--> Installation Log: ${log}"
 
+  # check if docker is installed
+  docker -h > /dev/null 2>&1
+  if [ $? -ne 0 ]; then assert "Docker is not installed"; fi
+
   # clone AWX repo
   echo -n "--> validating awx repository: "
   if [ -r ${awx_repo_dir} ]; then
     echo "present"
   else
     echo "missing - cloning..."
-    git clone ${awx_repo} ${awx_repo_dir} > ${log} 2>&1
+    sudo git clone ${awx_repo} ${awx_repo_dir} > ${log} 2>&1
+    if [ $? -ne 0 ]; then assert "failed to clone git repo: ${awx_repo}"; fi
   fi
 
   # Install Tower CLI
@@ -100,11 +105,11 @@ install_ui() {
 
   # Validate Tower CLI (timeout loop)
   echo "--> waiting for aws to initialize"
-  TIMEOUT=300
+  TIMEOUT=600
   start_time=`date +%s`
   elapsedTime=0
   while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
-    tower-cli version > /dev/null 2>&1
+    sudo tower-cli version > /dev/null 2>&1
     if [ $? -eq 0 ]; then break; fi
 
     # update elapsed time
@@ -126,7 +131,7 @@ install_ui() {
   #fi
 
   # stop tower service
-  docker cp ${basedir}/lib/awx-db.pgsql postgres:/tmp
+  sudo docker cp ${basedir}/lib/awx-db.pgsql postgres:/tmp
 
   # import awx database
   #docker exec postgres bash -c "su - postgres -c 'psql -U postgres < /tmp/awx-db.pgsql'"
@@ -152,14 +157,14 @@ install_prereqs() {
     done
 
     # check for packages with known conflicts
-    conflict_pkgs="PyYAML python-requests python-ipaddress"
+    conflict_pkgs="python-requests python-ipaddress"
     for pkg in ${conflict_pkgs}; do
-      rpm -qa | grep "${pkg}" > /dev/null 2>&1
+      rpm -q "${pkg}" > /dev/null 2>&1
       if [ $? -eq 0 ]; then
-        sudo yum -y erase ${pkg} > ${log} 2>&1
+        sudo rpm -e --nodeps ${pkg} > ${log} 2>&1
         if [ $? -ne 0 ]; then
           echo -e "\nERROR: failed to uninstall ${pkg} - here's the last 10 lines of the log:\n"
-          tail -10 ${log}; exit 1
+          tail -20 ${log}; exit 1
         fi
       fi
     done
