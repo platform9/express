@@ -124,8 +124,16 @@
 - debug: var=scsi_rescan
   when: rolename == "pf9-cindervolume-lvm"
 
+- set_fact:
+    pvs_string: ""
+- set_fact:
+    pvs_string: "{{pvs_string}} {{item}}"
+  with_items: pvs
+
+- debug: var=pvs_string
+
 - name: configure LVM
-  script: "files/pf9-configure-lvm cinder-volumes '{{pvs|flatten}}'"
+  script: "files/pf9-configure-lvm cinder-volumes '{{pvs_string}}'"
   register: config_lvm
   when: rolename == "pf9-cindervolume-lvm"
 - debug: var=config_lvm
