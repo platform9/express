@@ -117,26 +117,22 @@
 ##############################################################################
 # For cinder, perform SCSI discovery and LVM configuration
 ##############################################################################
-- name: discover volumes
-  script: files/pf9-scsi-rescan
-  register: scsi_rescan
-  when: rolename == "pf9-cindervolume-lvm"
-- debug: var=scsi_rescan
-  when: rolename == "pf9-cindervolume-lvm"
+- block:
+  - name: discover volumes
+    script: files/pf9-scsi-rescan
+    register: scsi_rescan
+  - debug: var=scsi_rescan
 
-- set_fact:
-    pvs_string: ""
-- set_fact:
-    pvs_string: "{{pvs_string}},{{item}}"
-  with_items: "{{pvs}}"
+  - set_fact:
+      pvs_string: ""
+  - set_fact:
+      pvs_string: "{{pvs_string}},{{item}}"
+    with_items: "{{pvs}}"
 
-- debug: var=pvs_string
-
-- name: configure LVM
-  script: "files/pf9-configure-lvm cinder-volumes '{{pvs_string}}'"
-  register: config_lvm
-  when: rolename == "pf9-cindervolume-lvm"
-- debug: var=config_lvm
+  - name: configure LVM
+    script: "files/pf9-configure-lvm cinder-volumes '{{pvs_string}}'"
+    register: config_lvm
+  - debug: var=config_lvm
   when: rolename == "pf9-cindervolume-lvm"
 
 ################################################################################
