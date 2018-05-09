@@ -12,8 +12,11 @@ vg_name=${1}
 pvs=${2}
 
 # process pvs (which is formatted as a yml list)
-pvs=${pvs:1:${#pvs}}
+echo "ARG.pvs=${pvs}"
+pvs=${pvs:2:${#pvs}}
+echo "0.pvs=${pvs}"
 pvs=${pvs:0:((${#pvs}-1))}
+echo "1.pvs=${pvs}"
 IFS=","
 pv_list=(${pvs})
 
