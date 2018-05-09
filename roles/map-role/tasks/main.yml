@@ -114,8 +114,6 @@
     proxy_params: "--proxy {{proxy_url}}"
   when: proxy_url is defined
 
-- debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}} {{proxy_params}}"
-
 ##############################################################################
 # For cinder, perform SCSI discovery and LVM configuration
 ##############################################################################
@@ -136,6 +134,8 @@
 ################################################################################
 # Apply Role to Server
 ################################################################################
+- debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}} {{proxy_params}}"
+
 - name: "Assigning Role - {{rolename}}"
   script: "map-role.sh {{ctrl_ip}} {{rolename}} {{role_metadata}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}} {{proxy_params}}"
   delegate_to: localhost
