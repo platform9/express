@@ -146,10 +146,7 @@
       dest: /tmp/setupd.rpm
 
   - name: install setupd.rpm
-    yum:
-      name: /tmp/setupd.rpm
-      state: present
-      skip_broken: true
+    shell: rpm -i --nodeps /tmp/setupd.rpm
 
   - name: copy setupd-updates
     copy:
