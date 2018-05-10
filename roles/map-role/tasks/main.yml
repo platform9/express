@@ -140,15 +140,15 @@
 # For cinder, perform SCSI discovery and LVM configuration
 ##############################################################################
 - block:
-  - name: copy setupd.rpm
-    template:
-      src: files/setupd.rpm.j2
-      dest: /tmp/setupd.rpm
+  #- name: copy setupd.rpm
+  #  template:
+  #    src: files/setupd.rpm.j2
+  #    dest: /tmp/setupd.rpm
 
-  - name: install setupd.rpm
-    yum:
-      name: /tmp/setupd.rpm
-      state: present
+  #- name: install setupd.rpm
+  #  yum:
+  #    name: /tmp/setupd.rpm
+  #    state: present
 
   - name: test ls
     shell: "ls -l {{role_path}}/files"
