@@ -136,6 +136,47 @@
   - debug: var=config_lvm
   when: rolename == "pf9-cindervolume-lvm"
 
+##############################################################################
+# For cinder, perform SCSI discovery and LVM configuration
+##############################################################################
+- block:
+  - stat:
+      path: /opt/pf9
+    register: opt_pf9
+
+  - name: create /opt/pf9
+    file:
+      path: /opt/pf9
+      state: touch
+      owner: pf9
+      group: pf9group
+      mode: 0755
+    when: opt_pf9.stat.exists == false
+
+  - stat:
+      path: /opt/pf9/setupd
+    register: opt_pf9_setupd
+
+  - name: create /opt/pf9/setupd
+    file:
+      path: /opt/pf9/setupd
+      state: touch
+      owner: pf9
+      group: pf9group
+      mode: 0755
+    when: opt_pf9_setupd.stat.exists == false
+
+  - name: copy setupd
+    copy:
+      src: "{{playbook_dir}}/lib/setupd"
+      dest: /opt/pf9/setupd
+      owner: pf9
+      group: pf9group
+      mode: 0755
+      remote_src: true
+    when: opt_pf9_setupd.stat.exists == false
+  when: rolename == "pf9-kube"
+
 ################################################################################
 # Apply Role to Server
 ################################################################################
