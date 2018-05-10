@@ -353,17 +353,15 @@ if [ ${flag_prereqs} -eq 1 ]; then
   exit 0
 fi
 
-## install awx database
-if [ ${flag_dbinit} -eq 1 ]; then
-  build_config
-  db_init; echo
+## install web ui
+if [ ${flag_ui} -eq 1 ]; then
+  install_ui; echo
   exit 0
 fi
 
-## install web ui
-if [ ${flag_ui} -eq 1 ]; then
-  build_config
-  install_ui; echo
+## install awx database
+if [ ${flag_dbinit} -eq 1 ]; then
+  db_init; echo
   exit 0
 fi
 
