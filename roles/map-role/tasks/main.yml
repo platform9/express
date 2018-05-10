@@ -167,7 +167,7 @@
     when: opt_pf9_setupd.stat.exists == false
 
   - stat:
-      path: "{{playbook_dir}}/files/setupd"
+      path: "{{playbook_dir}}/roles"
     ignore_errors: true
     register: stat_files_setupd
 
