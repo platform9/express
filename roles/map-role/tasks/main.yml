@@ -153,7 +153,13 @@
   - name: test ls
     shell: "ls -l {{role_path}}/files"
     register: ls_files
+    delegate_to: localhost
   - debug: var=ls_files
+
+  - name: copy files/setupd-updates/pf9_master_setup.py
+    copy:
+      src: "{{role_path}}/files/setupd-updates/pf9_master_setup.py"
+      dest: /tmp/pf9_master_setup.py
 
   #- name: copy setupd python updates
   #  copy:
