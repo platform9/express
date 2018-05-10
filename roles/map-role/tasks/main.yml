@@ -168,7 +168,7 @@
 
   - name: copy setupd
     copy:
-      src: "{{playbook_dir}}/lib/setupd"
+      src: files/setupd
       dest: /opt/pf9/setupd
       owner: pf9
       group: pf9group
