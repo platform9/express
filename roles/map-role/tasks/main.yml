@@ -166,6 +166,7 @@
       mode: 0755
     when: opt_pf9_setupd.stat.exists == false
 
+  - debug: var=role_path
   - stat:
       path: "{{role_path}}"
     register: stat_role_path
