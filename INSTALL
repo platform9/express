@@ -130,11 +130,13 @@ install_ui() {
   #  if [ $? -ne 0 ]; then assert "failed to create tower user 'pf9'"; fi
   #fi
 
-  # stop tower service
-  sudo docker cp ${basedir}/lib/awx-db.pgsql postgres:/tmp
-
+  # copy database export
+  #sudo docker cp ${basedir}/lib/awx-db-backup-v0.1.sql postgres:/tmp
+  # stop awx
+  # initialize awx database
   # import awx database
-  #docker exec postgres bash -c "su - postgres -c 'psql -U postgres < /tmp/awx-db.pgsql'"
+  #docker exec postgres bash -c "su - postgres -c 'psql -d awx -f /tmp/awx-db-backup-v0.1.sql'"
+  # start awx
 }
 
 install_prereqs() {
