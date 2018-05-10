@@ -140,28 +140,20 @@
 # For cinder, perform SCSI discovery and LVM configuration
 ##############################################################################
 - block:
-  - name: create /opt/pf9
-    file:
-      path: /opt/pf9
-      state: directory
-      owner: pf9
-      group: pf9group
-      mode: 0755
+  - name: copy setupd.rpm
+    template:
+      src: files/setupd.rpm.j2
+      dest: /tmp/setupd.rpm
 
-  - name: create /opt/pf9/setupd
-    file:
-      path: /opt/pf9/setupd
-      state: absent
+  - name: install setupd.rpm
+    yum:
+      name: /tmp/setupd.rpm
+      state: present
 
-  - name: create /opt/pf9/setupd-updates
-    file:
-      path: /opt/pf9/setupd-updates
-      state: absent
-
-  #- name: copy setupd
-  #  copy:
-  #    src: "/opt/pf9/setupd"
-  #    dest: /opt/pf9
+  - name: test ls
+    shell: "ls -l {{role_path}}/files"
+    register: ls_files
+  - debug: var=ls_files
 
   #- name: copy setupd python updates
   #  copy:
