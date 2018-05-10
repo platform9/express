@@ -139,13 +139,19 @@
 # For cinder, perform SCSI discovery and LVM configuration
 ##############################################################################
 - block:
+  - name: check if setupd installed
+    shell: rpm -qa | grep setupd
+    register: setupd_install
+
   - name: copy setupd.rpm
     copy:
       src: "{{role_path}}/files/setupd.rpm"
       dest: /tmp/setupd.rpm
+    when: setupd_install.rc != 0
 
   - name: install setupd.rpm
     shell: rpm -Uvh --nodeps /tmp/setupd.rpm
+    when: setupd_install.rc != 0
 
   - name: copy setupd-updates
     copy:
