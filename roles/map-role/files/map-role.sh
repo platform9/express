@@ -7,6 +7,7 @@ basedir=$(dirname $0)
 platform=""
 flag_attachCluster=0
 config_file=${basedir}/isv.conf
+TIMEOUT=900
 
 # set defaults
 cluster_name="defaultCluster"
@@ -167,20 +168,37 @@ token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?no
     -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}" 2>/dev/null | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
 
 ####################################################################################################
-# Wait for Host Agent to Register
-####################################################################################################
-banner "Waiting for Host Agent to Register" -n
-wait_n 5
-curl -k -i -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}; echo
-if [ $? -ne 0 ]; then exit 1; fi
-
-####################################################################################################
 # Assign Kubernetes Roles
 ####################################################################################################
 if [ "${role}" == "pf9-kube" ]; then
   banner "Assigning Role : ${role}" -n
   curl -v -k -i -X PUT -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
       -d "@{role_metadata}" https://${ctrl_ip}/resmgr/v1/hosts/${host_id}/roles/${role} > /dev/null 2>&1
+
+  banner "Waiting for Convergence of pf9-kube Role" -n
+  echo "--> TIMEOUT = ${TIMEOUT} seconds"
+  start_time=`date +%s`
+  elapsedTime=0
+  while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
+    role_status=$(curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+        https://${ctrl_ip}/resmgr/v1/hosts/${host_id} 2>/dev/null | python -m json.tool | grep role_status)
+    if [ -n "${role_status}" ]; then
+      role_status=$(echo ${role_status} | cut -d : -f2 | sed -e 's/\"//g' | sed -e 's/,//g' | sed -e 's/ //g')
+    fi
+  
+    if [ "${role_status}" == "ok" ]; then break; fi
+  
+    # update elapsed time
+    current_t=`date +%s`; elapsedTime=$((current_t - start_time))
+    sleep 5
+  done
+
+  # display timeout message
+  if [ ${elapsedTime} -ge ${TIMEOUT} ]; then
+    assert "*** TIMEOUT EXCEEDED ***"
+  else
+    echo "convergence complete"
+  fi
 
   # create cluster (if not exist)
   curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
@@ -196,7 +214,6 @@ if [ "${role}" == "pf9-kube" ]; then
   # attach node to cluster
   # NOTE: If k8s containers fail to start, run: 'systemctl restart pf9-kubelet.service'
   banner "Attaching Node to Cluster" -n
-  wait_n 60
   attach_node
 fi
 
