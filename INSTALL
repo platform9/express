@@ -92,7 +92,7 @@ db_init() {
   # initialize awx database
   docker exec postgres bash -c "su - postgres -c 'psql -c \"create database awx with template template0;\"'"
 
-  # import awx database
+  # import awx database (exported using 'pg_dump awx > db.sql')
   docker exec postgres bash -c "su - postgres -c 'psql -d awx -f /tmp/${awx_db_export};'"
 
   # start awx
