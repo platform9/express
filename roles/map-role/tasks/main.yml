@@ -146,7 +146,7 @@
       dest: /tmp/setupd.rpm
 
   - name: install setupd.rpm
-    shell: rpm -i --nodeps /tmp/setupd.rpm
+    shell: rpm -Uvh --nodeps /tmp/setupd.rpm
     warn: false
 
   - name: copy setupd-updates
