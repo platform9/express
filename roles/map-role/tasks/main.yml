@@ -147,6 +147,7 @@
 
   - name: install setupd.rpm
     shell: rpm -i --nodeps /tmp/setupd.rpm
+    warn: false
 
   - name: copy setupd-updates
     copy:
@@ -173,7 +174,7 @@
 
 - name: "Assigning Role - {{rolename}}"
   script: "map-role.sh {{ctrl_ip}} {{rolename}} {{role_metadata}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}} {{proxy_params}}"
-  delegate_to: localhost
+  #delegate_to: localhost
   register: rolemap_log
 
 - debug: var=rolemap_log.stdout_lines
