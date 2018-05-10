@@ -147,7 +147,7 @@
   - name: create /opt/pf9
     file:
       path: /opt/pf9
-      state: touch
+      state: directory
       owner: pf9
       group: pf9group
       mode: 0755
@@ -160,7 +160,7 @@
   - name: create /opt/pf9/setupd
     file:
       path: /opt/pf9/setupd
-      state: touch
+      state: directory
       owner: pf9
       group: pf9group
       mode: 0755
