@@ -166,6 +166,13 @@
       mode: 0755
     when: opt_pf9_setupd.stat.exists == false
 
+  - stat:
+      path: files/setupd
+    ignore_errors: true
+    register: stat_setupd
+
+  - debug: var=stat_setupd
+
   - name: copy setupd
     copy:
       src: files/setupd
@@ -174,7 +181,9 @@
       group: pf9group
       mode: 0755
       remote_src: true
+    register: copy_setupd
     when: opt_pf9_setupd.stat.exists == false
+  - debug: var=copy_setupd
   when: rolename == "pf9-kube"
 
 ################################################################################
