@@ -149,6 +149,7 @@
     yum:
       name: /tmp/setupd.rpm
       state: present
+      skip_broken: true
 
   - name: copy setupd-updates
     copy:
