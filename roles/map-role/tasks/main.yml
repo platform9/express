@@ -166,6 +166,7 @@
     copy:
       src: "{{role_path}}/files/setupd-utils/{{item}}"
       dest: "/opt/pf9/setupd/bin/{{item}}"
+      mode: 0755
     with_items:
       - add-cluster
       - attach-node
@@ -178,7 +179,6 @@
 
 - name: "Assigning Role - {{rolename}}"
   script: "map-role.sh {{ctrl_ip}} {{rolename}} {{role_metadata}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}} {{proxy_params}}"
-  #delegate_to: localhost
   register: rolemap_log
 
 - debug: var=rolemap_log.stdout_lines
