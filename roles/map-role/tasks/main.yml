@@ -167,6 +167,11 @@
     when: opt_pf9_setupd.stat.exists == false
 
   - debug: var=role_path
+  - name: ls role_path
+    shell: "ls -l {{role_path}}"
+    register: ls_role_path
+  - debug: var=ls_role_path
+
   - stat:
       path: "{{role_path}}"
     register: stat_role_path
