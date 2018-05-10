@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# set defaults
+admin_user="admin"
+admin_password="Platform99"
+tokendb=/tmp/token.dat
+flag_update_token=0
+
+usage() {
+  echo -e "\nUsage: `basename $0` ctrl_ip\n"
+  exit 1
+}
+
+assert() {
+  if [ $# -eq 1 ]; then echo "ASSERT: ${1}"; fi
+  exit 1
+}
+
+# validate required parameters
+if [ $# -ne 1 ]; then usage; fi
+ctrl_ip=${1}
+
+################################################################################
+# manage token
+token=`curl -k -i -H "Content-Type: application/json" https://${ctrl_ip}/keystone/v3/auth/tokens?nocatalog \
+       -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"admin\", \
+          \"domain\": {\"id\": \"default\"}, \"password\": \"Platform99\" } } }, \
+          \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}" 2>/dev/null \
+          | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
+
+################################################################################
+# stop host agent
+echo -e "\n[Stopping PF9 Host Agent]"
+systemctl stop pf9-hostagent pf9-comms.service pf9-sidekick.service
+echo "--> stopped"
+
+################################################################################
+# mkdir
+mkdir -p /etc/pf9/certs/hostagent
+if [ $? -ne 0 ]; then assert "failed to mkdir /etc/pf9/certs/hostagent"; fi
+mkdir -p /etc/pf9/certs/ca
+if [ $? -ne 0 ]; then assert "failed to mkdir /etc/pf9/certs/ca"; fi
+
+################################################################################
+# copy certificates from pf9 control plane
+echo -e "\n[Copying Certificates from Target Conroller]"
+for i in pf9/certs/ca/cert.pem pf9/certs/hostagent/cert.pem pf9/certs/hostagent/key.pem; do
+  echo "--> copying from https://${ctrl_ip}/private/etc/${i}"
+  curl -k -f -H "X-Auth-Token: ${token}" -o /etc/${i} https://${ctrl_ip}/private/etc/${i} 2>/dev/null
+  if [ $? -ne 0 ]; then assert "failed to copy '${i}' from ${ctrl_ip}"; fi
+done
+
+################################################################################
+# copy host agent configuration from control plane
+echo -e "\n[Copying Host Agent Config from Target Conroller]"
+for i in pf9/hostagent.conf; do
+  echo "--> copying from https://${ctrl_ip}/private/etc/${i}"
+  curl -k -f -H "X-Auth-Token: ${token}" -o /etc/${i} https://${ctrl_ip}/private/etc/${i} 2>/dev/null
+  if [ $? -ne 0 ]; then assert "failed to copy '${i}' from ${ctrl_ip}"; fi
+done
+
+################################################################################
+# start host agent
+echo -e "\n[Starting PF9 Host Agent]"
+systemctl restart pf9-hostagent pf9-comms.service pf9-sidekick.service
+if [ $? -ne 0 ]; then assert "one or more components failed to start"; fi
+echo -e "--> started\n"
+
+# exit cleanly
+exit 0

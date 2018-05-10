@@ -1,0 +1,278 @@
+#!/bin/bash
+####################################################################################################
+# Sample script for managing ISV deployments
+####################################################################################################
+
+# set defaults
+admin_user="admin"
+admin_password="Platform99"
+db_user="p9_intuser"
+db_password="platform9"
+tokendb=/tmp/token.dat
+flag_update_token=0
+object_id=""
+project_id=""
+cluster_name=""
+cluster_fqdn=""
+roles=""
+certificate=""
+flag_debug=0
+
+usage() {
+  echo "usage: `basename $0` <ctrl_ip> <Method> [Args]"
+  echo -e "\nMethods:"
+  echo "  create-cluster --clusterName <clusterName> --clusterFqdn <clusterFqdn>"
+  echo "  get-node [--id <id>]"
+  echo "  get-cluster [--id <id>]"
+  echo "  get-clusterNode [--id <id>]"
+  echo "  attach-node [--clusterName <clusterName>]"
+  echo "  detach-node --id <id> --projectId <id>"
+  echo "  delete-node --id <id>"
+  echo "  delete-cluster --id <id>"
+  echo -e "  inject-cert --cert <path-to-cert>\n"
+  exit 1
+}
+
+assert() {
+  if [ $# -eq 1 ]; then echo "ASSERT: ${1}"; fi
+  exit 1
+}
+
+validate_platform() {
+  # check if running CentOS 7.4
+  if [ -r /etc/centos-release ]; then
+    release=$(cat /etc/centos-release | cut -d ' ' -f 4)
+    if [[ ! "${release}" == 7.4.* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    platform="centos"
+  elif [ -r /etc/lsb-release ]; then
+    release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
+    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    platform="ubuntu"
+  else
+    assert "unsupported platform"
+  fi
+}
+
+banner() {
+  if [ $# -ge 1 ]; then title=${1}; fi
+  if [ $# -eq 2 -a "${2}" == "-n" ]; then echo; fi
+  echo "********************************************************************************"
+  echo "*** ${title}"
+  echo "********************************************************************************"
+}
+
+attach_cluster() {
+  export LD_LIBRARY_PATH="/opt/pf9/python/pf9-lib:/opt/pf9/python/pf9-hostagent-lib:${LD_LIBRARY_PATH}"
+  export PYTHONPATH="/opt/pf9/python/lib/python2.7:${PYTHONPATH}"
+
+  # get hostid
+  local pf9_hostid
+  if [ ! -r /etc/pf9/host_id.conf ]; then assert "this script must be run from a node"; fi
+  pf9_hostid=$(grep ^host_id /etc/pf9/host_id.conf | cut -d = -f2 | cut -d ' ' -f 2)
+  if [ -z "${pf9_hostid}" ]; then assert "failed to get hostid from /etc/pf9/host_id.conf"; fi
+
+  if [ ! -r /opt/pf9/setupd/bin/attach-node ]; then assert "attach-node not found - do you run deploy phase?"; fi
+  /opt/pf9/setupd/bin/attach-node --mgmt-ip ${ctrl_ip} --admin-user ${admin_user} --admin-password ${admin_password} \
+      --cluster-name ${cluster_name} --hostid ${pf9_hostid}
+  if [ $? -ne 0 ]; then return 1; fi
+}
+
+create_cluster() {
+  banner "Creating Cluster : ${cluster_name} | ${cluster_fqdn}" -n
+  if [ ! -r /opt/pf9-onprem/setupd-updates/add-cluster ]; then assert "add-cluster: not found"; fi
+  /bin/cp -f /opt/pf9-onprem/setupd-updates/add-cluster /opt/pf9/setupd/bin/
+  /opt/pf9/setupd/bin/add-cluster --ctrl-ip ${ctrl_ip} --admin-user ${admin_user} --admin-password ${admin_password} \
+      --cluster-fqdn ${cluster_fqdn} --cluster-name ${cluster_name}
+  if [ $? -ne 0 ]; then exit 1; fi
+}
+
+inject_cert() {
+  banner "Inject Certificate" -n
+
+  # validate vertificate path
+  if [ ! -r ${certificate} ]; then assert "certificate not found - '${certificate}'"; fi
+}
+
+# validate commandline
+if [ $# -lt 2 ]; then usage; fi
+ctrl_ip=${1}
+op=${2}
+
+# validate op
+case ${op} in
+get-node|get-cluster|get-clusterNode|attach-node|detach-node|delete-node|pre-authorize|inject-cert|create-cluster|delete-cluster)
+  ;;
+*)
+  usage ;;
+esac
+
+# process optional arguments
+shift 2
+while [ $# -gt 0 ]; do
+  case ${1} in
+  --id)
+    if [ $# -lt 2 ]; then usage; fi
+    object_id=${2}
+    shift 2
+    ;;
+  --projectId)
+    if [ $# -lt 2 ]; then usage; fi
+    project_id=${2}
+    shift 2
+    ;;
+  --clusterName)
+    if [ $# -lt 2 ]; then usage; fi
+    cluster_name=${2}
+    shift 2
+    ;;
+  --clusterFqdn)
+    if [ $# -lt 2 ]; then usage; fi
+    cluster_fqdn=${2}
+    shift 2
+    ;;
+  --role)
+    if [ $# -lt 2 ]; then usage; fi
+    roles=${2}
+    shift 2
+    ;;
+  --cert)
+    if [ $# -lt 2 ]; then usage; fi
+    certificate=${2}
+    shift 2
+    ;;
+  *)
+    usage ;;
+  esac
+done
+
+# validate arguments
+if [ "${op}" == "detach-node" -a -z "${object_id}" ]; then assert "${op} requires '--id <id>'"; fi
+if [ "${op}" == "detach-node" -a -z "${project_id}" ]; then assert "${op} requires '--projectId <id>'"; fi
+if [ "${op}" == "delete-node" -a -z "${object_id}" ]; then assert "${op} requires '--id <id>'"; fi
+if [ "${op}" == "delete-cluster" -a -z "${object_id}" ]; then assert "${op} requires '--id <id>'"; fi
+if [ "${op}" == "attach-node" -a -z "${cluster_name}" ]; then assert "${op} requires '--clusterName <id>'"; fi
+if [ "${op}" == "inject-cert" -a -z "${certificate}" ]; then assert "${op} requires '--cert <path-to-cert>'"; fi
+if [ "${op}" == "create-cluster" -a -z "${cluster_name}" ]; then assert "${op} requires '--clusterName <clusterName>'"; fi
+if [ "${op}" == "create-cluster" -a -z "${cluster_fqdn}" ]; then assert "${op} requires '--clusterFqdn <clusterFqdn>'"; fi
+
+## validate logged in as root
+uid=$(id -u)
+if [ ${uid} -ne 0 ]; then assert "this operation must be run as root"; fi
+
+# validate platform (CentOS 7.4 or Ubuntu 16.04)
+validate_platform
+
+################################################################################
+# manage token
+if [ ! -r ${tokendb} ]; then
+  flag_update_token=1
+else
+  token_ts=$(head -1 ${tokendb})
+  current_time=$(date +%s)
+  token_expire_ts=$((token_ts + 86400))
+  if [ ${current_time} -ge ${token_expire_ts} ]; then flag_update_token=1; fi
+fi
+
+if [ ${flag_update_token} -eq 1 ]; then
+  token=`curl -k -i -H "Content-Type: application/json" https://${ctrl_ip}/keystone/v3/auth/tokens?nocatalog \
+         -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \
+         \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \
+         \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}" 2>/dev/null \
+         | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
+
+  # update tokendb
+  echo "$(date +%s)" > ${tokendb}
+  echo "${token}" >> ${tokendb}
+else
+  token=$(cat ${tokendb} | tail -1)
+fi
+
+################################################################################
+# get-node
+if [ "${op}" == "get-node" ]; then
+  result=`curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/resmgr/v1/hosts/${object_id} 2>/dev/null`
+  if [ $? -ne 0 ]; then exit 1; fi
+  echo ${result} | grep ^404 > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ${result}
+    exit 1
+  fi
+  echo ${result} | python -m json.tool
+  echo -e "\nNodes : `echo ${result} | python -m json.tool | grep role_status | wc -l`"
+fi
+
+################################################################################
+# attach-node
+if [ "${op}" == "attach-node" ]; then
+  attach_cluster
+fi
+
+################################################################################
+# pre-authorize (agent de-coupling)
+if [ "${op}" == "pre-authorize" ]; then
+  pre_authorize
+fi
+
+################################################################################
+# inject-cert
+if [ "${op}" == "inject-cert" ]; then
+  inject_cert
+fi
+
+################################################################################
+# create-cluster
+if [ "${op}" == "create-cluster" ]; then
+  create_cluster
+fi
+
+################################################################################
+# detach-node
+if [ "${op}" == "detach-node" ]; then
+  echo "Detaching node from cluster (qbert/v2/<projectId>/nodes/<nodeId>)"
+  curl -k -X PUT -H "Content-Type: application/json;charset=UTF-8" -H "X-Auth-Token: ${token}" -H "Connection: keep-alive" --data-binary '{"clusterUuid":null}' --compressed https://${ctrl_ip}/qbert/v2/${project_id}/nodes/${object_id} 2>/dev/null; echo -e "\n"
+fi
+
+################################################################################
+# delete-node
+if [ "${op}" == "delete-node" ]; then
+  echo "Deleting role mapping from Resmgr (resmgr/v1/hosts/<nodeId>/roles/pf9-kube)"
+  curl -k -X DELETE -H "Content-Type: application/json;charset=UTF-8" -H "X-Auth-Token: ${token}" -H "Connection: keep-alive" https://${ctrl_ip}/resmgr/v1/hosts/${object_id}/roles/pf9-kube 2>/dev/null; echo -e "\n"
+fi
+
+################################################################################
+# get-cluster
+if [ "${op}" == "get-cluster" ]; then
+  result=`curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/qbert/v1/clusters/${object_id} 2>/dev/null`
+  if [ $? -ne 0 ]; then exit 1; fi
+  echo ${result} | grep ^404 > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ${result}
+    exit 1
+  fi
+  echo ${result} | python -m json.tool
+  echo -e "\nClusters : `echo ${result} | python -m json.tool | grep uuid | wc -l`"
+fi
+
+################################################################################
+# delete-cluster
+if [ "${op}" == "delete-cluster" ]; then
+  curl -k -X DELETE -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/qbert/v1/clusters/${object_id} > /dev/null 2>&1
+  if [ $? -ne 0 ]; then assert "Failed to remove cluster"; fi
+  echo "Cluster removed"
+fi
+
+################################################################################
+# get-clusterNode
+if [ "${op}" == "get-clusterNode" ]; then
+  result=`curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" https://${ctrl_ip}/qbert/v1/nodes/${object_id} 2>/dev/null`
+  if [ $? -ne 0 ]; then exit 1; fi
+  echo ${result} | grep ^404 > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ${result}
+    exit 1
+  fi
+  echo ${result} | python -m json.tool
+  echo -e "\nCluster Nodes : `echo ${result} | python -m json.tool | grep uuid | wc -l`"
+fi
+
+exit 0

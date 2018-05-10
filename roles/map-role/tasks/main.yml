@@ -170,6 +170,10 @@
     with_items:
       - add-cluster
       - attach-node
+      - isv-install
+      - isv-recert
+      - isv-service
+      - isv-tool
   when: rolename == "pf9-kube"
 
 ################################################################################
