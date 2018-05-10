@@ -6,6 +6,7 @@
   when: autoreg == "on"
 - debug: msg="SKIPPING ROLE - {{rolename}}"
   when: autoreg == "off"
+- debug: var=playbook_dir
 
 - block:
   # glance_endpoint_address

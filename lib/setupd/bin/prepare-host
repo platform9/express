@@ -1,0 +1,78 @@
+#!/opt/pf9/setupd/bin/python2
+# Copyright (c) 2018 Platform9 Systems
+
+# A script that reads the required configuration files and
+# prepares the host by downloading and caching the images
+
+
+import argparse, sys, logging, yaml
+from setupd_samples.utils import command_exec
+from setupd_samples.utils.docker_save_load import import_all_images, pull_images, save_all_images
+from setupd_samples.utils import get_misc_dir
+from setupd.fts import install_and_start_os_dependencies
+LOG = logging.getLogger(__name__)
+
+
+
+def _setup_logs():
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+
+    ch = logging.FileHandler('/var/log/pf9-prepare-host.log')
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
+    ch.setFormatter(formatter)
+    root.addHandler(ch)
+
+
+def _parse_args():
+    ap = argparse.ArgumentParser(sys.argv[0],
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ap.add_argument('--type', required=True, dest='prep_type',
+                    help='Prepare host by type (mgmt)')
+    ap.add_argument('--image-dir', required=True, dest='image_dir',
+                    help='Directory where all the images are stored')
+    return ap.parse_args()
+
+
+def _default_install(image_dir, download_images):
+
+    print "Installing Docker and other dependencies"
+    install_and_start_os_dependencies()
+
+    print "Downloading images"
+    pull_images(download_images)
+
+    print "Populating Docker cache"
+    import_all_images(image_dir)
+
+    print "Populating misc components"
+    command_exec.call("mkdir -p /opt/pf9/pf9-kube/bin/requester")
+    command_exec.call("cp %s/easy-rsa.tar.gz  /opt/pf9/pf9-kube/bin/requester/" % get_misc_dir())
+
+
+def _mysql_install(db_user, db_password):
+    print "Installing database"
+    command_exec.call("bash %s/setup-mysql.sh %s %s" %(get_misc_dir(), db_user, db_password))
+
+def main():
+    args = _parse_args()
+    _setup_logs()
+    with open("/etc/pf9/pf9-config.yaml", 'r') as stream:
+        conf = yaml.load(stream)
+    _default_install(args.image_dir, conf['app_config']['vendor_images'])
+
+    if args.prep_type == 'mgmt':
+        _mysql_install(conf['sys_config']['db_user'], conf['sys_config']['db_password'])
+
+
+if __name__ == '__main__':
+    try:
+        main()
+        print "Done"
+    except Exception as ex:
+        print "Operation failed"
+        LOG.exception(ex)
+        LOG.critical('Really bad things happened: %s', str(ex))
+        sys.exit(1)
+

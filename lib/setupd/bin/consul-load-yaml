@@ -1,0 +1,39 @@
+#!/opt/pf9/setupd/bin/python2
+
+import logging
+import os
+import sys
+
+from argparse import ArgumentParser
+from firkinize.configstore.consul import Consul
+
+logging.basicConfig(level=logging.DEBUG)
+LOG = logging.getLogger(__name__)
+
+def parse_args():
+    parser = ArgumentParser(
+        description='Load data into a consul store from a yaml file. '
+                    'Careful: keys are overwritten without warning.',
+        epilog='Example: consul-load-yaml --file customers.yaml')
+    parser.add_argument('--config-url',
+        help='Address of the config node, default http://localhost:8500, '
+             'also looks for env[\'CONSUL_HTTP_ADDR\']')
+    parser.add_argument('--token',
+            help='consul access token, also looks for '
+                 'env[\'CONSUL_ACCESS_TOKEN\']')
+    parser.add_argument('--file',
+        help='Name of a yaml file from which to load the config. '
+             'Note that the file must contain only dictionaries, no lists.',
+             required=True)
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+    config_url = args.config_url or \
+            os.environ.get('CONSUL_HTTP_ADDR', 'http://localhost:8500')
+    token = args.token or os.environ.get('CONSUL_HTTP_TOKEN', None)
+    consul = Consul(config_url, token)
+    consul.kv_put_yaml(args.file)
+
+if __name__ == '__main__':
+    sys.exit(main())
