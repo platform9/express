@@ -140,35 +140,32 @@
 # For cinder, perform SCSI discovery and LVM configuration
 ##############################################################################
 - block:
-  #- name: copy setupd.rpm
-  #  template:
-  #    src: files/setupd.rpm.j2
-  #    dest: /tmp/setupd.rpm
-
-  #- name: install setupd.rpm
-  #  yum:
-  #    name: /tmp/setupd.rpm
-  #    state: present
-
-  - name: test ls
-    shell: "ls -l {{role_path}}/files"
-    register: ls_files
-    delegate_to: localhost
-  - debug: var=ls_files
-
-  - name: copy files/setupd-updates/pf9_master_setup.py
+  - name: copy setupd.rpm
     copy:
-      src: "{{role_path}}/files/setupd-updates/pf9_master_setup.py"
-      dest: /tmp/pf9_master_setup.py
+      src: "{{role_path}}/files/setupd.rpm"
+      dest: /tmp/setupd.rpm
 
-  #- name: copy setupd python updates
-  #  copy:
-  #    src: "/opt/pf9/setupd-updates/{{item}}"
-  #    dest: "/opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/{{item}}"
-  #  with_items:
-  #    - pf9_mgmt_setup.py
-  #    - pf9_master_setup.py
-  #    - pf9_utils.py
+  - name: install setupd.rpm
+    yum:
+      name: /tmp/setupd.rpm
+      state: present
+
+  - name: copy setupd-updates
+    copy:
+      src: "{{role_path}}/files/setupd-updates/{{item}}"
+      dest: "/opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/{{item}}"
+    with_items:
+      - pf9_master_setup.py
+      - pf9_mgmt_setup.py
+      - pf9_utils.py
+
+  - name: copy setupd-utils
+    copy:
+      src: "{{role_path}}/files/setupd-utils/{{item}}"
+      dest: "/opt/pf9/setupd/bin/{{item}}"
+    with_items:
+      - add-cluster
+      - attach-node
   when: rolename == "pf9-kube"
 
 ################################################################################
