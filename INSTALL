@@ -89,11 +89,7 @@ restart_awx() {
 
   # start awx
   sleep 5
-  for container in awx_task awx_web; do
-    echo "--> starting ${container}"
-    sudo docker start ${container} > /dev/null 2>&1
-    sudo docker start ${container} > /dev/null 2>&1
-  done
+  ${basedir}/INSTALL -u
 
   exit 0
 }
