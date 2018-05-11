@@ -34,7 +34,8 @@ usage() {
   echo "--orgName         : organization name for control plane"
   echo "--orgShortName    : organization short-name for control plane"
   echo "--clusterFqdn     : fully-qualified domain name for default Kubernetes cluster"
-  echo "--adminPassword   : password for control plane admin user"
+  echo "--adminUser       : username for control plane"
+  echo "--adminPassword   : password for control plane"
   echo "--dbPassword      : password for control place database"
   echo "-k <k8s_masterIp> : download/install/configure Kubectl from management server"
   echo "-a                : attach node to cluster"
@@ -316,6 +317,11 @@ while [ $# -gt 0 ]; do
     if [ $# -lt 2 ]; then usage; fi
     if [ ! -r ${2} ]; then assert "invalid archive '${2}'"; fi
     onprem_archive=${2}
+    shift 2
+    ;;
+  --adminUser)
+    if [ $# -lt 2 ]; then usage; fi
+    admin_user=${2}
     shift 2
     ;;
   --adminPassword)
