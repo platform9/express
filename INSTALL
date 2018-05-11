@@ -354,14 +354,15 @@ if [ ${flag_prereqs} -eq 1 ]; then
 fi
 
 ## install web ui
-if [ ${flag_ui} -eq 1 ]; then
-  install_ui; echo
-  exit 0
-fi
+if [ ${flag_ui} -eq 1 -o ${flag_dbinit} -eq 1 ]; then
+  if [ ${flag_ui} -eq 1 ]; then
+    install_ui; echo
+  fi
 
-## install awx database
-if [ ${flag_dbinit} -eq 1 ]; then
-  db_init; echo
+  ## install awx database
+  if [ ${flag_dbinit} -eq 1 ]; then
+    db_init; echo
+  fi
   exit 0
 fi
 
