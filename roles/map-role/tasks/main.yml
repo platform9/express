@@ -140,18 +140,18 @@
 ##############################################################################
 - block:
   - name: check if setupd installed
-    shell: rpm -qa | grep setupd
+    shell: rpm -qa | grep setupd > /dev/null 2>&1; if [ $? -eq 0 ]; then echo "installed"; else echo "not-installed"; fi
     register: setupd_install
 
   - name: copy setupd.rpm
     copy:
       src: "{{role_path}}/files/setupd.rpm"
       dest: /tmp/setupd.rpm
-    when: setupd_install.rc != 0
+    when: setupd_install.stdout.strip() == "not-installed"
 
   - name: install setupd.rpm
     shell: rpm -Uvh --nodeps /tmp/setupd.rpm
-    when: setupd_install.rc != 0
+    when: setupd_install.stdout.strip() == "not-installed"
 
   - name: copy setupd-updates
     copy:
