@@ -172,10 +172,10 @@ install_prereqs() {
   # display log
   echo "--> Installation Log: ${install_log}"
 
-  # install Ansibl (and dependencies)
+  # install Ansible (and dependencies)
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
-    for pkg in epel-release nginx ansible gcc; do
+    for pkg in epel-release ntp nginx ansible gcc; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -188,17 +188,17 @@ install_prereqs() {
     done
 
     # check for packages with known conflicts
-    conflict_pkgs="PyYAML python-requests python-ipaddress"
-    for pkg in ${conflict_pkgs}; do
-      rpm -q "${pkg}" > /dev/null 2>&1
-      if [ $? -eq 0 ]; then
-        sudo rpm -e --nodeps ${pkg} > ${log} 2>&1
-        if [ $? -ne 0 ]; then
-          echo -e "\nERROR: failed to uninstall ${pkg} - here's the last 10 lines of the log:\n"
-          tail -20 ${log}; exit 1
-        fi
-      fi
-    done
+    #conflict_pkgs="PyYAML python-requests python-ipaddress"
+    #for pkg in ${conflict_pkgs}; do
+    #  rpm -q "${pkg}" > /dev/null 2>&1
+    #  if [ $? -eq 0 ]; then
+    #    sudo rpm -e --nodeps ${pkg} > ${log} 2>&1
+    #    if [ $? -ne 0 ]; then
+    #      echo -e "\nERROR: failed to uninstall ${pkg} - here's the last 10 lines of the log:\n"
+    #      tail -20 ${log}; exit 1
+    #    fi
+    #  fi
+    #done
 
     for pkg in python-devel python2-pip bc; do
       echo -n "${pkg} "
@@ -224,18 +224,18 @@ install_prereqs() {
       fi
     fi
 
-  for pkg in ansible bc ntp python-pip; do
-      echo -n "${pkg} "
-      dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        sudo apt -y install ${pkg} > ${log} 2>&1
-        if [ $? -ne 0 ]; then
-          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
-          tail -10 ${log}; exit 1
-        fi
-      fi
-    done
-  fi
+  #for pkg in ansible bc python-pip; do
+  #    echo -n "${pkg} "
+  #    dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
+  #    if [ $? -ne 0 ]; then
+  #      sudo apt -y install ${pkg} > ${log} 2>&1
+  #      if [ $? -ne 0 ]; then
+  #        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+  #        tail -10 ${log}; exit 1
+  #      fi
+  #    fi
+  #  done
+  #fi
 
   ## upgrade pip
   sudo pip install --upgrade pip > ${log} 2>&1
