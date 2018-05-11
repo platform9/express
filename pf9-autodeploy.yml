@@ -2,7 +2,8 @@
 # Common Roles
 - hosts:
     - hypervisors
-    - containervisors
+    - k8s-master
+    - k8s-worker
   become: true
   gather_facts: False
   pre_tasks:
@@ -46,13 +47,23 @@
     - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
 
-# Kubernetes Master & Worker Nodes
-- hosts: containervisors
+# Kubernetes Master Nodes
+- hosts: k8s-master
   become: true
   roles:
     - common
     - ntp
     - pf9-auth
     - pf9-hostagent
-    - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-kube", k8s_node_type: "master", when: autoreg == "on" }
+
+# Kubernetes Worker Nodes
+- hosts: k8s-worker
+  become: true
+  roles:
+    - common
+    - ntp
+    - pf9-auth
+    - pf9-hostagent
+    - { role: "map-role", rolename: "pf9-kube", k8s_node_type: "worker", when: autoreg == "on" }
 
