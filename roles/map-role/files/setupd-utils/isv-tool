@@ -20,6 +20,9 @@ flag_debug=0
 
 usage() {
   echo "usage: `basename $0` <ctrl_ip> <Method> [Args]"
+  echo -e "\nArgs:"
+  echo "  --adminUser  : username for control plane"
+  echo "  --adminPassword : password for control place"
   echo -e "\nMethods:"
   echo "  create-cluster --clusterName <clusterName> --clusterFqdn <clusterFqdn>"
   echo "  get-node [--id <id>]"
@@ -28,8 +31,7 @@ usage() {
   echo "  attach-node [--clusterName <clusterName>]"
   echo "  detach-node --id <id> --projectId <id>"
   echo "  delete-node --id <id>"
-  echo "  delete-cluster --id <id>"
-  echo -e "  inject-cert --cert <path-to-cert>\n"
+  echo -e "  delete-cluster --id <id>\n"
   exit 1
 }
 
@@ -115,6 +117,16 @@ while [ $# -gt 0 ]; do
     object_id=${2}
     shift 2
     ;;
+  --adminUser)
+    if [ $# -lt 2 ]; then usage; fi
+    admin_user=${2}
+    shift 2
+    ;;
+  --adminPassword)
+    if [ $# -lt 2 ]; then usage; fi
+    admin_password=${2}
+    shift 2
+    ;;
   --projectId)
     if [ $# -lt 2 ]; then usage; fi
     project_id=${2}
@@ -181,6 +193,7 @@ if [ ${flag_update_token} -eq 1 ]; then
          | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
 
   # update tokendb
+  if [ -z "${token}" ]; then assert "failed to get token"; fi
   echo "$(date +%s)" > ${tokendb}
   echo "${token}" >> ${tokendb}
 else
