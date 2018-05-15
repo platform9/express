@@ -27,6 +27,7 @@ flag_ui=0
 flag_dbinit=0
 flag_awx_restart=0
 flag_autoregister=0
+flag_nginx_init=0
 extra_vars=""
 awx_pf9_user="pf9"
 awx_pf9_password="Pl@tform9"
@@ -43,6 +44,7 @@ usage() {
   echo "-u|--ui                  : install web UI (Ansible AWX)"
   echo "-r|--restartAwx          : restart AWX"
   echo "-d|--dbinit              : initialize AWX database"
+  echo "-n|--nginx-init          : configure nginx (pf9-express config)"
   echo "-c|--config <configFile> : use custom configuration file"
   echo "-e|--extra-vars <string> : ansible extra-vars <name=val,...>"
   echo -e "-h|--help                : display this message\n"
@@ -176,7 +178,7 @@ install_awx() {
   fi
 
   # configure nginx
-  nginx_init
+  if [ ${flag_nginx_init} -eq 1 ]; then nginx_init; fi
 }
 
 install_prereqs() {
@@ -321,6 +323,9 @@ while [ $# -gt 0 ]; do
     ;;
   -d|--dbinit)
     flag_dbinit=1
+    ;;
+  -n|--nginx-init)
+    flag_nginx_init=1
     ;;
   -r|--restartAwx)
     flag_awx_restart=1
