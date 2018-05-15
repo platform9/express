@@ -122,7 +122,7 @@ db_init() {
   docker exec postgres bash -c "su - postgres -c 'psql -c \"create database awx with template template0;\"'"
 
   # import awx database (exported using 'pg_dump awx > db.sql')
-  docker exec postgres bash -c "su - postgres -c 'psql -d awx -f /tmp/${awx_db_export};'"
+  docker exec postgres bash -c "su - postgres -c 'psql -d awx -f /tmp/${awx_db_export};'" > /dev/null 2>&1
 
   # start awx
   ${basedir}/INSTALL -u
@@ -263,6 +263,14 @@ install_prereqs() {
   sudo pip install shade > ${log} 2>&1
   if [ $? -ne 0 ]; then
     echo -e "\nERROR: failed to install python shade - here's the last 10 lines of the log:\n"
+    tail -10 ${log}; exit 1
+  fi
+
+  ## install python docker-py
+  echo -n "docker-py "
+  sudo pip install docker-py > ${log} 2>&1
+  if [ $? -ne 0 ]; then
+    echo -e "\nERROR: failed to install python docker-py - here's the last 10 lines of the log:\n"
     tail -10 ${log}; exit 1
   fi
 
