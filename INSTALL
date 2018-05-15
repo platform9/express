@@ -94,6 +94,14 @@ restart_awx() {
   exit 0
 }
 
+nginx_init() {
+  # copy nginx.conf
+  sudo docker cp ${basedir}/lib/nginx.conf awx_web:/etc/nginx/nginx.conf
+
+  # restart nginx container
+  docker exec awx_web nginx -s reload
+}
+
 db_init() {
   echo "[ Installing AWX Database ]"
   
@@ -166,6 +174,9 @@ install_awx() {
   if [ ${elapsedTime} -ge ${TIMEOUT} ]; then
     assert "*** TIMEOUT EXCEEDED *** waiting to connect to awx"
   fi
+
+  # configure nginx
+  nginx_init
 }
 
 install_prereqs() {
