@@ -189,7 +189,7 @@ install_prereqs() {
   # install Ansible (and dependencies)
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
-    for pkg in epel-release ntp nginx ansible gcc; do
+    for pkg in epel-release ntp nginx gcc; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -202,18 +202,22 @@ install_prereqs() {
     done
 
     # check for packages with known conflicts
-    conflict_pkgs="PyYAML python-requests python-ipaddress"
-    for pkg in ${conflict_pkgs}; do
-      rpm -q "${pkg}" > /dev/null 2>&1
-      if [ $? -eq 0 ]; then
-        sudo rpm -e --nodeps ${pkg} > ${log} 2>&1
-        if [ $? -ne 0 ]; then
-          echo -e "\nERROR: failed to uninstall ${pkg} - here's the last 10 lines of the log:\n"
-          tail -20 ${log}; exit 1
-        fi
-      fi
-    done
+    #conflict_pkgs="PyYAML python-requests python-ipaddress"
+    #for pkg in ${conflict_pkgs}; do
+    #  rpm -q "${pkg}" > /dev/null 2>&1
+    #  if [ $? -eq 0 ]; then
+    #    sudo rpm -e --nodeps ${pkg} > ${log} 2>&1
+    #    if [ $? -ne 0 ]; then
+    #      echo -e "\nERROR: failed to uninstall ${pkg} - here's the last 10 lines of the log:\n"
+    #      tail -20 ${log}; exit 1
+    #    fi
+    #  fi
+    #done
 
+    # clean yum
+    #sudo yum clean all
+
+    # install additional yum-based packages
     for pkg in python-devel python2-pip bc; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
@@ -225,6 +229,42 @@ install_prereqs() {
         fi
       fi
     done
+
+    ## upgrade pip
+    sudo pip install --upgrade pip > ${log} 2>&1
+    if [ $? -ne 0 ]; then
+      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
+      tail -10 ${log}; exit 1
+    fi
+
+    ## install additional pip-based packages
+    for pkg in shade docker-py; do
+      echo -n "${pkg} "
+      sudo pip install ${pkg} > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    done
+
+    ## install additional yum-based packages
+    for pkg in python-requests python-ipaddress ansible; do
+      echo -n "${pkg} "
+      sudo yum -y install ${pkg} > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    done
+
+    ## install setupd
+    echo -n "setupd"
+    sudo yum -y install ${basedir}/lib/setupd.rpm > ${log} 2>&1
+    if [ ! -d /opt/pf9/setupd ]; then
+      echo -e "\nERROR: failed to install setupd\n"
+      tail -10 ${log}; exit 1
+    fi
+    echo
   elif [ "${platform}" == "ubuntu" ]; then
     # add ansible repository
     dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
@@ -250,42 +290,6 @@ install_prereqs() {
       fi
     done
   fi
-
-  ## upgrade pip
-  sudo pip install --upgrade pip > ${log} 2>&1
-  if [ $? -ne 0 ]; then
-    echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
-    tail -10 ${log}; exit 1
-  fi
-
-  ## install additional pip-based packages
-  for pkg in shade docker-py; do
-    echo -n "${pkg} "
-    sudo pip install ${pkg} > ${log} 2>&1
-    if [ $? -ne 0 ]; then
-      echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
-      tail -10 ${log}; exit 1
-    fi
-  done
-
-  ## install additional yum-based packages
-  for pkg in python-requests python-ipaddress; do
-    echo -n "${pkg} "
-    sudo yum -y install ${pkg} > ${log} 2>&1
-    if [ $? -ne 0 ]; then
-      echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
-      tail -10 ${log}; exit 1
-    fi
-  done
-
-  ## install setupd
-  echo -n "setupd"
-  sudo yum -y install ${basedir}/lib/setupd.rpm > ${log} 2>&1
-  if [ ! -d /opt/pf9/setupd ]; then
-    echo -e "\nERROR: failed to install setupd\n"
-    tail -10 ${log}; exit 1
-  fi
-  echo
 
   # create log directory
   if [ ! -d /var/log/pf9 ]; then sudo mkdir -p /var/log/pf9; fi
