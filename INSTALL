@@ -209,7 +209,7 @@ install_prereqs() {
     fi
 
     # check for packages with known conflicts
-    conflict_pkgs="python-requests python-ipaddress"
+    conflict_pkgs="PyYAML python-requests python-ipaddress"
     for pkg in ${conflict_pkgs}; do
       rpm -q "${pkg}" > /dev/null 2>&1
       if [ $? -eq 0 ]; then
