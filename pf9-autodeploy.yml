@@ -7,7 +7,6 @@
   become: true
   gather_facts: False
   pre_tasks:
-    - debug: var=ctrl_ip
     - debug: var=autoreg
     - name: install python2
       raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
@@ -20,7 +19,7 @@
     - ntp
     - pf9-auth
     - pf9-hostagent
-    - qemu-kvm-ev
+    #- qemu-kvm-ev
     - neutron-prerequisites
     - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
