@@ -190,17 +190,17 @@ install_prereqs() {
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
     # check for packages with known conflicts
-    conflict_pkgs="PyYAML python-requests python-ipaddress"
-    for pkg in ${conflict_pkgs}; do
-      rpm -q "${pkg}" > /dev/null 2>&1
-      if [ $? -eq 0 ]; then
-        sudo rpm -e ${pkg} --nodeps > ${log} 2>&1
-        if [ $? -ne 0 ]; then
-          echo -e "\nERROR: failed to uninstall ${pkg} - here's the last 10 lines of the log:\n"
-          tail -20 ${log}; exit 1
-        fi
-      fi
-    done
+    #conflict_pkgs="PyYAML python-requests python-ipaddress"
+    #for pkg in ${conflict_pkgs}; do
+    #  rpm -q "${pkg}" > /dev/null 2>&1
+    #  if [ $? -eq 0 ]; then
+    #    sudo rpm -e ${pkg} --nodeps > ${log} 2>&1
+    #    if [ $? -ne 0 ]; then
+    #      echo -e "\nERROR: failed to uninstall ${pkg} - here's the last 10 lines of the log:\n"
+    #      tail -20 ${log}; exit 1
+    #    fi
+    #  fi
+    #done
 
     for pkg in epel-release ntp nginx gcc python-devel python2-pip bc; do
       echo -n "${pkg} "
