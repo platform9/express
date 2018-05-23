@@ -209,6 +209,7 @@ if [ "${role}" == "pf9-kube" ]; then
     echo "INFO: cluster does not exists - creating"
     cluster_fqdn="c2.ilabs.net"
     create_cluster
+    sleep 30
   fi
 
   # attach node to cluster
