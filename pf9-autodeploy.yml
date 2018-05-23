@@ -37,6 +37,7 @@
   roles:
     - { role: "glance-host", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
+    - wait-for-convergence
 
 # Openstack Block Storage Nodes
 - hosts: cinder
@@ -45,6 +46,7 @@
     - { role: "lvm", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
+    - wait-for-convergence
 
 # Kubernetes Master Nodes
 - hosts: k8s-master
@@ -55,6 +57,7 @@
     - pf9-auth
     - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube", k8s_node_type: "master", when: autoreg == "on" }
+    - wait-for-convergence
 
 # Kubernetes Worker Nodes
 - hosts: k8s-worker
@@ -65,4 +68,5 @@
     - pf9-auth
     - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube", k8s_node_type: "worker", when: autoreg == "on" }
+    - wait-for-convergence
 
