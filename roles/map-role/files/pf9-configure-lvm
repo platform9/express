@@ -12,7 +12,8 @@ vg_name=${1}
 pvs=${2}
 
 # process pvs (which is formatted as a yml list)
-pvs=${pvs:1:${#pvs}}
+arglen=$(expr ${#pvs}-3)
+pvs=${pvs:2:${arglen}}
 IFS=","
 pv_list=(${pvs})
 
