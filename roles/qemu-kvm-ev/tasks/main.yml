@@ -4,6 +4,7 @@
     path: /etc/yum/vars/contentdir
     line: centos
     create: yes
+  when: ansible_os_family == "RedHat"
 
 - name: install the centos-release-qemu-ev repo
   yum:
