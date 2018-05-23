@@ -260,6 +260,14 @@ install_prereqs() {
         fi
       fi
     done
+
+    ## install setupd
+    echo -n "setupd"
+    if [ ! -r /opt/pf9 ]; then mkdir -p /opt/pf9; fi
+    if [ ! -r /opt/pf9/setupd ]; then 
+      cp -r ${basedir}/lib/setupd /opt/pf9
+    fi
+    echo
   fi
 
   # create log directory
