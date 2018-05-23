@@ -1,0 +1,52 @@
+#!/opt/pf9/setupd/bin/python2
+
+import logging
+import sys
+
+from argparse import ArgumentParser
+from firkinize.configstore.consul import Consul
+
+logging.basicConfig(level=logging.DEBUG)
+LOG = logging.getLogger(__name__)
+
+def parse_args():
+    parser = ArgumentParser(
+        description='Add a keystone user to the config store.')
+    parser.add_argument('--config-url', default='http://localhost:8500',
+        help='Address of the config node, default http://localhost:8500')
+    parser.add_argument('--customer-id', help='Customer id', required=True)
+    parser.add_argument('--region-id', help='region uuid', required=True)
+    parser.add_argument('--public-url', help='Service public url')
+    parser.add_argument('--admin-url', help='Service admin url')
+    parser.add_argument('--internal-url', help='Service internal url')
+    parser.add_argument('--service-name',
+                        help="name of service, like 'nova'",
+                        required=True)
+    parser.add_argument('--service-type',
+                        help="type of service', like 'compute'",
+                        required=True)
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+    if not (args.public_url or args.internal_url or args.admin_url):
+        sys.stderr.write('Please provide at least one of public_url, '
+                         'admin_url or internal_url')
+        return 1
+
+    consul = Consul(args.config_url)
+
+    # FIXME: move this logic to keystone_config
+    key = 'customers/%s/keystone/endpoints/%s/%s/%%s' % \
+          (args.customer_id, args.region_id, args.service_name)
+    txn = {key % 'type': args.service_type}
+    for interface in ['public_url', 'admin_url', 'internal_url']:
+        url = getattr(args, interface)
+        if url:
+            txn[key % interface] = url
+
+    consul.kv_put_txn(txn)
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())

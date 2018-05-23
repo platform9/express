@@ -1,0 +1,65 @@
+#!/opt/pf9/setupd/bin/python2
+
+import os
+import sys
+import yaml
+
+from argparse import ArgumentParser
+from firkinize.configstore.consul import Consul
+
+def parse_args():
+    parser = ArgumentParser(
+        description='Dump a section from the config store to yaml',
+        epilog='Example: consul-dump-yaml --start-key customers')
+    parser.add_argument('--config-url',
+        help='Address of the config node, default http://localhost:8500, '
+             'also looks for env[\'CONSUL_HTTP_ADDR\']')
+    parser.add_argument('--token',
+            help='consul access token, also looks for '
+                 'env[\'CONSUL_HTTP_TOKEN\']')
+    parser.add_argument('--start-key',
+        help='Start key', required=True)
+    return parser.parse_args()
+
+def add_nodes(root, elems, value):
+    if len(elems) == 1:
+        oldval = root.get(elems[0], None)
+        if oldval and isinstance(oldval, dict):
+            sys.stderr.write(
+                'Warning: A non-leaf child of \'%s\' has a scalar value '
+                '\'%s\'. The scalar value will not be included '
+                'in the output.\n' % (root, value))
+        else:
+            root[elems[0]] = value
+    else:
+        head = elems[0]
+        tail = elems[1:]
+        newroot = root.get(head, None)
+        if not newroot:
+            root[head] = {}
+            newroot = root[head]
+        elif not isinstance(newroot, dict):
+            sys.stderr.write(
+                'Warning: A non-leaf child of \'%s\' has a scalar value '
+                '\'%s\'. The scalar value will not be included '
+                'in the output.\n' % (root, value))
+            root[head] = {}
+            newroot = root[head]
+        add_nodes(newroot, tail, value)
+
+def main():
+    args = parse_args()
+    config_url = args.config_url or \
+            os.environ.get('CONSUL_HTTP_ADDR', 'http://localhost:8500')
+    token = args.token or os.environ.get('CONSUL_HTTP_TOKEN', None)
+    consul = Consul(config_url, token)
+    tree = consul.kv_get_prefix(args.start_key)
+    retval = {}
+    for k, v in tree.iteritems():
+        if v:
+            elems = str(k).split('/')
+            add_nodes(retval, elems, v)
+    print yaml.dump(retval, default_flow_style=False)
+
+if __name__ == '__main__':
+    sys.exit(main())
