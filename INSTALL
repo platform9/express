@@ -25,6 +25,7 @@ flag_setup=0
 flag_prereqs=0
 flag_ui=0
 flag_dbinit=0
+flag_skip_prereqs=0
 flag_awx_restart=0
 flag_autoregister=0
 flag_nginx_init=0
@@ -48,6 +49,7 @@ usage() {
   echo "-n|--nginx-init            : configure nginx (pf9-express config)"
   echo "-c|--config <configFile>   : use custom configuration file"
   echo "-e|--extra-vars <string>   : ansible extra-vars <name=val,...>"
+  echo "-b|--bypassPrereqs         : bypass pre-requisites"
   echo -e "-h|--help                  : display this message\n"
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
     :
@@ -227,34 +229,6 @@ install_prereqs() {
         tail -10 ${log}; exit 1
       fi
     done
-
-    ## install setupd
-    echo -n "setupd"
-    sudo yum -y install ${basedir}/lib/setupd.rpm > ${log} 2>&1
-    if [ ! -d /opt/pf9/setupd ]; then
-      echo -e "\nERROR: failed to install setupd\n"
-      tail -10 ${log}; exit 1
-    fi
-    echo
-
-    # update setupd packages
-    echo -n "--> Updating setupd libraries: "
-    for pkg in pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py; do
-      echo -n "${pkg} "
-      sudo /bin/cp -f ${basedir}/scripts/setupd-updates/${pkg} \
-           /opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/${pkg} > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        echo; assert "failed to update ${pkg}"
-      fi
-    done
-  
-    for pkg in attach-node add-cluster; do
-      echo -n "${pkg} "
-      sudo /bin/cp -f ${basedir}/scripts/setupd-updates/${pkg} /opt/pf9/setupd/bin/${pkg} > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        echo; assert "failed to update ${pkg}"
-      fi
-    done
     echo
   elif [ "${platform}" == "ubuntu" ]; then
     # add ansible repository
@@ -321,6 +295,9 @@ while [ $# -gt 0 ]; do
     ;;
   -a|--autoRegister)
     flag_autoregister=1
+    ;;
+  -b|--bypassPrereqs)
+    flag_skip_prereqs=1
     ;;
   -x|--dbExport)
     if [ $# -lt 2 ]; then usage; fi
@@ -410,7 +387,7 @@ if [ -z "${target}" ]; then usage; fi
 banner
 
 # install prerequisite packages
-install_prereqs
+if [ ${flag_skip_prereqs} -eq 0 ]; then install_prereqs; fi
 
 ## validate minimum Ansible version
 ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)

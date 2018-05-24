@@ -12,10 +12,6 @@
 - fail: msg="variable undefined - os_tenant"
   when: os_tenant is undefined
 
-- debug: var=du_url
-- debug: var=os_username
-- debug: var=os_password
-- debug: var=os_tenant
 - name: Set OS_AUTH fact
   set_fact:
     os_auth:

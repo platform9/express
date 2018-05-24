@@ -23,7 +23,7 @@
     - neutron-prerequisites
     - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
-    - { role: "map-role", rolename: "pf9-celiometer-role", when: autoreg == "on" and ceilometer == "on" }
+    - { role: "map-role", rolename: "pf9-ceilometer", when: autoreg == "on" and ceilometer == "on" }
     - { role: "map-role", rolename: "pf9-neutron-ovs-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
@@ -56,8 +56,9 @@
     - ntp
     - pf9-auth
     - pf9-hostagent
-    - { role: "map-role", rolename: "pf9-kube", k8s_node_type: "master", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
     - wait-for-convergence
+    - { role: "k8s-cluster-attach", k8s_node_type: "master", when: autoreg == "on" }
 
 # Kubernetes Worker Nodes
 - hosts: k8s-worker
@@ -67,6 +68,7 @@
     - ntp
     - pf9-auth
     - pf9-hostagent
-    - { role: "map-role", rolename: "pf9-kube", k8s_node_type: "worker", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
     - wait-for-convergence
+    - { role: "k8s-cluster-attach", k8s_node_type: "worker", when: autoreg == "on" }
 
