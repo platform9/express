@@ -17,21 +17,40 @@ pf9_config=${basedir}/pf9-autodeploy.conf
 pf9_config_tpl=${basedir}/lib/pf9-autodeploy.tpl
 pf9_group_vars=${basedir}/group_vars/all.yml
 pf9_custom_configFile=""
+awx_repo_dir=/opt/awx
+awx_repo=https://github.com/ansible/awx.git
+awxcli_repo_dir=/opt/tower-cli
+awxcli_repo=https://github.com/ansible/tower-cli.git
 flag_setup=0
 flag_prereqs=0
+flag_ui=0
+flag_dbinit=0
+flag_skip_prereqs=0
+flag_awx_restart=0
 flag_autoregister=0
+flag_nginx_init=0
 extra_vars=""
+awx_pf9_user="pf9"
+awx_pf9_password="Pl@tform9"
+awx_pf9_email="user@company.com"
+awx_db_export=awx-db-backup-v0.2.sql
 
 # functions
 usage() {
   echo "Usage: $0 [Args] <target>"
   echo -e "\nArgs (Optional):\n"
-  echo "-a|--autoRegister        : auto-register host with control plane"
-  echo "-i|--installPrereqs      : install pre-requisites and exit"
-  echo "-s|--setup               : run setup and exit"
-  echo "-c|--config <configFile> : use custom configuration file"
-  echo "-e|--extra-vars <string> : ansible extra-vars <name=val,...>"
-  echo -e "-h|--help                : display this message\n"
+  echo "-a|--autoRegister          : auto-register host with control plane"
+  echo "-i|--installPrereqs        : install pre-requisites and exit"
+  echo "-s|--setup                 : run setup and exit"
+  echo "-u|--ui                    : install web UI (Ansible AWX)"
+  echo "-r|--restartAwx            : restart AWX"
+  echo "-d|--dbinit                : initialize AWX database"
+  echo "-x|--dbExport <exportFile> : use <exportFile> for dbinit"
+  echo "-n|--nginx-init            : configure nginx (pf9-express config)"
+  echo "-c|--config <configFile>   : use custom configuration file"
+  echo "-e|--extra-vars <string>   : ansible extra-vars <name=val,...>"
+  echo "-b|--bypassPrereqs         : bypass pre-requisites"
+  echo -e "-h|--help                  : display this message\n"
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
     :
   else
@@ -63,14 +82,116 @@ banner() {
   echo "################################################################"
 }
 
+restart_awx() {
+  echo "[ Restarting AWX ]"
+
+  # stop awx
+  for container in awx_task awx_web; do
+    echo "--> stopping ${container}"
+    sudo docker stop ${container} > /dev/null 2>&1
+    sudo docker stop ${container} > /dev/null 2>&1
+  done
+
+  # start awx
+  sleep 5
+  ${basedir}/INSTALL -u
+
+  exit 0
+}
+
+nginx_init() {
+  # copy nginx.conf
+  sudo docker cp ${basedir}/lib/nginx.conf awx_web:/etc/nginx/nginx.conf
+
+  # restart nginx container
+  docker exec awx_web nginx -s reload
+}
+
+db_init() {
+  echo "[ Installing AWX Database ]"
+  
+  # copy database export
+  sudo docker cp ${basedir}/lib/${awx_db_export} postgres:/tmp
+
+  # stop awx
+  docker stop awx_web > /dev/null 2>&1
+  docker stop awx_task > /dev/null 2>&1
+
+  # drop awx database
+  docker exec postgres bash -c "su - postgres -c 'psql -c \"drop database awx;\"'"
+
+  # initialize awx database
+  docker exec postgres bash -c "su - postgres -c 'psql -c \"create database awx with template template0;\"'"
+
+  # import awx database (exported using 'pg_dump awx > db.sql')
+  docker exec postgres bash -c "su - postgres -c 'psql -d awx -f /tmp/${awx_db_export};'" > /dev/null 2>&1
+
+  # start awx
+  ${basedir}/INSTALL -u
+}
+
+install_awx() {
+  echo "[ Installing Web UI (Ansible AWX) ]"
+  echo "--> Installation Log: ${log}"
+
+  # check if docker is installed
+  docker -h > /dev/null 2>&1
+  if [ $? -ne 0 ]; then assert "Docker is not installed"; fi
+
+  # clone AWX repo
+  echo -n "--> validating awx repository: "
+  if [ -r ${awx_repo_dir} ]; then
+    echo "present"
+  else
+    echo "missing - cloning..."
+    sudo git clone ${awx_repo} ${awx_repo_dir} > ${log} 2>&1
+    if [ $? -ne 0 ]; then assert "failed to clone git repo: ${awx_repo}"; fi
+  fi
+
+  # Install Tower CLI
+  echo "--> installing tower-cli"
+  sudo pip install ansible-tower-cli > ${log} 2>&1
+  if [ $? -ne 0 ]; then assert "failed to pip install ansible-tower-cli"; fi
+  sudo /bin/cp -f ${basedir}/lib/tower_cli.cfg.tpl /root/.tower_cli.cfg
+  if [ $? -ne 0 ]; then assert "failed to copy lib/tower_cli.cfg.tpl"; fi
+  sudo chmod 0400 /root/.tower_cli.cfg
+  if [ $? -ne 0 ]; then assert "failed to set permissions on /root/.tower_cli.cfg"; fi
+
+  # Install AWX (Docker-based)
+  echo "--> installing awx (this will take a while - monitor log for status)"
+  (cd ${awx_repo_dir}/installer && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
+
+  # Validate Tower CLI (timeout loop)
+  echo "--> waiting for awx to initialize"
+  TIMEOUT=600
+  start_time=`date +%s`
+  elapsedTime=0
+  while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
+    sudo tower-cli version > /dev/null 2>&1
+    if [ $? -eq 0 ]; then break; fi
+
+    # update elapsed time
+    current_t=`date +%s`; elapsedTime=$((current_t - start_time))
+    sleep 5
+  done
+
+  # display timeout message
+  if [ ${elapsedTime} -ge ${TIMEOUT} ]; then
+    assert "*** TIMEOUT EXCEEDED *** waiting to connect to awx"
+  fi
+
+  # configure nginx
+  if [ ${flag_nginx_init} -eq 1 ]; then nginx_init; fi
+}
+
 install_prereqs() {
   # display log
   echo "--> Installation Log: ${install_log}"
 
-  # install Ansibl (and dependencies)
+  # install Ansible (and dependencies)
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
-    for pkg in epel-release nginx ansible gcc; do
+    for pkg in epel-release ntp nginx gcc python-devel python2-pip bc; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -82,30 +203,33 @@ install_prereqs() {
       fi
     done
 
-    # check for packages with known conflicts
-    conflict_pkgs="PyYAML python-requests python-ipaddress"
-    for pkg in ${conflict_pkgs}; do
-      rpm -qa | grep "${pkg}" > /dev/null 2>&1
-      if [ $? -eq 0 ]; then
-        sudo yum -y erase ${pkg} > ${log} 2>&1
-        if [ $? -ne 0 ]; then
-          echo -e "\nERROR: failed to uninstall ${pkg} - here's the last 10 lines of the log:\n"
-          tail -10 ${log}; exit 1
-        fi
+    ## upgrade pip
+    sudo pip install --upgrade pip > ${log} 2>&1
+    if [ $? -ne 0 ]; then
+      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
+      tail -10 ${log}; exit 1
+    fi
+
+    ## install additional pip-based packages
+    for pkg in shade docker-py; do
+      echo -n "${pkg} "
+      sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
       fi
     done
 
-    for pkg in python-devel python2-pip bc; do
+    ## install additional yum-based packages
+    for pkg in ansible; do
       echo -n "${pkg} "
-      rpm -q ${pkg} > /dev/null 2>&1
+      sudo yum -y install ${pkg} > ${log} 2>&1
       if [ $? -ne 0 ]; then
-        sudo yum -y install ${pkg} > ${log} 2>&1
-        if [ $? -ne 0 ]; then
-          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
-          tail -10 ${log}; exit 1
-        fi
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
       fi
     done
+    echo
   elif [ "${platform}" == "ubuntu" ]; then
     # add ansible repository
     dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
@@ -119,7 +243,7 @@ install_prereqs() {
       fi
     fi
 
-  for pkg in ansible bc ntp python-pip; do
+    for pkg in ansible bc python-pip; do
       echo -n "${pkg} "
       dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -130,54 +254,11 @@ install_prereqs() {
         fi
       fi
     done
+    echo
   fi
-
-  ## upgrade pip
-  sudo pip install --upgrade pip > ${log} 2>&1
-  if [ $? -ne 0 ]; then
-    echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
-    tail -10 ${log}; exit 1
-  fi
-
-  ## install python shade
-  echo -n "python-shade "
-  sudo pip install shade > ${log} 2>&1
-  if [ $? -ne 0 ]; then
-    echo -e "\nERROR: failed to install python shade - here's the last 10 lines of the log:\n"
-    tail -10 ${log}; exit 1
-  fi
-
-  ## install setupd
-  echo -n "setupd"
-  sudo yum -y install ${basedir}/lib/setupd.rpm > ${log} 2>&1
-  if [ ! -d /opt/pf9/setupd ]; then
-    echo -e "\nERROR: failed to install setupd\n"
-    tail -10 ${log}; exit 1
-  fi
-  echo
 
   # create log directory
   if [ ! -d /var/log/pf9 ]; then sudo mkdir -p /var/log/pf9; fi
-
-  # update setupd packages
-  echo -n "--> Updating setupd libraries: "
-  for pkg in pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py; do
-    echo -n "${pkg} "
-    sudo /bin/cp -f ${basedir}/scripts/setupd-updates/${pkg} \
-         /opt/pf9/setupd/lib/python2.7/site-packages/setupd_samples/utils/${pkg} > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo; assert "failed to update ${pkg}"
-    fi
-  done
-
-  for pkg in attach-node add-cluster; do
-    echo -n "${pkg} "
-    sudo /bin/cp -f ${basedir}/scripts/setupd-updates/${pkg} /opt/pf9/setupd/bin/${pkg} > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      echo; assert "failed to update ${pkg}"
-    fi
-  done
-  echo
 }
 
 ################################################################################
@@ -200,8 +281,28 @@ while [ $# -gt 0 ]; do
   -i|--installPrereqs)
     flag_prereqs=1
     ;;
+  -u|--ui)
+    flag_ui=1
+    ;;
+  -d|--dbinit)
+    flag_dbinit=1
+    ;;
+  -n|--nginx-init)
+    flag_nginx_init=1
+    ;;
+  -r|--restartAwx)
+    flag_awx_restart=1
+    ;;
   -a|--autoRegister)
     flag_autoregister=1
+    ;;
+  -b|--bypassPrereqs)
+    flag_skip_prereqs=1
+    ;;
+  -x|--dbExport)
+    if [ $# -lt 2 ]; then usage; fi
+    awx_db_export=${2}
+    shift
     ;;
   -c|--config)
     if [ $# -lt 2 ]; then usage; fi
@@ -251,9 +352,31 @@ fi
 ## build group_vars/all.yml
 build_config --skip-inventory-check
 
+# validate all config values are set
+validate_config
+
 ## install prequisite packages
 if [ ${flag_prereqs} -eq 1 ]; then
   install_prereqs; echo
+  exit 0
+fi
+
+## restart awx
+if [ ${flag_awx_restart} -eq 1 ]; then
+  restart_awx; echo
+  exit 0
+fi
+
+## install web ui
+if [ ${flag_ui} -eq 1 -o ${flag_dbinit} -eq 1 ]; then
+  if [ ${flag_ui} -eq 1 ]; then
+    install_awx; echo
+  fi
+
+  ## install awx database
+  if [ ${flag_dbinit} -eq 1 ]; then
+    db_init; echo
+  fi
   exit 0
 fi
 
@@ -263,11 +386,8 @@ if [ -z "${target}" ]; then usage; fi
 ## display banner
 banner
 
-# validate all config values are set
-validate_config
-
 # install prerequisite packages
-install_prereqs
+if [ ${flag_skip_prereqs} -eq 0 ]; then install_prereqs; fi
 
 ## validate minimum Ansible version
 ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)

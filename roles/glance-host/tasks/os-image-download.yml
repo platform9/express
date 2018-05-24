@@ -4,7 +4,7 @@
   get_url:
     url: "{{ item }}"
     dest: "{{ glance_filesystem_store_datadir }}/{{ item | basename }}"
-  async: 300
+  async: 900
   register: image_downloads
   with_items: "{{ glance_images }}"
 

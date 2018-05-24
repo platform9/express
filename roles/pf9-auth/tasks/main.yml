@@ -21,13 +21,13 @@
       project_name: "{{os_tenant}}"
 
 - name: Obtain authentication token from Keystone
-  become: no
-  local_action: "os_auth auth={{ os_auth }} region_name={{ os_tenant }}"
-  check_mode: no
+  os_auth:
+    auth: "{{os_auth}}"
+    region_name: "{{os_tenant}}"
+  delegate_to: localhost
   register: auth_reply
 
 - name: Save OS Auth Token
-  become: no
   copy:
     content: "{{ auth_reply.ansible_facts.auth_token }}"
     dest: /tmp/keystone-token.txt

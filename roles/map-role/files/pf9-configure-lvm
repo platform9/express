@@ -12,15 +12,15 @@ vg_name=${1}
 pvs=${2}
 
 # process pvs (which is formatted as a yml list)
-pvs=${pvs:1:${#pvs}}
-pvs=${pvs:0:((${#pvs}-1))}
+arglen=$(expr ${#pvs}-3)
+pvs=${pvs:2:${arglen}}
 IFS=","
 pv_list=(${pvs})
 
 # validate PVs
 for pv in "${pv_list[@]}"; do
   if [ ! -r ${pv} ]; then
-    echo "PV not found: ${pv}"
+    echo "PV not found: [${pv}]"
     exit 1
   fi
 done

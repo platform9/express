@@ -9,8 +9,7 @@ ansible_sudo_pass=Pl@tform9
 ################################################################################################
 ## Optional Settings
 ################################################################################################
-#nested_virt=True
-#live_migration_hosts=["hv401","hv402","hv403"]
+nested_virt=False
 
 ################################################################################################
 ## Openstack Groups
@@ -24,10 +23,19 @@ hv11 ansible_host=172.16.7.171 ansible_user=ubuntu ha_cluster_ip=172.16.7.171
 [glance]
 hv10 glance_public_endpoint=True
 
+## global variables defined in group_vars/glance.yml
+[cinder]
+hv11 cinder_ip=10.31.254.252 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
+
+## global variables defined in group_vars/live-migration.yml
+[live-migration]
+
 ################################################################################################
 ## Kubernetes Groups
 ################################################################################################
 ## global variables defined in group_vars/containervisors.yml
-[containervisors]
+[k8s-master]
 cv01 ansible_host=172.16.7.116 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
+
+[k8s-worker]
 cv02 ansible_host=172.16.7.88 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net

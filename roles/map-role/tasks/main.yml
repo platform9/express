@@ -2,7 +2,14 @@
 ################################################################################
 # Dynamically-Assigned Role Values (static values are initialized in inventory)
 ################################################################################
-- debug: msg="*** DEPLOYING ROLE - {{rolename}}"
+- debug: msg="DEPLOYING ROLE - {{rolename}}"
+  when: autoreg == "on"
+- debug: msg="SKIPPING ROLE - {{rolename}}"
+  when: autoreg == "off"
+
+################################################################################
+# Neutron Settings
+################################################################################
 - block:
   # glance_endpoint_address
   - set_fact:
@@ -36,6 +43,9 @@
     when: neutron_novncproxy_base_url is undefined
   when: rolename != "pf9-kube" and rolename != "pf9-cindervolume-lvm" and rolename != "pf9-cindervolume-base"
 
+################################################################################
+# Cinder Settings
+################################################################################
 - block:
   # cinder_iscsi_ip_address
   - set_fact:
@@ -47,7 +57,7 @@
   when: rolename == "pf9-cindervolume-lvm"
 
 ################################################################################
-# Configure Role Metadata
+# Configure JSON Metadata
 ################################################################################
 - name: validate pf9/host_id.conf
   stat:
@@ -69,72 +79,56 @@
   template:
     src: "{{rolename}}.j2"
     dest: "{{role_metadata}}"
-  delegate_to: localhost
 
 ##############################################################################
 # Enforce required role parameters
 ##############################################################################
-# pf0-kube
-- name: validate required role params (sourced from inventory)
-  fail: msg="role 'pf9-kube' is missing required parameter - 'cluster_name'"
-  when: rolename == "pf9-kube" and cluster_name is undefined
-    
-- name: validate required role params (sourced from inventory)
-  fail: msg="role 'pf9-kube' is missing required parameter - 'cluster_fqdn'"
-  when: rolename == "pf9-kube" and cluster_fqdn is undefined
-    
 # pf9-cindervolume-lvm
-- fail: msg="role 'pf9-kube' is missing required parameter - pvs"
+- fail: msg="role 'pf9-cindervolume-lvm' is missing required parameter - pvs"
   when: rolename == "pf9-cindervolume-lvm" and pvs is undefined
 
 ##############################################################################
-# Manage role_params
+# Cinder: perform SCSI discovery and LVM configuration
 ##############################################################################
-- name: initialize role_params to null
-  set_fact:
-    role_params: ""
-  when: rolename != "pf9-kube"
+- block:
+  - name: discover volumes
+    script: files/pf9-scsi-rescan
+    register: scsi_rescan
+  - debug: var=scsi_rescan
 
-- name: assign role_params for pf9-kube role
-  set_fact:
-    role_params: "--clusterName {{cluster_name}} --clusterFqdn {{cluster_fqdn}}"
-  when: rolename == "pf9-kube"
+  - set_fact:
+      pvs_string: ""
+  - set_fact:
+      pvs_string: "{{pvs_string}},{{item}}"
+    with_items: "{{pvs}}"
 
-- name: initialize proxy_params to null
-  set_fact: 
-    proxy_params: ""
-  when: proxy_url is undefined
-
-- name: initialize proxy_params
-  set_fact: 
-    proxy_params: "--proxy {{proxy_url}}"
-  when: proxy_url is defined
-
-- debug: msg="executing map-role.sh {{ctrl_ip}} {{rolename}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}} {{proxy_params}}"
-
-##############################################################################
-# For cinder, perform SCSI discovery and LVM configuration
-##############################################################################
-- name: discover volumes
-  script: files/pf9-scsi-rescan
-  register: scsi_rescan
-  when: rolename == "pf9-cindervolume-lvm"
-- debug: var=scsi_rescan
-  when: rolename == "pf9-cindervolume-lvm"
-
-- name: configure LVM
-  script: "files/pf9-configure-lvm cinder-volumes {{pvs}}"
-  register: config_lvm
-  when: rolename == "pf9-cindervolume-lvm"
-- debug: var=config_lvm
+  - name: configure LVM
+    script: "files/pf9-configure-lvm cinder-volumes '{{pvs_string}}'"
+    register: config_lvm
+  - debug: var=config_lvm
   when: rolename == "pf9-cindervolume-lvm"
 
 ################################################################################
-# Apply Role to Server
+# Role Assignment (for both OpenStack and Kubernetes)
 ################################################################################
+- name: read role json
+  shell: "cat {{role_metadata}}"
+  register: role_json
+- name: read api token
+  shell: "cat /tmp/keystone-token.txt"
+  register: api_token
+
 - name: "Assigning Role - {{rolename}}"
-  script: "map-role.sh {{ctrl_ip}} {{rolename}} {{role_metadata}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{role_params}} {{proxy_params}}"
+  uri:
+    url: "https://{{ctrl_ip}}/resmgr/v1/hosts/{{host_id.stdout.strip()}}/roles/{{rolename}}"
+    method: PUT
+    body: "{{role_json.stdout.strip()}}"
+    body_format: json
+    validate_certs: False
+    headers:
+      Content-Type: "application/json"
+      X-Auth-Token: "{{api_token.stdout.strip()}}"
+  register: uri_result
   delegate_to: localhost
-  register: rolemap_log
+- debug: var=uri_result
 
-- debug: var=rolemap_log.stdout_lines

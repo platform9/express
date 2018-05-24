@@ -1,0 +1,22 @@
+---
+
+- name: validate pf9/host_id.conf
+  stat:
+    path: /etc/pf9/host_id.conf
+  register: stat_hostid
+
+- fail: msg="failed to open /etc/pf9/host_id.conf"
+  when: stat_hostid.stat.exists == false
+
+- name: get host_id
+  shell: cat /etc/pf9/host_id.conf | grep ^host_id | cut -d = -f2 | cut -d ' ' -f2
+  register: host_id
+
+- debug: msg="running wait_for_agent_convergence.sh {{ctrl_ip}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
+
+- name: wait for pf9-hostagent to converge
+  script: "files/wait_for_agent_convergence.sh {{ctrl_ip}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
+  register: waitfor_agent
+
+- debug: var=waitfor_agent
+
