@@ -1,53 +1,88 @@
 # Platform9 Autodeploy
-Autodeploy aims to automate the prerequisite tasks required to bring OpenStack hypervisors and Kubernetes containervisors under management by a Platform9 control plane, including package/service prerequisites, host agent(s), and control plane authorization.
+Auto-Deploy is a CS-developed tool for bringing bare-metal hosts under management by a Platform9 control plane.  It can bring a host to the point where it shows up in the Clarify UI as a host waiting to be authorized, or it can (optionally) perform Platform9 role deployments for both OpenStack and Kubernetes.  Auto-Deploy includes a CLI and Web UI and can be installed on a CentOS or Ubuntu control host.
 
-GitHub Repository : [https://github.com/platform9/autodeploy.git](https://github.com/platform9/autodeploy.git)
+## Prerequisites
+Auto-Deploy must be installed on a control host with IP connectivity to the hosts to be brought under management.  CentOS 7.4 or Ubuntu 16.04 are supported on the control host.  Before installing Auto-Deploy, you'll need administrator credentials for the Platform9 control plane.  If a proxy is required for HTTP/HTTPS traffic, you'll need the URL for the proxy.
 
-## Installation/Setup Instructions
+## Installation
+Perform the following steps to install Auto-Deploy:
 
-**Step 1 : Run Setup**
+1. Login as root on the control host (or a user with sudo access)
+
+2. Clone the Auto-Deploy repository. 
+
 ```
-$ ./INSTALL -s
-Instance URL: https://acme.platform9.net
---> accepted: https://acme.platform9.net
+git clone https://github.com/platform9/autodeploy.git /opt/autodeploy
+```
+NOTE: In this example, AD the installation directory is /opt/autodeploy, but any directory can be used.
 
-Admin Username: admin-user@platform9.net
---> accepted: admin-user@platform9.net
+3. Git Branching Strategy
 
-Admin Password: ---masked---
---> accepted: ---masked---
+By default, you'll be on the "master" branch after cloning the repository.  If you'd like to use the latest version (but perhaps not fully tested) you should checkout the "develop" branch.  If instructed to use a private branch, you'll need to checkout a specific branch.  To checkout a branch, use the following command:
 
-Region: master
---> accepted: master
+```
+cd /opt/autodeploy
+git checkout <branchName>
+```
 
-Tenant [service]: admin
---> accepted: admin
+## Configuration Control Plane (CLI Only)
+To configure the Auto-Deploy CLI to communicate with the Platform9 control plane, run the following command (a sample session is included):
 
+```
+# ./INSTALL -s
+NOTE: to enter a NULL value for prompt, enter '-'
+ 
+Instance URL [https://sample.platform9.net]:
+--> accepted: https://sample.platform9.net
+ 
+Admin Username [user@company.com]:
+--> accepted: user@company.com
+ 
+Admin Password [********]:
+--> accepted: ********
+ 
+Region [KVM-01]:
+--> accepted: KVM-01
+ 
+Tennant [service]:
+--> accepted: service
+ 
 Manage Hostname [true false] [false]:
 --> accepted: false
-
+ 
 Manage DNS Resolver [true false] [false]:
 --> accepted: false
-
+ 
 DNS Resolver 1 [8.8.8.8]:
 --> accepted: 8.8.8.8
-
+ 
 DNS Resolver 2 [8.8.4.4]:
 --> accepted: 8.8.4.4
-
-DNS Domain for Nova Hypervisors: cs.platform9.net
---> accepted: cs.platform9.net
-
+ 
+DNS Domain for Nova Hypervisors [company.com]:
+--> accepted: company.com
+ 
 Proxy URL:
 --> accepted: -
+ 
+Ansible inventory file exists - overwrite with template? y
 ```
 
-**Step 2 : Configure Your Inventory**
-* vi inventory/hosts 
+## Install Prerequisite Packages
+To install prerequisite packages on the control host, run the following command (a sample session is included):
 
-NOTE: The above file is a sample starting point, with a reference configuration for both OpenStack and Kubernetes. You'll need change the hostnames and IP addresses to reflect your environment.
+```
+# ./INSTALL -i
+--> Installation Log: ./log/pf9-autodeploy.2018-05-22_11:36:13.log
+--> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible
+```
 
-* Ansible Inventory Example
+## Configuration Inventory (CLI Only)
+Auto-Deploy uses Ansible to execute commands on the hosts to be taken under management.  In order to configure Ansible to run remote commands on the managed hosts, the Ansible Inventory file must be configured.  This file is located in /opt/autodeploy/inventory/hosts.
+
+NOTE: A sample template is installed in the previous command ("./INSTALL -s").
+
+## Sample Inventory File
 ```
 ##
 ## Ansible Inventory
@@ -56,107 +91,142 @@ NOTE: The above file is a sample starting point, with a reference configuration 
 [all:vars]
 ansible_ssh_pass=Pl@tform9
 ansible_sudo_pass=Pl@tform9
-
+ 
+################################################################################################
+## Optional Settings
+################################################################################################
+nested_virt=False
+ 
 ################################################################################################
 ## Openstack Groups
 ################################################################################################
 ## global variables defined in group_vars/hypervisors.yml
 [hypervisors]
-hv10 ansible_host=172.16.7.172 ansible_user=centos ha_cluster_ip=172.16.7.172 dhcp=on snat=on glance=on
-hv11 ansible_host=172.16.7.171 ansible_user=ubuntu ha_cluster_ip=172.16.7.171
-
+hv01 ansible_host=172.16.7.172 ansible_user=centos ha_cluster_ip=172.16.7.172 dhcp=on snat=on
+hv02 ansible_host=172.16.7.171 ansible_user=ubuntu ha_cluster_ip=172.16.7.171
+ 
 ## global variables defined in group_vars/glance.yml
 [glance]
-hv10
-
+hv01 glance_public_endpoint=True
+ 
+## global variables defined in group_vars/glance.yml
+[cinder]
+hv02 cinder_ip=10.31.254.252 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
+ 
+## global variables defined in group_vars/live-migration.yml
+[live-migration]
+ 
 ################################################################################################
 ## Kubernetes Groups
 ################################################################################################
 ## global variables defined in group_vars/containervisors.yml
-[containervisors]
-cv01 ansible_host=172.16.7.116 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.netcv02 ansible_host=172.16.7.88 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
+[k8s-master]
+cv01 ansible_host=172.16.7.139 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
+ 
+[k8s-worker]
+cv02 ansible_host=172.16.7.143 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
+cv03 ansible_host=172.16.7.194 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 ```
 
-**Step 3: Run Autodeploy**
-* ./INSTALL [-a] \<target\>
+## Running Auto-Deploy
+The basic syntax for starting Auto-Deploy includes a target (which can be a host group, individual host, or comma-delimited list of hosts) and an optional flag ('-a') that instructs it to perform role deployment.
 
-Where '\<target\>' is a hostname or group defined in Inventory file.
-
-NOTE: if you include the '-a' flag, Autodeploy will perform pre-authorization and role deployment for the hypervisor or containervisor.
-
-## Usage Notes
-Here's the usage statement for the Autodeploy installer:
+Here's an example of invoking Auto-Deploy against a number of hosts:
 ```
-$ ./INSTALL
+# ./INSTALL hyper201,hyper202,hyper203
+################################################################
+# Platform9 Auto-Deplopy Utility (Version 0.1)
+################################################################
+--> Installation Log: ./log/pf9-autodeploy.2018-05-22_11:47:22.log
+--> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible setupd
+--> Updating setupd libraries: pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py attach-node add-cluster
+--> ansible_version = 2.5
+ 
+[Executing: ansible-playbook ./pf9-autodeploy.yml]
+.
+.
+.
+```
+Here's an example of invoking Auto-Deploy against a host group and performing role deployments (based on metadata defined in /opt/autodeploy/inventory/hosts):
+```
+# ./INSTALL -a hyper201,hyper202,hyper203,hyper204
+################################################################
+# Platform9 Auto-Deplopy Utility (Version 0.1)
+################################################################
+--> Installation Log: ./log/pf9-autodeploy.2018-05-22_16:29:01.log
+--> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible setupd
+--> Updating setupd libraries: pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py attach-node add-cluster
+--> ansible_version = 2.5
+ 
+[Executing: ansible-playbook ./pf9-autodeploy.yml]
+.
+.
+.
+```
+Here's the usage statement showing all command-line options:
+```
+# ./INSTALL
 Usage: ./INSTALL [Args] <target>
-
+ 
 Args (Optional):
-
--a|--autoRegister        : auto-register host with control plane
--i|--installPrereqs      : install pre-requisites and exit
--s|--setup               : run setup and exit
--c|--config <configFile> : use custom configuration file
--e|--extra-vars <string> : ansible extra-vars <name=val,...>
--h|--help                : display this message
+ 
+-a|--autoRegister          : auto-register host with control plane
+-i|--installPrereqs        : install pre-requisites and exit
+-s|--setup                 : run setup and exit
+-u|--ui                    : install web UI (Ansible AWX)
+-r|--restartAwx            : restart AWX
+-d|--dbinit                : initialize AWX database
+-x|--dbExport <exportFile> : use <exportFile> for dbinit
+-n|--nginx-init            : configure nginx (pf9-express config)
+-c|--config <configFile>   : use custom configuration file
+-e|--extra-vars <string>   : ansible extra-vars <name=val,...>
+-h|--help                  : display this message
 ```
 
-**Managing Multiple DUs**
+## Managing Multiple Cloud Controller Instances (DUs)
 If you have more than one Platform9 region to manage, you can create a configuration file for each one (using pf9-autodeploy.conf as a template) and start INSTALL with the '-c' flag:
+
 ```
 ./INSTALL -c ~/pf9-site1.conf -a hv01
 ```
 
-**Overriding Inventory Variable**
+## Overriding Inventory Variables
 If you want to override an Ansible variable defined in Inventory or dynamically within playbooks, you can invoke INSTALL with the '-e' flag:
+
 ```
 ./INSTALL -c ~/pf9-autodeploy.conf -a -e "proxy_url=https://proxy1.platform9.net" hv01
 ```
 NOTE: Variables passed as extra-vars have the highest precedence.
 
-**AWX Configuration**
-* Create Organization : Platform9
-* Create Inventory    : Platform9
-** Define Global Inventory Variables
+## Auto-Deploy Web UI
+Auto-Deploy includes a Web UI based on Ansibe AWX, an open-source project that provides an Rest API and Web-based interface for running Ansible playbooks, which is the underlying technology leveraged by Auto-Deploy.
+
+To install AWX with Auto-Deploy configured within its database, run the following command:
+
 ```
-#nested_virt=True
-#live_migration_hosts=["hv401","hv402","hv403"]
+# ./INSTALL -u -d
+[ Installing Web UI (Ansible AWX) ]
+--> Installation Log: /tmp/pf9-INSTALL.log
+--> validating awx repository: present
+--> installing tower-cli
+--> installing awx (this will take a while - monitor log for status)
+--> waiting for awx to initialize
+
+[ Installing AWX Database ]
+--> copying default database
+--> importing default database
+--> restarting AWX
 ```
-* Create Groups (within Platform9 Inventory)
-** hypervisors
-```
-dvr: "on"
-dhcp: "off"
-snat: "off"
-ceilometer: "on"
-glance: "off"
-nova_instances_path: /opt/pf9/data/instances/
-neutron_dhcp_dns_domain: cs.platform9.net
-neutron_dhcp_dnsmasq_dns_servers: 8.8.8.8
-neutron_ovs_allow_dhcp_vms: "False"
-neutron_ovs_bridge_mappings: "external:br-pf9"
-neutron_ovs_enable_tunneling: "False"
-neutron_ovs_net_type: vlan
-ceilometer_kvm_instance_disk_path: /opt/pf9/data/instances/
-```
-** containervisors
-** glance
-```
-glance_filesystem_store_datadir: /var/opt/pf9/imagelibrary/data
-glance_public_endpoint: False
-glance_images:
-  - https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud-1802.qcow2
-  - http://images.platform9.com/ubuntu-14.04-cloudinit.qcow2
-```
-* Add Hosts to Inventory
-* Create Credentials
-** Platform9 Centos
-** Platform9 Ubuntu
-* Create Project (Auto-Deploy)
-** SCM Type = git (https://github.com/platform9/autodeploy.git)
-* Create Templates
-** Auto-Deploy Hypervisor
-** Auto-Deploy Containervisor
-** Auto-Deploy Glance
+
+## Accessing Auto-Deploy Web UI
+To login to the Web UI (AWX), point your browser at the IP address of your Auto-Deploy control host (using the default port of 80).
+
+NOTE: The default username is "admin"; the default password is "password".
+
+## Accessing the Auto-Deploy Rest API
+To access the API, point your browser (or API client application) at the IP address of your control host and append /api/v1/.
+
+For example, http://<ip_address>/api/v1/
 
 ## License
 
