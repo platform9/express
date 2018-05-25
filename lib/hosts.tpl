@@ -35,7 +35,8 @@ hv11 cinder_ip=10.31.254.252 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 ################################################################################################
 ## global variables defined in group_vars/containervisors.yml
 [k8s-master]
-cv01 ansible_host=172.16.7.116 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
+cv01 ansible_host=172.16.7.139 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 
 [k8s-worker]
-cv02 ansible_host=172.16.7.88 ansible_user=centos cluster_name=c1 cluster_fqdn=c1.platform9.net
+cv02 ansible_host=172.16.7.143 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
+cv03 ansible_host=172.16.7.194 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
