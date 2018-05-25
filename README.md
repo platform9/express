@@ -13,7 +13,7 @@ Perform the following steps to install Auto-Deploy:
 
 ```
 git clone https://github.com/platform9/autodeploy.git /opt/autodeploy
-``
+```
 NOTE: In this example, AD the installation directory is /opt/autodeploy, but any directory can be used.
 
 3) Git Branching Strategy
