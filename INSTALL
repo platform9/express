@@ -111,6 +111,7 @@ db_init() {
   echo "[ Installing AWX Database ]"
   
   # copy database export
+  echo "--> copying default database"
   sudo docker cp ${basedir}/lib/${awx_db_export} postgres:/tmp
 
   # stop awx
@@ -118,16 +119,18 @@ db_init() {
   docker stop awx_task > /dev/null 2>&1
 
   # drop awx database
-  docker exec postgres bash -c "su - postgres -c 'psql -c \"drop database awx;\"'"
+  echo "--> importing default database"
+  docker exec postgres bash -c "su - postgres -c 'psql -c \"drop database awx;\"'" > /dev/null 2>&1
 
   # initialize awx database
-  docker exec postgres bash -c "su - postgres -c 'psql -c \"create database awx with template template0;\"'"
+  docker exec postgres bash -c "su - postgres -c 'psql -c \"create database awx with template template0;\"'" > /dev/null 2>&1
 
   # import awx database (exported using 'pg_dump awx > db.sql')
   docker exec postgres bash -c "su - postgres -c 'psql -d awx -f /tmp/${awx_db_export};'" > /dev/null 2>&1
 
   # start awx
-  ${basedir}/INSTALL -u
+  echo "--> restarting AWX"
+  ${basedir}/INSTALL -u > /dev/null 2>&1
 }
 
 install_awx() {

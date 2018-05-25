@@ -26,7 +26,7 @@ git checkout <branchName>
 ```
 
 ## Configuration Control Plane (CLI Only)
-To configure the CLI to communicate with the Platform9 control plane, run the following command (a sample session is included):
+To configure the Auto-Deploy CLI to communicate with the Platform9 control plane, run the following command (a sample session is included):
 
 ```
 # ./INSTALL -s
@@ -197,6 +197,36 @@ If you want to override an Ansible variable defined in Inventory or dynamically 
 ./INSTALL -c ~/pf9-autodeploy.conf -a -e "proxy_url=https://proxy1.platform9.net" hv01
 ```
 NOTE: Variables passed as extra-vars have the highest precedence.
+
+## Auto-Deploy Web UI
+Auto-Deploy includes a Web UI based on Ansibe AWX, an open-source project that provides an Rest API and Web-based interface for running Ansible playbooks, which is the underlying technology leveraged by Auto-Deploy.
+
+To install AWX with Auto-Deploy configured within its database, run the following command:
+
+```
+# ./INSTALL -u -d
+[ Installing Web UI (Ansible AWX) ]
+--> Installation Log: /tmp/pf9-INSTALL.log
+--> validating awx repository: present
+--> installing tower-cli
+--> installing awx (this will take a while - monitor log for status)
+--> waiting for awx to initialize
+
+[ Installing AWX Database ]
+--> copying default database
+--> importing default database
+--> restarting AWX
+```
+
+## Accessing Auto-Deploy Web UI
+To login to the Web UI (AWX), point your browser at the IP address of your Auto-Deploy control host (using the default port of 80).
+
+NOTE: The default username is "admin"; the default password is "password".
+
+## Accessing the Auto-Deploy Rest API
+To access the API, point your browser (or API client application) at the IP address of your control host and append /api/v1/.
+
+For example, http://<ip_address>/api/v1/
 
 ## License
 
