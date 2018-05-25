@@ -7,16 +7,16 @@ Auto-Deploy must be installed on a control host with IP connectivity to the host
 ## Installation
 Perform the following steps to install Auto-Deploy:
 
-1) Login as root on the control host (or a user with sudo access)
+1. Login as root on the control host (or a user with sudo access)
 
-2) Clone the Auto-Deploy repository. 
+2. Clone the Auto-Deploy repository. 
 
 ```
 git clone https://github.com/platform9/autodeploy.git /opt/autodeploy
 ```
 NOTE: In this example, AD the installation directory is /opt/autodeploy, but any directory can be used.
 
-3) Git Branching Strategy
+3. Git Branching Strategy
 
 By default, you'll be on the "master" branch after cloning the repository.  If you'd like to use the latest version (but perhaps not fully tested) you should checkout the "develop" branch.  If instructed to use a private branch, you'll need to checkout a specific branch.  To checkout a branch, use the following command:
 
