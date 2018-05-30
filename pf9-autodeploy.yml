@@ -28,7 +28,7 @@
     - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
-    - wait-for-convergence
+    - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "enable-nested-virt", when: autoreg == "on" and nested_virt == True }
 
 # Openstack Image Nodes
@@ -37,7 +37,7 @@
   roles:
     - { role: "glance-host", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
-    - wait-for-convergence
+    - { role: "wait-for-convergence", when: autoreg == "on" }
 
 # Openstack Block Storage Nodes
 - hosts: cinder
@@ -46,7 +46,7 @@
     - { role: "lvm", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
-    - wait-for-convergence
+    - { role: "wait-for-convergence", when: autoreg == "on" }
 
 # Kubernetes Master Nodes
 - hosts: k8s-master
@@ -57,7 +57,7 @@
     - pf9-auth
     - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
-    - wait-for-convergence
+    - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "k8s-cluster-attach", k8s_node_type: "master", when: autoreg == "on" }
 
 # Kubernetes Worker Nodes
@@ -69,6 +69,6 @@
     - pf9-auth
     - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
-    - wait-for-convergence
+    - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "k8s-cluster-attach", k8s_node_type: "worker", when: autoreg == "on" }
 

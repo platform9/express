@@ -12,7 +12,7 @@
   shell: cat /etc/pf9/host_id.conf | grep ^host_id | cut -d = -f2 | cut -d ' ' -f2
   register: host_id
 
-- debug: msg="running wait_for_agent_convergence.sh {{ctrl_ip}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
+- debug: msg="running wait_for_agent_convergence.sh {{ctrl_ip}} {{host_id.stdout.strip()}} {{du_username}} ********"
 
 - name: wait for pf9-hostagent to converge
   script: "files/wait_for_agent_convergence.sh {{ctrl_ip}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
