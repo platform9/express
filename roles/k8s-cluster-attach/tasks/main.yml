@@ -29,7 +29,7 @@
   uri:
     url: "https://{{ctrl_ip}}/qbert/v1/clusters/{{cluster_uuid}}/attach"
     method: POST
-    body: "{{host_id.stdout.strip()}}"
+    body: "['{{host_id.stdout.strip()}}']"
     body_format: json
     validate_certs: False
     headers:
