@@ -1,15 +1,27 @@
 ---
 
-- name: install lvm2
-  yum:
-    name: lvm2
-    state: latest
+- block:
+  - name: install LVM (Redhat)
+    yum:
+      name: lvm2
+      state: latest
 
-- name: configuring lvm (device filters in lvm.conf)
-  template:
-    src: lvm.conf.j2
-    dest: /etc/lvm/lvm.conf
+  - name: configuring lvm (device filters in lvm.conf)
+    template:
+      src: lvm.conf.j2
+      dest: /etc/lvm/lvm.conf
 
-- name: running vgscan
-  shell: vgscan
+  - name: running vgscan
+    shell: vgscan
+  when: ansible_os_family == "RedHat"
+
+- block:
+  - name: install LVM (Debian)
+    apt:
+      name: lvm2
+      state: latest
+
+  - name: running vgscan
+    shell: vgscan
+  when: ansible_os_family == "Debian"
 
