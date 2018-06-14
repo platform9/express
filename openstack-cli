@@ -7,12 +7,53 @@
 # initialize variables
 basedir=$(dirname $0)
 os_cli=/home/centos/.virtenvs/os_cli/bin/openstack
+os_cmd=""
 rc_file=${basedir}/pf9-openstack.rc
+pf9_config=${basedir}/pf9-autodeploy.conf
+pf9_custom_configFile=""
 
 usage() {
-  echo "Usage: `basename $0` <command> [-h|--help]"
+  echo "Usage: `basename $0` [Args] [<command>]"
+  echo -e "\nArgs (Optional):\n"
+  echo "-c|--config <configFile> : use custom configuration file"
+  echo -e "-h|--help                : display this message\n"
   exit 1
 }
+
+# include libraries
+source ${basedir}/lib/config_util.sh
+
+# process arguments
+while [ $# -gt 0 ]; do
+  case ${1} in
+  -h|--help)
+    usage ;;
+  -c|--config)
+    if [ $# -lt 2 ]; then usage; fi
+    pf9_custom_configFile=${2}
+    shift 2
+    ;;
+  *)
+    os_cmd=${1}
+    ;;
+  esac
+done
+
+## use custom config (if specified on commandline)
+if [ -n "${pf9_custom_configFile}" ]; then pf9_config=${pf9_custom_configFile}; fi
+
+# validate config file
+if [ ! -r ${pf9_config} ]; then assert "could not find auto-deploy config file (looked in ${pf9_config})"; fi
+
+## lookup configuration values from config file
+ctrl_hostname=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
+du_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
+du_tenant=$(grep ^os_tenant ${pf9_config} | cut -d \| -f2)
+du_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
+du_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
+
+# build rc file
+update_openstack_rc ${ctrl_hostname} ${du_region} ${du_tenant} ${du_username} ${du_password}
 
 # source rc file
 if [ ! -r ${rc_file} ]; then assert "could not find openstack rc file (looked in ${rc_file})"; fi
@@ -21,17 +62,5 @@ source ${rc_file}
 # validate openstack cli is installed
 if [ ! -r ${os_cli} ]; then assert "could not find openstack cli (looked in ${os_cli})"; fi
 
-# process arguments
-while [ $# -gt 0 ]; do
-  case ${1} in
-  -h|--help)
-    usage ;;
-  *)
-    eval ${os_cli} ${1}
-    exit $?
-    ;;
-  esac
-done
-
-eval ${os_cli}
+eval ${os_cli} ${os_cmd}
 exit $?
