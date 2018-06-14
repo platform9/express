@@ -184,7 +184,7 @@ install_awx() {
   fi
 }
 
-# install_oscli <ctrl-hostname> <region>
+# install_oscli <ctrl-hostname> <region> <tenant> <username> <password>
 install_oscli() {
   echo "[ Installing OpenStack CLI ]"
   echo "--> Installation Log: ${log}"
@@ -195,15 +195,7 @@ install_oscli() {
 
   # configure pf9-openstack.rc
   echo "--> Building pf9-openstack.rc"
-  osrc_file=${basedir}/pf9-openstack.rc
-  if [ -r ${osrc_file} ]; then rm -f ${osrc_file}; touch ${osrc_file}; fi
-  echo "export OS_AUTH_URL=https://${1}/keystone/v3" >> ${osrc_file}
-  echo "export OS_IDENTITY_API_VERSION=3" >> ${osrc_file}
-  echo "export OS_REGION_NAME='${2}'" >> ${osrc_file}
-  echo "export OS_USERNAME='${du_username}'" >> ${osrc_file}
-  echo "export OS_PASSWORD='${du_password}'" >> ${osrc_file}
-  echo "export OS_PROJECT_NAME='${3}'" >> ${osrc_file}
-  echo "export OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-'default'}" >> ${osrc_file}
+  update_openstack_rc ${1} ${2} ${3} ${4} ${5}
 
   # source rc file
   source ${osrc_file}
@@ -326,7 +318,7 @@ install_prereqs() {
 ################################################################################
 ## main
 ################################################################################
-# incliude libraries
+# include libraries
 source ${basedir}/lib/config_util.sh
 source ${basedir}/lib/utility.sh
 
@@ -460,7 +452,7 @@ ctrl_ip=${tmp_ip:1:((${#tmp_ip}-2))}
 
 ## install openstack cli
 if [ ${flag_oscli} -eq 1 ]; then
-  install_oscli ${ctrl_hostname} ${du_region} ${du_tenant}
+  install_oscli ${ctrl_hostname} ${du_region} ${du_tenant} ${du_username} ${du_password}
   exit 0
 fi
 
