@@ -24,11 +24,11 @@ awxcli_repo=https://github.com/ansible/tower-cli.git
 flag_setup=0
 flag_prereqs=0
 flag_ui=0
+flag_oscli=0
 flag_dbinit=0
 flag_skip_prereqs=0
 flag_awx_restart=0
 flag_autoregister=0
-flag_nginx_init=0
 extra_vars=""
 awx_pf9_user="pf9"
 awx_pf9_password="Pl@tform9"
@@ -43,10 +43,10 @@ usage() {
   echo "-i|--installPrereqs        : install pre-requisites and exit"
   echo "-s|--setup                 : run setup and exit"
   echo "-u|--ui                    : install web UI (Ansible AWX)"
+  echo "-o|--oscli                 : install OpenStack CLI"
   echo "-r|--restartAwx            : restart AWX"
   echo "-d|--dbinit                : initialize AWX database"
   echo "-x|--dbExport <exportFile> : use <exportFile> for dbinit"
-  echo "-n|--nginx-init            : configure nginx (pf9-express config)"
   echo "-c|--config <configFile>   : use custom configuration file"
   echo "-e|--extra-vars <string>   : ansible extra-vars <name=val,...>"
   echo "-b|--bypassPrereqs         : bypass pre-requisites"
@@ -182,9 +182,68 @@ install_awx() {
   if [ ${elapsedTime} -ge ${TIMEOUT} ]; then
     assert "*** TIMEOUT EXCEEDED *** waiting to connect to awx"
   fi
+}
 
-  # configure nginx
-  if [ ${flag_nginx_init} -eq 1 ]; then nginx_init; fi
+# install_oscli <ctrl-hostname> <region>
+install_oscli() {
+  echo "[ Installing OpenStack CLI ]"
+  echo "--> Installation Log: ${log}"
+  if [ $# -ne 3 ]; then
+    echo "install_oscli(): missing arguments (expected 3; got $#)"
+    return 1
+  fi
+
+  # configure pf9-openstack.rc
+  echo "--> Building pf9-openstack.rc"
+  osrc_file=${basedir}/pf9-openstack.rc
+  if [ -r ${osrc_file} ]; then rm -f ${osrc_file}; touch ${osrc_file}; fi
+  echo "export OS_AUTH_URL=https://${1}/keystone/v3" >> ${osrc_file}
+  echo "export OS_IDENTITY_API_VERSION=3" >> ${osrc_file}
+  echo "export OS_REGION_NAME='${2}'" >> ${osrc_file}
+  echo "export OS_USERNAME='${du_username}'" >> ${osrc_file}
+  echo "export OS_PASSWORD='${du_password}'" >> ${osrc_file}
+  echo "export OS_PROJECT_NAME='${3}'" >> ${osrc_file}
+  echo "export OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-'default'}" >> ${osrc_file}
+
+  # source rc file
+  source ${osrc_file}
+
+  # install openstack cli packages (CentOS)
+  if [ "${platform}" == "centos" ]; then
+    echo -n "--> Installing Package Dependencies"
+    for pkg in gcc openssl-devel python-pip python-wheel python-virtualenv python-virtualenvwrapper; do
+      echo -n "${pkg} "
+      rpm -q ${pkg} > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        sudo yum -y install ${pkg} > ${log} 2>&1
+        if [ $? -ne 0 ]; then
+          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+          tail -10 ${log}; exit 1
+        fi
+      fi
+    done
+    echo
+
+    echo "--> Configuring Python Virtual Environment"
+    if [ ! -r /usr/bin/virtualenvwrapper.sh ]; then assert "missing script: /usr/bin/virtualenvwrapper.sh"; fi
+    source /usr/bin/virtualenvwrapper.sh
+    export WORKON_HOME=$HOME/.virtenvs
+    mkvirtualenv os_cli > ${log} 2>&1
+
+    echo "--> Upgrading PIP"
+    pip install pip --upgrade > ${log} 2>&1
+
+    echo "--> Installing OpenStack CLI"
+    pip install --upgrade --requirement \
+        https://raw.githubusercontent.com/platform9/support-locker/master/openstack-clients/requirements.txt \
+        --constraint http://raw.githubusercontent.com/openstack/requirements/stable/newton/upper-constraints.txt > ${log} 2>&1
+  fi
+
+  # install openstack cli packages (Ubuntu)
+  if [ "${platform}" == "ubuntu" ]; then
+    assert "Not Implemented (for platform = ${platform})"
+  fi
+
 }
 
 install_prereqs() {
@@ -287,11 +346,11 @@ while [ $# -gt 0 ]; do
   -u|--ui)
     flag_ui=1
     ;;
+  -o|--oscli)
+    flag_oscli=1
+    ;;
   -d|--dbinit)
     flag_dbinit=1
-    ;;
-  -n|--nginx-init)
-    flag_nginx_init=1
     ;;
   -r|--restartAwx)
     flag_awx_restart=1
@@ -383,8 +442,27 @@ if [ ${flag_ui} -eq 1 -o ${flag_dbinit} -eq 1 ]; then
   exit 0
 fi
 
-## validate target
-if [ -z "${target}" ]; then usage; fi
+## lookup configuration values from config file
+du_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
+du_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
+nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
+du_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
+du_tenant=$(grep ^os_tenant ${pf9_config} | cut -d \| -f2)
+proxy_url=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
+
+## append proxy_url to extra_args
+if [ "${proxy_url}" != "-" ]; then extra_vars="${extra_vars} proxy_url=${proxy_url}"; fi
+
+## assign/validate ctrl_ip from config file and resolve IP for ctrl_hostname
+ctrl_hostname=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
+tmp_ip=$(ping -c 1 ${ctrl_hostname} | grep PING | cut -d ' ' -f3)
+ctrl_ip=${tmp_ip:1:((${#tmp_ip}-2))}
+
+## install openstack cli
+if [ ${flag_oscli} -eq 1 ]; then
+  install_oscli ${ctrl_hostname} ${du_region} ${du_tenant}
+  exit 0
+fi
 
 ## display banner
 banner
@@ -397,19 +475,8 @@ ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
 echo "--> ansible_version = ${ansible_version}"
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
 
-## lookup configuration values from config file
-du_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
-du_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
-nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
-proxy_url=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
-
-## append proxy_url to extra_args
-if [ "${proxy_url}" != "-" ]; then extra_vars="${extra_vars} proxy_url=${proxy_url}"; fi
-
-## assign/validate ctrl_ip from config file and resolve IP for ctrl_hostname
-ctrl_hostname=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
-tmp_ip=$(ping -c 1 ${ctrl_hostname} | grep PING | cut -d ' ' -f3)
-ctrl_ip=${tmp_ip:1:((${#tmp_ip}-2))}
+## validate target
+if [ -z "${target}" ]; then usage; fi
 
 ## toggle auto-regsister flag
 if [ ${flag_autoregister} -eq 1 ]; then
