@@ -1,4 +1,5 @@
 pf9-autodeploy.conf
+pf9-openstack.rc
 platform9-install-redhat.sh
 group_vars/all.yml
 lib/INSTALL.log

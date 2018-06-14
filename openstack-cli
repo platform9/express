@@ -1,0 +1,37 @@
+#!/bin/bash
+################################################################################
+## Platform9 Openstack CLI Utility
+## Copyright(c) 2018 Platform9 Systems, Inc.
+################################################################################
+
+# initialize variables
+basedir=$(dirname $0)
+os_cli=/home/centos/.virtenvs/os_cli/bin/openstack
+rc_file=${basedir}/pf9-openstack.rc
+
+usage() {
+  echo "Usage: `basename $0` <command> [-h|--help]"
+  exit 1
+}
+
+# source rc file
+if [ ! -r ${rc_file} ]; then assert "could not find openstack rc file (looked in ${rc_file})"; fi
+source ${rc_file}
+
+# validate openstack cli is installed
+if [ ! -r ${os_cli} ]; then assert "could not find openstack cli (looked in ${os_cli})"; fi
+
+# process arguments
+while [ $# -gt 0 ]; do
+  case ${1} in
+  -h|--help)
+    usage ;;
+  *)
+    eval ${os_cli} ${1}
+    exit $?
+    ;;
+  esac
+done
+
+eval ${os_cli}
+exit $?
