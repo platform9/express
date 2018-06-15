@@ -7,6 +7,8 @@
 # initialize variables
 basedir=$(dirname $0)
 min_ansible_version="2.2"
+oscli_version=pike
+oscli_rc_file=${basedir}/pf9-openstack.rc
 inventory=${basedir}/inventory/hosts
 autodeplopy_script=${basedir}/pf9-autodeploy.yml
 platform=""
@@ -188,7 +190,7 @@ install_awx() {
 install_oscli() {
   echo "[ Installing OpenStack CLI ]"
   echo "--> Installation Log: ${log}"
-  if [ $# -ne 3 ]; then
+  if [ $# -ne 5 ]; then
     echo "install_oscli(): missing arguments (expected 3; got $#)"
     return 1
   fi
@@ -198,7 +200,7 @@ install_oscli() {
   update_openstack_rc ${1} ${2} ${3} ${4} ${5}
 
   # source rc file
-  source ${osrc_file}
+  source ${oscli_rc_file}
 
   # install openstack cli packages (CentOS)
   if [ "${platform}" == "centos" ]; then
@@ -228,7 +230,7 @@ install_oscli() {
     echo "--> Installing OpenStack CLI"
     pip install --upgrade --requirement \
         https://raw.githubusercontent.com/platform9/support-locker/master/openstack-clients/requirements.txt \
-        --constraint http://raw.githubusercontent.com/openstack/requirements/stable/newton/upper-constraints.txt > ${log} 2>&1
+        --constraint http://raw.githubusercontent.com/openstack/requirements/stable/${oscli_version}/upper-constraints.txt > ${log} 2>&1
   fi
 
   # install openstack cli packages (Ubuntu)
