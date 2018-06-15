@@ -204,7 +204,7 @@ install_oscli() {
 
   # install openstack cli packages (CentOS)
   if [ "${platform}" == "centos" ]; then
-    echo -n "--> Installing Package Dependencies"
+    echo -n "--> Installing Package Dependencies: "
     for pkg in gcc openssl-devel python-pip python-wheel python-virtualenv python-virtualenvwrapper; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
