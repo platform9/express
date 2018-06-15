@@ -3,16 +3,15 @@
 update_openstack_rc() {
   if [ $# -ne 5 ]; then return 1; fi
 
-  local osrc_file=${basedir}/pf9-openstack.rc
-  if [ -r ${osrc_file} ]; then rm -f ${osrc_file}; touch ${osrc_file}; fi
+  if [ -r ${oscli_rc_file} ]; then rm -f ${oscli_rc_file}; touch ${oscli_rc_file}; fi
 
-  echo "export OS_AUTH_URL=https://${1}/keystone/v3" >> ${osrc_file}
-  echo "export OS_IDENTITY_API_VERSION=3" >> ${osrc_file}
-  echo "export OS_REGION_NAME='${2}'" >> ${osrc_file}
-  echo "export OS_USERNAME='${4}'" >> ${osrc_file}
-  echo "export OS_PASSWORD='${5}'" >> ${osrc_file}
-  echo "export OS_PROJECT_NAME='${3}'" >> ${osrc_file}
-  echo "export OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-'default'}" >> ${osrc_file}
+  echo "export OS_AUTH_URL=https://${1}/keystone/v3" >> ${oscli_rc_file}
+  echo "export OS_IDENTITY_API_VERSION=3" >> ${oscli_rc_file}
+  echo "export OS_REGION_NAME='${2}'" >> ${oscli_rc_file}
+  echo "export OS_USERNAME='${4}'" >> ${oscli_rc_file}
+  echo "export OS_PASSWORD='${5}'" >> ${oscli_rc_file}
+  echo "export OS_PROJECT_NAME='${3}'" >> ${oscli_rc_file}
+  echo "export OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-'default'}" >> ${oscli_rc_file}
 }
 
 update_template() {
