@@ -11,15 +11,15 @@
 
 - name: Download Platform9 installers
   shell: "./pf9_get_hostagent.py --account_endpoint {{du_fqdn}} --region {{os_region}} --user {{os_username}} --password '{{os_password}}' --tenant {{os_tenant}} --platform {{ansible_os_family|lower}}"
-  when: proxy_url is undefined
   args:
     chdir: "/tmp"
+  when: proxy_url is undefined
 
 - name: Download Platform9 installers
-  shell: "./pf9_get_hostagent.py --account_endpoint {{du_fqdn}} --region {{os_region}} --user {{os_username}} --password {{os_password}} --tenant {{os_tenant}} --proxy {{proxy_url}} --platform {{ansible_os_family|lower}}"
-  when: proxy_url is defined
+  shell: "./pf9_get_hostagent.py --account_endpoint {{du_fqdn}} --region {{os_region}} --user {{os_username}} --password '{{os_password}}' --tenant {{os_tenant}} --proxy {{proxy_url}} --platform {{ansible_os_family|lower}}"
   args:
     chdir: "/tmp"
+  when: proxy_url is defined
 
 - include: packages.yml
 
