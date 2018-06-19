@@ -3,10 +3,6 @@
   template:
     src: files/pf9_get_hostagent.py.j2
     dest: /tmp/pf9_get_hostagent.py
-
-- name: add execute permission to installer
-  file:
-    path: /tmp/pf9_get_hostagent.py
     mode: 0755
 
 - name: Download Platform9 installers
