@@ -15,6 +15,3 @@ neutron_ovs_enable_tunneling: "False"
 neutron_ovs_net_type: vlan
 ceilometer_kvm_instance_disk_path: /opt/pf9/data/instances/
 
-# variables for pre-flight-checks
-cinder_image_conversion_cache: /opt/pf9/pf9-cindervolume-base/lib/python2.7/site-packages/cinder/conversion
-cinder_image_cache_min_free_space: 20000000
