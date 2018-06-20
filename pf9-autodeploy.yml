@@ -11,6 +11,12 @@
     - name: install python2
       raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
 
+# Run pre_hook (if exists)
+- hosts: all
+  become: true
+  roles:
+    - pre-hook
+
 # Openstack Hypervisor Nodes
 - hosts: hypervisors
   become: true
@@ -21,6 +27,7 @@
     - pf9-hostagent
     - qemu-kvm-ev
     - neutron-prerequisites
+    - { role: "network-hook", when: autoreg == "on"}
     - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-ceilometer", when: autoreg == "on" and ceilometer == "on" }
@@ -71,4 +78,10 @@
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "k8s-cluster-attach", k8s_node_type: "worker", when: autoreg == "on" }
+
+# Run post_hook (if it exists)
+- hosts: all
+  become: true
+  roles:
+    - post-hook
 

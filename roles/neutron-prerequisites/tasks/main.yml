@@ -21,15 +21,16 @@
   shell: "ifconfig -a | grep ^br-pf9 > /dev/null 2>&1; if [ $? -eq 0 ]; then echo 'exists'; else echo 'not-exist'; fi"
   register: ovs_bridge_check
 
-- block: 
-  - name: Create required OVS bridges
-    openvswitch_bridge:
-      bridge: br-pf9
-      state: present
-
-  - name: Set br-pf9 port as bond0
-    openvswitch_port:
-      bridge: br-pf9
-      port: bond0
-      state: present
+- name: Create required OVS bridges
+  openvswitch_bridge:
+    bridge: br-pf9
+    state: present
   when: ovs_bridge_check.stdout.strip() == "not-exist"
+
+- name: Set br-pf9 port as bond0
+  openvswitch_port:
+    bridge: br-pf9
+    port: bond0
+    state: present
+  when: ovs_bridge_check.stdout.strip() == "not-exist" and network_hook_check.stat.exists == false
+
