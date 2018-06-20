@@ -11,8 +11,20 @@
     - name: install python2
       raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
 
-# Run pre_hook (if exists)
-- hosts: all
+# Run pre_flight_checks
+- hosts:
+    - hypervisors
+    - k8s-master
+    - k8s-worker
+  become: true
+  roles:
+    - pre-flight-checks
+
+# Run pre_hook
+- hosts:
+    - hypervisors
+    - k8s-master
+    - k8s-worker
   become: true
   roles:
     - pre-hook
@@ -79,8 +91,11 @@
     - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "k8s-cluster-attach", k8s_node_type: "worker", when: autoreg == "on" }
 
-# Run post_hook (if it exists)
-- hosts: all
+# Run post_hook
+- hosts:
+    - hypervisors
+    - k8s-master
+    - k8s-worker
   become: true
   roles:
     - post-hook
