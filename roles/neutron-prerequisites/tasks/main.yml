@@ -27,10 +27,3 @@
     state: present
   when: ovs_bridge_check.stdout.strip() == "not-exist"
 
-- name: Set br-pf9 port as bond0
-  openvswitch_port:
-    bridge: br-pf9
-    port: bond0
-    state: present
-  when: ovs_bridge_check.stdout.strip() == "not-exist" and network_hook_check.stat.exists == false
-
