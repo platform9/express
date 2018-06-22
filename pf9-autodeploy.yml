@@ -39,7 +39,7 @@
     - pf9-hostagent
     - qemu-kvm-ev
     - neutron-prerequisites
-    - { role: "network-hook", when: autoreg == "on"}
+    - { role: "network-hook", when: manage_network == True }
     - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-ceilometer", when: autoreg == "on" and ceilometer == "on" }
@@ -49,6 +49,7 @@
     - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "enable-nested-virt", when: autoreg == "on" and nested_virt == True }
+    - { role: "secure-live-migration", when: autoreg == "on" and live_migration == True }
 
 # Openstack Image Nodes
 - hosts: glance
@@ -99,4 +100,3 @@
   become: true
   roles:
     - post-hook
-

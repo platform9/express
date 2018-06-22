@@ -64,7 +64,7 @@ validate_platform() {
   # check if running CentOS 7.4
   if [ -r /etc/centos-release ]; then
     release=$(cat /etc/centos-release | cut -d ' ' -f 4)
-    if [[ ! "${release}" == 7.4.* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    if [[ ! "${release}" == 7.* ]]; then assert "unsupported CentOS release: ${release}"; fi
     platform="centos"
     host_os_info=$(cat /etc/centos-release)
   elif [ -r /etc/lsb-release ]; then
@@ -111,7 +111,7 @@ nginx_init() {
 
 db_init() {
   echo "[ Installing AWX Database ]"
-  
+
   # copy database export
   echo "--> copying default database"
   sudo docker cp ${basedir}/lib/${awx_db_export} postgres:/tmp

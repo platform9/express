@@ -9,6 +9,8 @@ ansible_sudo_pass=Pl@tform9
 ################################################################################################
 ## Optional Settings
 ################################################################################################
+manage_network=True
+live_migration=True
 nested_virt=False
 
 ################################################################################################
@@ -26,9 +28,6 @@ hv10 glance_public_endpoint=True
 ## global variables defined in group_vars/glance.yml
 [cinder]
 hv11 cinder_ip=10.31.254.252 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
-
-## global variables defined in group_vars/live-migration.yml
-[live-migration]
 
 ################################################################################################
 ## Kubernetes Groups
