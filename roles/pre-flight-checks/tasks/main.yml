@@ -1,0 +1,18 @@
+---
+
+- debug: msg="running pre_flight_checks():"
+
+###########################################################################################
+## validate free space in filesystem that the Cinder temp directory lives on
+###########################################################################################
+- block:
+  - debug: msg="Validate minimum free space for cinder_image_conversion_cache (at least {{cinder_image_cache_min_free_space}} KBytes)"
+  - name: get free space for cinder_image_conversion_cache
+    shell: "df -k {{cinder_image_conversion_cache}} | tail -1 | awk '{print $2}'"
+    register: cinder_cache_free_space
+  - debug: var=cinder_cache_free_space
+  
+  - fail:
+      msg="Insufficient free space in {{cinder_image_conversion_cache}} (mimimum required = {{cinder_image_cache_min_free_space}})"
+    when: cinder_cache_free_space.stdout.strip() < cinder_image_cache_min_free_space
+  when: inventory_hostname in groups['cinder']
