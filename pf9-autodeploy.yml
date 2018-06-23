@@ -49,7 +49,7 @@
     - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "enable-nested-virt", when: autoreg == "on" and nested_virt == True }
-    - { role: "enable-ksm", when: kernel_same-page_merging == True }
+    - { role: "enable-ksm", when: kernel_same_page_merging == True }
     - { role: "secure-live-migration", when: autoreg == "on" and live_migration == True }
 
 # Openstack Image Nodes
