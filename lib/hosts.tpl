@@ -12,6 +12,7 @@ ansible_sudo_pass=Pl@tform9
 manage_network=True
 live_migration=True
 nested_virt=False
+kernel_same-page_merging=False
 
 ################################################################################################
 ## Openstack Groups
