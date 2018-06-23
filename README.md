@@ -95,10 +95,13 @@ ansible_sudo_pass=Pl@tform9
 ################################################################################################
 ## Optional Settings
 ################################################################################################
+manage_network=True
+live_migration=True
 nested_virt=False
+kernel_same-page_merging=False
  
 ################################################################################################
-## Openstack Groups
+## OpenStack Groups
 ################################################################################################
 ## global variables defined in group_vars/hypervisors.yml
 [hypervisors]
