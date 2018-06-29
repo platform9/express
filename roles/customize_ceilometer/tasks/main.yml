@@ -1,0 +1,22 @@
+---
+- name: Check if pf9-ceilometer in installed (Ubuntu))
+  shell: "`which dpkg-query` -s pf9-ceilometer > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
+  register: pkg_state_ceilometer_ubuntu
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_pkg_mgr == "apt"
+
+- name: Check if pf9-ceilometer is installed (RedHat)
+  shell: "`which rpm` -qa | grep pf9-ceilometer > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
+  register: pkg_state_ceilometer_redhat
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_pkg_mgr == "yum"
+
+- name: Configure Ceilometer pipeline.yaml
+  template:
+    src: pipeline.yaml.j2
+    dest: /opt/pf9/etc/ceilometer/pipeline.yaml
+  when: (pkg_state_ceilometer_ubuntu.stdout is defined and pkg_state_ceilometer_ubuntu.stdout.strip() == "not-installed") or
+        (pkg_state_ceilometer_redhat.stdout is defined and pkg_state_ceilometer_redhat.stdout.strip() == "not-installed")
+  notify: restart pf9-ceilometer

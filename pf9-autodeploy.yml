@@ -51,6 +51,7 @@
     - { role: "enable-nested-virt", when: autoreg == "on" and nested_virt == True }
     - { role: "enable-ksm", when: kernel_same_page_merging == True }
     - { role: "secure-live-migration", when: autoreg == "on" and live_migration == True }
+    - { role: "customize-ceilometer", when: ceilometer == "on" and ceilometer_customize == True }
 
 # Openstack Image Nodes
 - hosts: glance
