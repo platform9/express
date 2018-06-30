@@ -17,6 +17,6 @@
   template:
     src: pipeline.yaml.j2
     dest: /opt/pf9/etc/ceilometer/pipeline.yaml
-  when: (pkg_state_ceilometer_ubuntu.stdout is defined and pkg_state_ceilometer_ubuntu.stdout.strip() == "not-installed") or
-        (pkg_state_ceilometer_redhat.stdout is defined and pkg_state_ceilometer_redhat.stdout.strip() == "not-installed")
+  when: (pkg_state_ceilometer_ubuntu.stdout is defined and pkg_state_ceilometer_ubuntu.stdout.strip() == "installed") or
+        (pkg_state_ceilometer_redhat.stdout is defined and pkg_state_ceilometer_redhat.stdout.strip() == "installed")
   notify: restart pf9-ceilometer
