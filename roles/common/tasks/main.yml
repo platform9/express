@@ -36,6 +36,41 @@
   with_items: "{{ dns_resolvers }}"
   when: manage_resolvers == True
 
-- debug: msg="OS Family = {{ansible_os_family}}"
+- name: Check if pf9 user already installed
+  shell: "grep pf9 /etc/passwd > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
+  register: pf9_account_status
+
+- block:
+  - name: create /opt/pf9 directory
+    file:
+      path: /opt/pf9
+      state: directory
+      mode: 0755
+
+  - set_fact: 
+      pf9_uid: 1001
+    when: pf9_uid is undefined
+
+  - set_fact: 
+      pf9_gid: 1001
+    when: pf9_gid is undefined
+
+  # create Platform9 service account
+  - name: create Platform9 service group (pf9group)
+    group:
+      name: pf9group
+      gid: "{{pf9_gid}}"
+      state: present
+
+  - name: create Platform9 service account (pf9)
+    user:
+      name: pf9
+      shell: /bin/bash
+      uid: "{{pf9_uid}}"
+      home: /opt/pf9/home
+      create_home: True
+      groups: pf9group
+  when: pf9_account_status is defined and pf9_account_status == "not-installed"
+
 - include: redhat.yml
   when: ansible_os_family == "RedHat"
