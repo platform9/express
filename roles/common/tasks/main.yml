@@ -47,20 +47,13 @@
       state: directory
       mode: 0755
 
-  - set_fact: 
-      pf9_uid: 1001
-    when: pf9_uid is undefined
-
-  - set_fact: 
-      pf9_gid: 1001
-    when: pf9_gid is undefined
-
   # create Platform9 service account
   - name: create Platform9 service group (pf9group)
     group:
       name: pf9group
       gid: "{{pf9_gid}}"
       state: present
+    when: pf9_gid is defined
 
   - name: create Platform9 service account (pf9)
     user:
@@ -70,6 +63,7 @@
       home: /opt/pf9/home
       create_home: True
       groups: pf9group
+    when: pf9_uid is defined
   when: pf9_account_status is defined and pf9_account_status == "not-installed"
 
 - include: redhat.yml

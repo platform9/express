@@ -5,8 +5,6 @@
 [all:vars]
 ansible_ssh_pass=Pl@tform9
 ansible_sudo_pass=Pl@tform9
-pf9_uid=1001
-pf9_gid=1001
 
 ################################################################################################
 ## Optional Settings
