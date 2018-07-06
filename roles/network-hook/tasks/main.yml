@@ -26,4 +26,4 @@
     bridge: br-pf9
     port: bond0
     state: present
-  when: ovs_bridge_check.stdout.strip() == "not-exist"
+  when: ovs_bridge_check.stdout.strip() == "exists"
