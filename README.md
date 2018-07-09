@@ -131,6 +131,13 @@ cv02 ansible_host=172.16.7.143 ansible_user=centos cluster_uuid=7273706d-afd5-44
 cv03 ansible_host=172.16.7.194 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 ```
 
+## Controlling UID/GID for the Platform9 Host Agent
+If you want to control the UID and GID values for the Platform9 service account (pf9/pf9group), set the following inventory variables:
+* pf9_uid
+* pf9_gid
+
+NOTE: This feature is not idempotent.  If the 'pf9' user had not been created yet, Auto-Deploy will create the 'pf9' user and 'pf9group' group based on the values of pf9_uid and pf9_gid.  If the 'pf9' user already exists, Auto-Deploy will skip the user/group management section; it will not attempt to alter the UID/GID settings.
+
 ## Running Auto-Deploy
 The basic syntax for starting Auto-Deploy includes a target (which can be a host group, individual host, or comma-delimited list of hosts) and an optional flag ('-a') that instructs it to perform role deployment.
 
