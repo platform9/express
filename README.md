@@ -136,6 +136,8 @@ If you want to control the UID and GID values for the Platform9 service account 
 * pf9_uid
 * pf9_gid
 
+If these variables are not defined, the Host Agent Installer will allow the system to auto-assign the UID and GID.
+
 NOTE: This feature is not idempotent.  If the 'pf9' user had not been created yet, Auto-Deploy will create the 'pf9' user and 'pf9group' group based on the values of pf9_uid and pf9_gid.  If the 'pf9' user already exists, Auto-Deploy will skip the user/group management section; it will not attempt to alter the UID/GID settings.
 
 ## Running Auto-Deploy
