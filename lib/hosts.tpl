@@ -26,7 +26,7 @@ hv11 ansible_host=172.16.7.171 ansible_user=ubuntu ha_cluster_ip=172.16.7.171
 [glance]
 hv10 glance_public_endpoint=True
 
-## global variables defined in group_vars/glance.yml
+## global variables defined in group_vars/cinder.yml
 [cinder]
 hv11 cinder_ip=10.31.254.252 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 
