@@ -1,0 +1,21 @@
+#!/bin/bash
+
+method_usage() {
+  echo "`basename $0` <uuid>"
+  exit 1
+}
+
+# process paramters
+if [ $# -eq 1 -a "${1}" == "-h" ]; then
+  method_usage
+elif [ $# -eq 2 ]; then
+  uuid=${2}
+else
+  method_usage
+fi
+
+# invoke API
+echo "Sending Http PUT message to: ${du_url}/resmgr/v1/hosts/<uuid>/roles/pf9-kube"
+echo "--> uuid = ${uuid}"
+echo "--> monitor the hostagent log for status (${log_hostagent})"
+curl -X PUT ${du_url}/resmgr/v1/hosts/${uuid}/roles/pf9-kube -H "X-Auth-Token: ${token}"; echo

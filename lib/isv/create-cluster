@@ -1,0 +1,52 @@
+#!/bin/bash
+
+method_usage() {
+  echo "`basename $0` <clusterName> <containerCidr> <servicesCidr> <nodePoolUuid> <masterVip> <masterVipIf> <startVipIp> <endVipIp>"
+  exit 1
+}
+
+# process paramters
+if [ $# -eq 1 -a "${1}" == "-h" ]; then
+  method_usage
+elif [ $# -eq 9 ]; then
+  clusterName=${2}
+  containerCidr=${3}
+  servicesCidr=${4}
+  nodePoolUuid=${5}
+  masterVip=${6}
+  masterVipIf=${7}
+  startVipIp=${8}
+  endVipIp=${9}
+else
+  method_usage
+fi
+
+# invoke API
+echo "Sending Http POST message to: ${du_url}/qbert/v1/clusters"
+echo "--> clusterName=${clusterName}"
+echo "--> containerCidr=${containerCidr}"
+echo "--> servicesCidr=${servicesCidr}"
+echo "--> nodePoolUuid=${nodePoolUuid}"
+echo "--> masterVip=${masterVip}"
+echo "--> masterVipIf=${masterVipIf}"
+echo "--> startVipIp=${startVipIp}"
+echo "--> endVipIp=${endVipIp}"
+
+echo -e "\nAPI Response"
+curl ${du_url}/qbert/v1/clusters \
+-X POST \
+-H "X-Auth-Token: ${token}" \
+-H "Content-Type: application/json" \
+-d @- << EOF
+{
+    "name": "${clusterName}",
+    "nodePoolUuid": "${nodePoolUuid}",
+    "containersCidr": "${containerCidr}",
+    "servicesCidr": "${servicesCidr}",
+    "masterVip": "${masterVip}",
+    "masterVipIf": "${masterVipIf}",
+    "startVipIp": "${startVipIp}",
+    "endVipIp": "${endVipIp}"
+}
+EOF
+echo

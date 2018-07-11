@@ -1,0 +1,11 @@
+#!/bin/bash
+
+method_usage() {
+  echo "`basename $0`"
+  exit 1
+}
+
+# process paramters
+if [ $# -eq 1 -a "${1}" == "-h" ]; then
+  method_usage
+fi

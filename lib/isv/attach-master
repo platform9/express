@@ -1,0 +1,37 @@
+#!/bin/bash
+
+method_usage() {
+  echo "`basename $0` <keystoneTenantId> <clusterUuid> <master_uuid> [<master_uuid> ...]"
+  exit 1
+}
+
+# process paramters
+if [ $# -eq 1 -a "${1}" == "-h" ]; then
+  method_usage
+elif [ $# -ge 4 ]; then
+  keystoneTenantId=${2}
+  clusterUuid=${3}
+  shift 3
+  json_payload="[ "
+  while [ $# -gt 0 ]; do
+    json_payload="${json_payload} { "uuid": "${1}", "isMaster": true }"
+    shift
+    if [ $# -gt 0 ]; then json_payload="${json_payload},"; fi
+  done
+  json_payload="${json_payload} ]"
+else
+  method_usage
+fi
+
+# invoke API
+echo "Sending Http POST message to: ${du_url}/qbert/v3/<keystoneTenantId>/clusters/<clusterUuid>/attach"
+echo "--> keystoneTenantId=${keystoneTenantId}"
+echo "--> clusterUuid=${clusterUuid}"
+
+echo -e "\nAPI Response"
+curl ${du_url}/qbert/v3/${keystoneTenantId}/clusters/${clusterUuid}/attach \
+-X POST \
+-H "X-Auth-Token: ${token}" \
+-H "Content-Type: application/json" \
+-d "${json_payload}"
+echo
