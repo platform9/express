@@ -14,18 +14,20 @@
   when: hw_virt|failed and
         inventory_hostname in groups.hypervisors
 
-- name: Set system hostname
-  hostname:
-    name: "{{ inventory_hostname }}"
-  register: hostname_result
+- block:
+  - name: Set system hostname
+    hostname:
+      name: "{{ inventory_hostname }}"
+    register: hostname_result
 
-- name: Update /etc/hosts to reflect hostname change
-  lineinfile:
-    state: present
-    dest: /etc/hosts
-    regexp: "^(127.0.0.1).*$"
-    line: "127.0.0.1\t{{ inventory_hostname_short }}\t{{ inventory_hostname }}\tlocalhost"
-  register: etc_hosts_result
+  - name: Update /etc/hosts to reflect hostname change
+    lineinfile:
+      state: present
+      dest: /etc/hosts
+      regexp: "^(127.0.0.1).*$"
+      line: "127.0.0.1\t{{ inventory_hostname_short }}\t{{ inventory_hostname }}\tlocalhost"
+    register: etc_hosts_result
+  when: manage_hostname == True
 
 - name: Set DNS resolvers
   lineinfile:
