@@ -44,7 +44,7 @@ Admin Password [********]:
 Region [KVM-01]:
 --> accepted: KVM-01
  
-Tennant [service]:
+Tenant [service]:
 --> accepted: service
  
 Manage Hostname [true false] [false]:

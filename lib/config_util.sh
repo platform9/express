@@ -163,7 +163,7 @@ run_setup() {
     "os_username|Admin Username|${v2}"
     "os_password|Admin Password|${v3}"
     "os_region|Region|${v4}"
-    "os_tenant|Tennant|${v5}"
+    "os_tenant|Tenant|${v5}"
     "manage_hostname|Manage Hostname [true,false]|${v6}|true,false"
     "manage_resolver|Manage DNS Resolver [true,false]|${v7}|true,false"
     "dns_resolver1|DNS Resolver 1|${v8}"
