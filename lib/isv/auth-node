@@ -1,7 +1,7 @@
 #!/bin/bash
 
 method_usage() {
-  echo "`basename $0` <uuid>"
+  echo "auth-node <uuid>"
   exit 1
 }
 

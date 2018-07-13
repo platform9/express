@@ -1,7 +1,7 @@
 #!/bin/bash
 
 method_usage() {
-  echo "`basename $0` <clusterName> <containerCidr> <servicesCidr> <nodePoolUuid> <masterVip> <masterVipIf> <startVipIp> <endVipIp>"
+  echo "create-cluster <clusterName> <containerCidr> <servicesCidr> <nodePoolUuid> <masterVip> <masterVipIf> <startVipIp> <endVipIp>"
   exit 1
 }
 
