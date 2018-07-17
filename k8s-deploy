@@ -31,7 +31,8 @@ usage() {
   echo "  `${libdir}/get-clusterNode -h`"
   echo "  `${libdir}/get-provider -h`"
   echo "  `${libdir}/get-tenant -h`"
-  echo "  `${libdir}/delete-cluster -h`"
+  echo "  `${libdir}/detach-worker -h`"
+  echo "  `${libdir}/detach-master -h`"
   echo "  `${libdir}/install-kubectl -h`"
   echo
   exit 1
