@@ -1,0 +1,61 @@
+#!/bin/bash
+
+method_usage() {
+  echo "install-kubectl <cluster_uuid> <master-ip>"
+  exit 1
+}
+
+# process paramters
+if [ $# -eq 1 -a "${1}" == "-h" ]; then
+  method_usage
+elif [ $# -eq 3 ]; then
+  cluster_uuid=${2}
+  master_ip=${3}
+else
+  method_usage
+fi
+
+# Installing Kubectl
+echo "Installing Kubectl"
+echo "--> master IP = ${master_ip}"
+
+# validate running on master
+ip addr | grep ${master_ip} > /dev/null 2>&1
+if [ $? -ne 0 ]; then assert "not running on Kubernetes master node"; fi
+
+if [ ! -r /usr/bin/kubectl ]; then
+  curl -o /usr/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/kubectl
+  if [ $? -ne 0 ]; then exit 1; fi
+  chmod 0755 /usr/bin/kubectl
+fi
+
+echo -e "\nDownloading kubeconfig from management plane"
+curl -v -O /tmp/kubeconfig ${du_url}/qbert/v1/kubeconfig/${cluster_uuid} \
+-H "X-Auth-Token: ${token}" \
+-H "Content-Type: application/json"
+if [ $? -ne 0 ]; then
+  cat /tmp/kubeconfig
+  exit 1
+fi
+
+# configure kubeconfig
+echo "Updating ~/.kube/kubeconfig"
+if [ ! -r ~/.kube ]; then mkdir ~/.kube; fi
+/bin/cp -f /tmp/kubeconfig ~/.kube/kubeconfig
+export KUBECONFIG=~/.kube/kubeconfig
+
+# update bash profile
+echo "Updating ~/.bash_profile"
+grep "^export KUBECONFIG=" ~/.bash_profile > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "export KUBECONFIG=\~/.kube/kubeconfig" >> ~/.bash_profile
+fi
+
+# update kubeconfig
+sed -i "s/server:.*/server: https:\/\/${master_ip}/g" ~/.kube/kubeconfig
+
+# run kubectl
+echo "Executing: kubectl cluster-info"
+kubectl cluster-info
+
+exit 0
