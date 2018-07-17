@@ -97,7 +97,7 @@ done
 # execute methods
 op=${1}
 case ${op} in
-auth-node|create-cluster|attach-master|attach-worker|get-node|get-cluster|get-clusterNode|get-provider|get-tenant|delete-cluster|install-kubectl)
+auth-node|create-cluster|attach-master|attach-worker|get-node|get-cluster|get-clusterNode|get-provider|get-tenant|delete-cluster|install-kubectl|detach-worker|detach-master)
   if [ ! -r ${libdir}/${op} ]; then assert "missing library: ${libdir}/${op}"; fi
   source ${libdir}/${op} $*
   ;;
