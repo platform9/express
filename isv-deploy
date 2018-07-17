@@ -11,6 +11,7 @@ config_file=$(dirname $0)/pf9-autodeploy.conf
 libdir=$(dirname $0)/lib/isv
 tokendb=/tmp/token.dat
 flag_update_token=0
+flag_verbose=0
 log_hostagent=/var/log/pf9/hostagent.log
 
 assert() {
@@ -19,7 +20,7 @@ assert() {
 }
 
 usage() {
-  echo -e "Usage: `basename $0` <Method> [Args]\n"
+  echo -e "Usage: `basename $0` [-d] <Method> [Args]\n"
   echo "Methods:"
   echo "  `${libdir}/auth-node -h`"
   echo "  `${libdir}/create-cluster -h`"
@@ -76,8 +77,23 @@ read_config
 # get keystone token
 get_token
 
-# execute methods
+# validate command-line
 if [ $# -eq 0 ]; then usage; fi
+
+# process optional args
+while [ $# -gt 0 ]; do
+  case ${1} in
+  -d|--debug)
+    flag_verbose=1
+    shift
+    ;;
+  *)
+    break
+    ;;
+  esac
+done
+
+# execute methods
 op=${1}
 case ${op} in
 auth-node|create-cluster|attach-master|attach-worker|get-node|get-cluster|get-clusterNode|get-provider|get-tenant|delete-cluster)

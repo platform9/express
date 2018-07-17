@@ -32,6 +32,24 @@ echo "--> masterVipIf=${masterVipIf}"
 echo "--> startVipIp=${startVipIp}"
 echo "--> endVipIp=${endVipIp}"
 
+# build JSON payload
+json_payload=" \
+{
+    \"name\": \"${clusterName}\",
+    \"nodePoolUuid\": \"${nodePoolUuid}\",
+    \"containersCidr\": \"${containerCidr}\",
+    \"servicesCidr\": \"${servicesCidr}\",
+    \"masterVip\": \"${masterVip}\",
+    \"masterVipIf\": \"${masterVipIf}\",
+    \"startVipIp\": \"${startVipIp}\",
+    \"endVipIp\": \"${endVipIp}\"
+}"
+
+if [ ${flag_verbose} -eq 1 ]; then 
+  echo "--> JSON Payload"
+  echo ${json_payload}
+fi
+
 echo -e "\nAPI Response"
 curl ${du_url}/qbert/v1/clusters \
 -X POST \
