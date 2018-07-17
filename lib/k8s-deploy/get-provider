@@ -19,4 +19,4 @@ if [ $? -eq 0 ]; then
   exit 1
 fi
 echo ${result} | python -m json.tool
-echo -e "\nNodes : `echo ${result} | python -m json.tool | grep '"id": "' | wc -l`"
+echo -e "\nProviders : `echo ${result} | python -m json.tool | grep '"id": "' | wc -l`"

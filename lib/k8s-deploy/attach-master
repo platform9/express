@@ -14,7 +14,7 @@ elif [ $# -ge 4 ]; then
   shift 3
   json_payload="[ "
   while [ $# -gt 0 ]; do
-    json_payload="${json_payload} { "uuid": "${1}", "isMaster": true }"
+    json_payload="${json_payload} { \"uuid\": \"${1}\", \"isMaster\": true }"
     shift
     if [ $# -gt 0 ]; then json_payload="${json_payload},"; fi
   done
@@ -31,7 +31,7 @@ echo "--> payload"
 echo ${json_payload}
 
 echo -e "\nAPI Response"
-curl ${du_url}/qbert/v3/${keystoneTenantId}/clusters/${clusterUuid}/attach \
+curl -v ${du_url}/qbert/v3/${keystoneTenantId}/clusters/${clusterUuid}/attach \
 -X POST \
 -H "X-Auth-Token: ${token}" \
 -H "Content-Type: application/json" \

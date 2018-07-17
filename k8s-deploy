@@ -3,12 +3,12 @@
 # Installer for Platform9 Bare-Metal Kubernetes using PMK
 # 
 # Sample Invocations:
-#   ./isv-deploy create-cluster c2 10.20.0.0/16 10.40.0.0/16 \
+#   ./k8s-deploy create-cluster c2 10.20.0.0/16 10.40.0.0/16 \
 #                5f50c197-782c-48f0-8587-e75c21ce778d 172.16.7.254 ens192 172.20.10.121 172.20.10.124
 ####################################################################################################
 
 config_file=$(dirname $0)/pf9-autodeploy.conf
-libdir=$(dirname $0)/lib/isv
+libdir=$(dirname $0)/lib/k8s-deploy
 tokendb=/tmp/token.dat
 flag_update_token=0
 flag_verbose=0
