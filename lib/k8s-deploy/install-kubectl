@@ -24,19 +24,22 @@ ip addr | grep ${master_ip} > /dev/null 2>&1
 if [ $? -ne 0 ]; then assert "not running on Kubernetes master node"; fi
 
 if [ ! -r /usr/bin/kubectl ]; then
-  curl -o /usr/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/kubectl
+  curl -o /usr/bin/kubectl -LO https://storage.googleapis.com/kubernetes-release/release/v1.8.4/bin/linux/amd64/kubectl > /dev/null 2>&1
   if [ $? -ne 0 ]; then exit 1; fi
   chmod 0755 /usr/bin/kubectl
 fi
 
 echo -e "\nDownloading kubeconfig from management plane"
+rm -f /tmp/kubeconfig
 curl -v -O /tmp/kubeconfig ${du_url}/qbert/v1/kubeconfig/${cluster_uuid} \
--H "X-Auth-Token: ${token}" \
--H "Content-Type: application/json"
+-H "X-Auth-Token: ${token}" > /dev/null 2>&1
 if [ $? -ne 0 ]; then
-  cat /tmp/kubeconfig
+  if [ -r /tmp/kubeconfig ]; then cat /tmp/kubeconfig; fi
   exit 1
 fi
+
+# validate kubeconfig
+if [ ! -r /tmp/kubeconfig ]; then assert "failed to download kubectl"; fi
 
 # configure kubeconfig
 echo "Updating ~/.kube/kubeconfig"
@@ -53,6 +56,11 @@ fi
 
 # update kubeconfig
 sed -i "s/server:.*/server: https:\/\/${master_ip}/g" ~/.kube/kubeconfig
+
+# configure command completion
+echo "Comfiguring Command Completion"
+echo "--> source <(kubectl completion bash)"
+source <(kubectl completion bash)
 
 # run kubectl
 echo "Executing: kubectl cluster-info"
