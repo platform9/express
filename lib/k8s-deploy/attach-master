@@ -31,7 +31,7 @@ echo "--> payload"
 echo ${json_payload}
 
 echo -e "\nAPI Response"
-curl -v ${du_url}/qbert/v3/${keystoneTenantId}/clusters/${clusterUuid}/attach \
+curl ${du_url}/qbert/v3/${keystoneTenantId}/clusters/${clusterUuid}/attach \
 -X POST \
 -H "X-Auth-Token: ${token}" \
 -H "Content-Type: application/json" \

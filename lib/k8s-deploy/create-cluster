@@ -39,10 +39,13 @@ json_payload=" \
     \"nodePoolUuid\": \"${nodePoolUuid}\",
     \"containersCidr\": \"${containerCidr}\",
     \"servicesCidr\": \"${servicesCidr}\",
-    \"masterVip\": \"${masterVip}\",
-    \"masterVipIf\": \"${masterVipIf}\",
-    \"startVipIp\": \"${startVipIp}\",
-    \"endVipIp\": \"${endVipIp}\"
+    \"masterVipIpv4\": \"${masterVip}\",
+    \"masterVipIface\": \"${masterVipIf}\",
+    \"metallbCidr\":\"${startVipIp}-${endVipIp}\",
+    \"privileged\":true,
+    \"appCatalogEnabled\":false,
+    \"allowWorkloadsOnMaster\":true,
+    \"enableMetallb\":true
 }"
 
 if [ ${flag_verbose} -eq 1 ]; then 
@@ -55,16 +58,5 @@ curl ${du_url}/qbert/v1/clusters \
 -X POST \
 -H "X-Auth-Token: ${token}" \
 -H "Content-Type: application/json" \
--d @- << EOF
-{
-    "name": "${clusterName}",
-    "nodePoolUuid": "${nodePoolUuid}",
-    "containersCidr": "${containerCidr}",
-    "servicesCidr": "${servicesCidr}",
-    "masterVip": "${masterVip}",
-    "masterVipIf": "${masterVipIf}",
-    "startVipIp": "${startVipIp}",
-    "endVipIp": "${endVipIp}"
-}
-EOF
+-d "${json_payload}"
 echo
