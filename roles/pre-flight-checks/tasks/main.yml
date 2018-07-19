@@ -3,8 +3,49 @@
 - debug: msg="running pre_flight_checks():"
 
 ###########################################################################################
+## Verify DVR is on / validate step 1 in the UI is complete / test credentials
+###########################################################################################
+
+- name: read api token
+  shell: "cat /tmp/keystone-token.txt"
+  register: api_token
+
+- name: validate DU global network settings have been configured
+  uri:
+    url: "https://{{ctrl_ip}}/resmgr/v1/services/neutron-server"
+    method: GET
+    body_format: json
+    validate_certs: False
+    headers:
+      Content-Type: "application/json"
+      X-Auth-Token: "{{api_token.stdout.strip()}}"
+  register: du_result
+  delegate_to: localhost
+
+- set_fact:
+    du_neutron_type_drivers: "{{du_result.json.ml2.ml2.type_drivers}}"
+
+- set_fact:
+    net_list: "{{du_neutron_type_drivers.split(',')}}"
+- set_fact:
+    net_list_filtered: []
+
+- name: build list of net types
+  set_fact:
+    net_list_filtered: '{{net_list_filtered + [item]}}'
+  when: item != "flat"
+  with_items: '{{net_list|list}}'
+
+- set_fact:
+    neutron_ovs_net_type: "{{ net_list_filtered | join(',') }}"
+
+- fail: msg="ALERT - DVR is disabled. You must enable it or use the '-b' flag"
+  when: skip_prereq == "0" and not du_result.json.neutron.DEFAULT.router_distributed
+
+###########################################################################################
 ## validate free space in filesystem that the Cinder temp directory lives on
 ###########################################################################################
+
 - block:
   - debug: msg="Validate minimum free space for cinder_image_conversion_cache (at least {{cinder_image_cache_min_free_space}} KBytes)"
   - name: get free space for cinder_image_conversion_cache

@@ -13,7 +13,6 @@ neutron_ovs_allow_dhcp_vms: "False"
 neutron_ovs_bridge_name: "br-pf9"
 neutron_ovs_bridge_mappings: "external:br-pf9"
 neutron_ovs_enable_tunneling: "False"
-neutron_ovs_net_type: vlan
 ceilometer_kvm_instance_disk_path: /opt/pf9/data/instances/
 ceilometer_customize: "False"
 ceilometer_cpu_interval: 600
