@@ -3,7 +3,7 @@
 - debug: msg="running pre_flight_checks():"
 
 ###########################################################################################
-## validate free space in filesystem that the Cinder temp directory lives on
+## Verify DVR is on / validate step 1 in the UI is complete / test credentials
 ###########################################################################################
 
 - name: read api token
@@ -41,6 +41,10 @@
 
 - fail: msg="ALERT - DVR is disabled. You must enable it or use the '-b' flag"
   when: skip_prereq == "0" and not du_result.json.neutron.DEFAULT.router_distributed
+
+###########################################################################################
+## validate free space in filesystem that the Cinder temp directory lives on
+###########################################################################################
 
 - block:
   - debug: msg="Validate minimum free space for cinder_image_conversion_cache (at least {{cinder_image_cache_min_free_space}} KBytes)"
