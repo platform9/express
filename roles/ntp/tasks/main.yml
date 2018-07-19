@@ -11,5 +11,5 @@
   service:
     name: "{{ ntp_service_name }}"
     state: started
-    enabled: True
+    enabled: yes
   when: ntp_service_name is defined

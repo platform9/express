@@ -7,7 +7,7 @@
 #                5f50c197-782c-48f0-8587-e75c21ce778d 172.16.7.254 ens192 172.20.10.121 172.20.10.124
 ####################################################################################################
 
-config_file=$(dirname $0)/pf9-autodeploy.conf
+config_file=$(dirname $0)/pf9-express.conf
 libdir=$(dirname $0)/lib/k8s-deploy
 tokendb=/tmp/token.dat
 flag_update_token=0
