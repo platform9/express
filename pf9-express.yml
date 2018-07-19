@@ -18,6 +18,7 @@
     - k8s-worker
   become: true
   roles:
+    - pf9-auth
     - pre-flight-checks
 
 # Run pre_hook
@@ -35,7 +36,6 @@
   roles:
     - common
     - ntp
-    - pf9-auth
     - pf9-hostagent
     - qemu-kvm-ev
     - neutron-prerequisites
@@ -76,7 +76,6 @@
   roles:
     - common
     - ntp
-    - pf9-auth
     - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
@@ -88,7 +87,6 @@
   roles:
     - common
     - ntp
-    - pf9-auth
     - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }

@@ -1,0 +1,46 @@
+#!/bin/bash
+
+basedir=$(dirname $0)
+tokendb=/tmp/token.dat
+flag_update_token=0
+config_file=${basedir}/../pf9-express.conf
+
+assert() {
+  if [ $# -eq 1 ]; then echo "ASSERT: ${1}"; fi
+  exit 1
+}
+
+# read config file
+if [ ! -r ${config_file} ]; then assert "missing config file: ${config_file}"; fi
+admin_user=$(grep ^os_username ${config_file} | cut -d \| -f2)
+admin_password=$(grep ^os_password ${config_file} | cut -d \| -f2)
+du_url=$(grep ^du_url ${config_file} | cut -d \| -f2)
+
+# manage token
+if [ ! -r ${tokendb} ]; then
+  flag_update_token=1
+else
+  token_ts=$(head -1 ${tokendb})
+  current_time=$(date +%s)
+  token_expire_ts=$((token_ts + 86400))
+  if [ ${current_time} -ge ${token_expire_ts} ]; then flag_update_token=1; fi
+fi
+
+if [ ${flag_update_token} -eq 1 ]; then
+  token=`curl -k -i -H "Content-Type: application/json" ${du_url}/keystone/v3/auth/tokens?nocatalog \
+         -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \
+         \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \
+         \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}" 2>/dev/null \
+         | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
+
+  # update tokendb
+  if [ -z "${token}" ]; then assert "failed to get token"; fi
+  echo "$(date +%s)" > ${tokendb}
+  echo "${token}" >> ${tokendb}
+else
+  token=$(cat ${tokendb} | tail -1)
+fi
+
+echo ${token}
+
+exit 0

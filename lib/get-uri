@@ -1,0 +1,17 @@
+#!/bin/bash
+
+basedir=$(dirname $0)
+
+usage() {
+  echo "Usage: `basename $0` <url>"
+  exit 1
+}
+
+if [ $# -ne 1 ]; then usage; fi
+url=${1}
+
+# get token
+token=$(${basedir}/../lib/get-token)
+
+# call API
+curl -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" ${url}
