@@ -29,7 +29,7 @@ git checkout <branchName>
 To configure the Auto-Deploy CLI to communicate with the Platform9 control plane, run the following command (a sample session is included):
 
 ```
-# ./INSTALL -s
+# ./deploy -s
 NOTE: to enter a NULL value for prompt, enter '-'
  
 Instance URL [https://sample.platform9.net]:
@@ -72,7 +72,7 @@ Ansible inventory file exists - overwrite with template? y
 To install prerequisite packages on the control host, run the following command (a sample session is included):
 
 ```
-# ./INSTALL -i
+# ./deploy -i
 --> Installation Log: ./log/pf9-autodeploy.2018-05-22_11:36:13.log
 --> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible
 ```
@@ -80,7 +80,7 @@ To install prerequisite packages on the control host, run the following command 
 ## Configuration Inventory (CLI Only)
 Auto-Deploy uses Ansible to execute commands on the hosts to be taken under management.  In order to configure Ansible to run remote commands on the managed hosts, the Ansible Inventory file must be configured.  This file is located in /opt/autodeploy/inventory/hosts.
 
-NOTE: A sample template is installed in the previous command ("./INSTALL -s").
+NOTE: A sample template is installed in the previous command ("./deploy -s").
 
 ## Sample Inventory File
 ```
@@ -89,9 +89,9 @@ NOTE: A sample template is installed in the previous command ("./INSTALL -s").
 ##
 [all]
 [all:vars]
-ansible_ssh_pass=Pl@tform9
-ansible_sudo_pass=Pl@tform9
- 
+ansible_ssh_pass=winterwonderland
+ansible_sudo_pass=winterwonderland
+
 ################################################################################################
 ## Optional Settings
 ################################################################################################
@@ -99,36 +99,35 @@ manage_network=True
 live_migration=True
 nested_virt=False
 kernel_same_page_merging=False
- 
+
 ################################################################################################
 ## OpenStack Groups
 ################################################################################################
 ## global variables defined in group_vars/hypervisors.yml
 [hypervisors]
-hv01 ansible_host=172.16.7.172 ansible_user=centos ha_cluster_ip=172.16.7.172 dhcp=on snat=on
-hv02 ansible_host=172.16.7.171 ansible_user=ubuntu ha_cluster_ip=172.16.7.171
- 
+hv01 ansible_host=10.0.0.10 ansible_user=centos ha_cluster_ip=10.0.0.10 dhcp=on snat=on
+hv02 ansible_host=10.0.0.11 ansible_user=ubuntu ha_cluster_ip=10.0.0.11 dhcp=on snat=on
+hv03 ansible_host=10.0.0.12 ansible_user=ubuntu ha_cluster_ip=10.0.0.12
+hv04 ansible_host=10.0.0.13 ansible_user=ubuntu ha_cluster_ip=10.0.0.13
+
 ## global variables defined in group_vars/glance.yml
 [glance]
 hv01 glance_public_endpoint=True
- 
-## global variables defined in group_vars/glance.yml
+
+## global variables defined in group_vars/cinder.yml
 [cinder]
-hv02 cinder_ip=10.31.254.252 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
- 
-## global variables defined in group_vars/live-migration.yml
-[live-migration]
- 
+hv02 cinder_ip=10.0.0.11 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
+
 ################################################################################################
 ## Kubernetes Groups
 ################################################################################################
 ## global variables defined in group_vars/containervisors.yml
 [k8s-master]
-cv01 ansible_host=172.16.7.139 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
- 
+cv01 ansible_host=10.0.0.14 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
+
 [k8s-worker]
-cv02 ansible_host=172.16.7.143 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
-cv03 ansible_host=172.16.7.194 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
+cv02 ansible_host=10.0.0.15 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
+cv03 ansible_host=10.0.0.16 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 ```
 
 ## Controlling UID/GID for the Platform9 Host Agent
@@ -145,9 +144,9 @@ The basic syntax for starting Auto-Deploy includes a target (which can be a host
 
 Here's an example of invoking Auto-Deploy against a number of hosts:
 ```
-# ./INSTALL hyper201,hyper202,hyper203
+# ./deploy hyper201,hyper202,hyper203
 ################################################################
-# Platform9 Auto-Deplopy Utility (Version 0.1)
+# Platform9 AutoDeploy Utility
 ################################################################
 --> Installation Log: ./log/pf9-autodeploy.2018-05-22_11:47:22.log
 --> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible setupd
@@ -161,9 +160,9 @@ Here's an example of invoking Auto-Deploy against a number of hosts:
 ```
 Here's an example of invoking Auto-Deploy against a host group and performing role deployments (based on metadata defined in /opt/autodeploy/inventory/hosts):
 ```
-# ./INSTALL -a hyper201,hyper202,hyper203,hyper204
+# ./deploy -a hyper201,hyper202,hyper203,hyper204
 ################################################################
-# Platform9 Auto-Deplopy Utility (Version 0.1)
+# Platform9 AutoDeploy Utility
 ################################################################
 --> Installation Log: ./log/pf9-autodeploy.2018-05-22_16:29:01.log
 --> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible setupd
@@ -177,8 +176,8 @@ Here's an example of invoking Auto-Deploy against a host group and performing ro
 ```
 Here's the usage statement showing all command-line options:
 ```
-# ./INSTALL
-Usage: ./INSTALL [Args] <target>
+# ./deploy
+Usage: ./deploy [Args] <target>
  
 Args (Optional):
  
@@ -196,17 +195,17 @@ Args (Optional):
 ```
 
 ## Managing Multiple Cloud Controller Instances (DUs)
-If you have more than one Platform9 region to manage, you can create a configuration file for each one (using pf9-autodeploy.conf as a template) and start INSTALL with the '-c' flag:
+If you have more than one Platform9 region to manage, you can create a configuration file for each one (using pf9-autodeploy.conf as a template) and start deploy with the '-c' flag:
 
 ```
-./INSTALL -c ~/pf9-site1.conf -a hv01
+./deploy -c ~/pf9-site1.conf -a hv01
 ```
 
 ## Overriding Inventory Variables
-If you want to override an Ansible variable defined in Inventory or dynamically within playbooks, you can invoke INSTALL with the '-e' flag:
+If you want to override an Ansible variable defined in Inventory or dynamically within playbooks, you can invoke deploy with the '-e' flag:
 
 ```
-./INSTALL -c ~/pf9-autodeploy.conf -a -e "proxy_url=https://proxy1.platform9.net" hv01
+./deploy -c ~/pf9-autodeploy.conf -a -e "proxy_url=https://proxy1.platform9.net" hv01
 ```
 NOTE: Variables passed as extra-vars have the highest precedence.
 
@@ -216,9 +215,9 @@ Auto-Deploy includes a Web UI based on Ansibe AWX, an open-source project that p
 To install AWX with Auto-Deploy configured within its database, run the following command:
 
 ```
-# ./INSTALL -u -d
+# ./deploy -u -d
 [ Installing Web UI (Ansible AWX) ]
---> Installation Log: /tmp/pf9-INSTALL.log
+--> Installation Log: /tmp/pf9-deploy.log
 --> validating awx repository: present
 --> installing tower-cli
 --> installing awx (this will take a while - monitor log for status)

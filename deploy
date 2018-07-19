@@ -13,7 +13,7 @@ inventory=${basedir}/inventory/hosts
 autodeplopy_script=${basedir}/pf9-autodeploy.yml
 platform=""
 target=""
-log=/tmp/pf9-INSTALL.log
+log=/tmp/deploy.log
 install_log="${basedir}/log/pf9-autodeploy.`date "+%Y-%m-%d_%H:%M:%S"`.log"
 pf9_config=${basedir}/pf9-autodeploy.conf
 pf9_config_tpl=${basedir}/lib/pf9-autodeploy.tpl
@@ -80,7 +80,7 @@ validate_platform() {
 
 banner() {
   echo "################################################################"
-  echo "# Platform9 Auto-Deplopy Utility (Version 0.1)"
+  echo "# Platform9 AutoDeploy Utility"
   echo "################################################################"
 }
 
@@ -96,7 +96,7 @@ restart_awx() {
 
   # start awx
   sleep 5
-  ${basedir}/INSTALL -u
+  ${basedir}/deploy -u
 
   exit 0
 }
@@ -132,7 +132,7 @@ db_init() {
 
   # start awx
   echo "--> restarting AWX"
-  ${basedir}/INSTALL -u > /dev/null 2>&1
+  ${basedir}/deploy -u > /dev/null 2>&1
 }
 
 install_awx() {
