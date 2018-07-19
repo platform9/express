@@ -10,8 +10,8 @@ nova_instances_path: /opt/pf9/data/instances/
 neutron_dhcp_dns_domain: cs.platform9.net
 neutron_dhcp_dnsmasq_dns_servers: 8.8.8.8
 neutron_ovs_allow_dhcp_vms: "False"
-neutron_ovs_bridge_name: "br-bond0"
-neutron_ovs_bridge_mappings: "external:br-bond0"
+neutron_ovs_bridge_name: "br-pf9"
+neutron_ovs_bridge_mappings: "external:br-pf9"
 neutron_ovs_enable_tunneling: "False"
 neutron_ovs_net_type: vlan
 ceilometer_kvm_instance_disk_path: /opt/pf9/data/instances/

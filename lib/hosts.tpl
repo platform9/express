@@ -19,16 +19,18 @@ kernel_same_page_merging=False
 ################################################################################################
 ## global variables defined in group_vars/hypervisors.yml
 [hypervisors]
-hv10 ansible_host=172.16.7.172 ansible_user=centos ha_cluster_ip=172.16.7.172 dhcp=on snat=on
-hv11 ansible_host=172.16.7.171 ansible_user=ubuntu ha_cluster_ip=172.16.7.171
+hv01 ansible_host=172.16.7.10 ansible_user=centos ha_cluster_ip=172.16.7.10 dhcp=on snat=on
+hv02 ansible_host=172.16.7.11 ansible_user=ubuntu ha_cluster_ip=172.16.7.11 dhcp=on snat=on
+hv03 ansible_host=172.16.7.12 ansible_user=ubuntu ha_cluster_ip=172.16.7.12 dhcp=on snat=on
+hv04 ansible_host=172.16.7.13 ansible_user=ubuntu ha_cluster_ip=172.16.7.13 dhcp=on snat=on
 
 ## global variables defined in group_vars/glance.yml
 [glance]
-hv10 glance_public_endpoint=True
+hv01 glance_public_endpoint=True
 
 ## global variables defined in group_vars/glance.yml
 [cinder]
-hv11 cinder_ip=10.31.254.252 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
+hv02 cinder_ip=172.16.7.11 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 
 ################################################################################################
 ## Kubernetes Groups

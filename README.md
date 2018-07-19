@@ -29,7 +29,7 @@ git checkout <branchName>
 To configure the Auto-Deploy CLI to communicate with the Platform9 control plane, run the following command (a sample session is included):
 
 ```
-# ./INSTALL -s
+# ./pf9-deploy -s
 NOTE: to enter a NULL value for prompt, enter '-'
  
 Instance URL [https://sample.platform9.net]:
@@ -72,7 +72,7 @@ Ansible inventory file exists - overwrite with template? y
 To install prerequisite packages on the control host, run the following command (a sample session is included):
 
 ```
-# ./INSTALL -i
+# ./pf9-deploy -i
 --> Installation Log: ./log/pf9-autodeploy.2018-05-22_11:36:13.log
 --> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible
 ```
@@ -80,7 +80,7 @@ To install prerequisite packages on the control host, run the following command 
 ## Configuration Inventory (CLI Only)
 Auto-Deploy uses Ansible to execute commands on the hosts to be taken under management.  In order to configure Ansible to run remote commands on the managed hosts, the Ansible Inventory file must be configured.  This file is located in /opt/autodeploy/inventory/hosts.
 
-NOTE: A sample template is installed in the previous command ("./INSTALL -s").
+NOTE: A sample template is installed in the previous command ("./pf9-deploy -s").
 
 ## Sample Inventory File
 ```
@@ -145,7 +145,7 @@ The basic syntax for starting Auto-Deploy includes a target (which can be a host
 
 Here's an example of invoking Auto-Deploy against a number of hosts:
 ```
-# ./INSTALL hyper201,hyper202,hyper203
+# ./pf9-deploy hyper201,hyper202,hyper203
 ################################################################
 # Platform9 Auto-Deplopy Utility (Version 0.1)
 ################################################################
@@ -161,7 +161,7 @@ Here's an example of invoking Auto-Deploy against a number of hosts:
 ```
 Here's an example of invoking Auto-Deploy against a host group and performing role deployments (based on metadata defined in /opt/autodeploy/inventory/hosts):
 ```
-# ./INSTALL -a hyper201,hyper202,hyper203,hyper204
+# ./pf9-deploy -a hyper201,hyper202,hyper203,hyper204
 ################################################################
 # Platform9 Auto-Deplopy Utility (Version 0.1)
 ################################################################
@@ -177,8 +177,8 @@ Here's an example of invoking Auto-Deploy against a host group and performing ro
 ```
 Here's the usage statement showing all command-line options:
 ```
-# ./INSTALL
-Usage: ./INSTALL [Args] <target>
+# ./pf9-deploy
+Usage: ./pf9-deploy [Args] <target>
  
 Args (Optional):
  
@@ -196,17 +196,17 @@ Args (Optional):
 ```
 
 ## Managing Multiple Cloud Controller Instances (DUs)
-If you have more than one Platform9 region to manage, you can create a configuration file for each one (using pf9-autodeploy.conf as a template) and start INSTALL with the '-c' flag:
+If you have more than one Platform9 region to manage, you can create a configuration file for each one (using pf9-autodeploy.conf as a template) and start pf9-deploy with the '-c' flag:
 
 ```
-./INSTALL -c ~/pf9-site1.conf -a hv01
+./pf9-deploy -c ~/pf9-site1.conf -a hv01
 ```
 
 ## Overriding Inventory Variables
-If you want to override an Ansible variable defined in Inventory or dynamically within playbooks, you can invoke INSTALL with the '-e' flag:
+If you want to override an Ansible variable defined in Inventory or dynamically within playbooks, you can invoke pf9-deploy with the '-e' flag:
 
 ```
-./INSTALL -c ~/pf9-autodeploy.conf -a -e "proxy_url=https://proxy1.platform9.net" hv01
+./pf9-deploy -c ~/pf9-autodeploy.conf -a -e "proxy_url=https://proxy1.platform9.net" hv01
 ```
 NOTE: Variables passed as extra-vars have the highest precedence.
 
@@ -216,7 +216,7 @@ Auto-Deploy includes a Web UI based on Ansibe AWX, an open-source project that p
 To install AWX with Auto-Deploy configured within its database, run the following command:
 
 ```
-# ./INSTALL -u -d
+# ./pf9-deploy -u -d
 [ Installing Web UI (Ansible AWX) ]
 --> Installation Log: /tmp/pf9-INSTALL.log
 --> validating awx repository: present

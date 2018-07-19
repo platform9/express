@@ -22,7 +22,6 @@ assert() {
 usage() {
   echo -e "Usage: `basename $0` [-d] <Method> [Args]\n"
   echo "Methods:"
-  echo "  `${libdir}/auth-node -h`"
   echo "  `${libdir}/create-cluster -h`"
   echo "  `${libdir}/attach-master -h`"
   echo "  `${libdir}/attach-worker -h`"
@@ -34,6 +33,7 @@ usage() {
   echo "  `${libdir}/detach-worker -h`"
   echo "  `${libdir}/detach-master -h`"
   echo "  `${libdir}/install-kubectl -h`"
+  echo "  `${libdir}/auth-node -h`"
   echo
   exit 1
 }

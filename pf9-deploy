@@ -96,7 +96,7 @@ restart_awx() {
 
   # start awx
   sleep 5
-  ${basedir}/INSTALL -u
+  ${basedir}/pf9-deploy -u
 
   exit 0
 }
@@ -132,7 +132,7 @@ db_init() {
 
   # start awx
   echo "--> restarting AWX"
-  ${basedir}/INSTALL -u > /dev/null 2>&1
+  ${basedir}/pf9-deploy -u > /dev/null 2>&1
 }
 
 install_awx() {
