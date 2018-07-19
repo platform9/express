@@ -1,6 +1,6 @@
 #!/bin/bash
 ################################################################################
-## Platform9 Openstack Assimilation Utility
+## Platform9 Assimilation Utility
 ## Copyright(c) 2018 Platform9 Systems, Inc.
 ################################################################################
 
@@ -10,13 +10,13 @@ min_ansible_version="2.2"
 oscli_version=pike
 oscli_rc_file=${basedir}/pf9-openstack.rc
 inventory=${basedir}/inventory/hosts
-autodeplopy_script=${basedir}/pf9-autodeploy.yml
+autodeplopy_script=${basedir}/pf9-express.yml
 platform=""
 target=""
-log=/tmp/deploy.log
-install_log="${basedir}/log/pf9-autodeploy.`date "+%Y-%m-%d_%H:%M:%S"`.log"
-pf9_config=${basedir}/pf9-autodeploy.conf
-pf9_config_tpl=${basedir}/lib/pf9-autodeploy.tpl
+log=/tmp/pf9-express.log
+install_log="${basedir}/log/pf9-express.`date "+%Y-%m-%d_%H:%M:%S"`.log"
+pf9_config=${basedir}/pf9-express.conf
+pf9_config_tpl=${basedir}/lib/pf9-express.tpl
 pf9_group_vars=${basedir}/group_vars/all.yml
 pf9_custom_configFile=""
 awx_repo_dir=/opt/awx
@@ -61,7 +61,7 @@ usage() {
 }
 
 validate_platform() {
-  # check if running CentOS 7.4
+  # check if running CentOS 7
   if [ -r /etc/centos-release ]; then
     release=$(cat /etc/centos-release | cut -d ' ' -f 4)
     if [[ ! "${release}" == 7.* ]]; then assert "unsupported CentOS release: ${release}"; fi
@@ -69,7 +69,7 @@ validate_platform() {
     host_os_info=$(cat /etc/centos-release)
   elif [ -r /etc/lsb-release ]; then
     release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
-    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported Ubuntu release: ${release}"; fi
     platform="ubuntu"
     ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
     host_os_info="${platform} ${ubuntu_release}"
@@ -80,7 +80,7 @@ validate_platform() {
 
 banner() {
   echo "################################################################"
-  echo "# Platform9 AutoDeploy Utility"
+  echo "# Platform9 Express Utility"
   echo "################################################################"
 }
 
@@ -96,7 +96,7 @@ restart_awx() {
 
   # start awx
   sleep 5
-  ${basedir}/deploy -u
+  ${basedir}/pf9-express -u
 
   exit 0
 }
@@ -132,7 +132,7 @@ db_init() {
 
   # start awx
   echo "--> restarting AWX"
-  ${basedir}/deploy -u > /dev/null 2>&1
+  ${basedir}/pf9-express -u > /dev/null 2>&1
 }
 
 install_awx() {
