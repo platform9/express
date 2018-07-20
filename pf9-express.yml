@@ -31,44 +31,44 @@
     - pre-hook
 
 # Openstack Hypervisor Nodes
-#- hosts: hypervisors
-#  become: true
-#  roles:
-#    - common
-#    - ntp
-#    - pf9-hostagent
-#    - qemu-kvm-ev
-#    - neutron-prerequisites
-#    - { role: "network-hook", when: manage_network == True }
-#    - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
-#    - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
-#    - { role: "map-role", rolename: "pf9-ceilometer", when: autoreg == "on" and ceilometer == "on" }
-#    - { role: "map-role", rolename: "pf9-neutron-ovs-agent", when: autoreg == "on" }
-#    - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
-#    - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
-#    - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
-#    - { role: "wait-for-convergence", when: autoreg == "on" }
-#    - { role: "enable-nested-virt", when: autoreg == "on" and nested_virt == True }
-#    - { role: "enable-ksm", when: kernel_same_page_merging == True }
-#    - { role: "secure-live-migration", when: autoreg == "on" and live_migration == True }
-#    - { role: "customize-ceilometer", when: ceilometer == "on" and ceilometer_customize == True }
+- hosts: hypervisors
+  become: true
+  roles:
+    - common
+    - ntp
+    - pf9-hostagent
+    - qemu-kvm-ev
+    - neutron-prerequisites
+    - { role: "network-hook", when: manage_network == True }
+    - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-ceilometer", when: autoreg == "on" and ceilometer == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-ovs-agent", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
+    - { role: "wait-for-convergence", when: autoreg == "on" }
+    - { role: "enable-nested-virt", when: autoreg == "on" and nested_virt == True }
+    - { role: "enable-ksm", when: kernel_same_page_merging == True }
+    - { role: "secure-live-migration", when: autoreg == "on" and live_migration == True }
+    - { role: "customize-ceilometer", when: ceilometer == "on" and ceilometer_customize == True }
 
 # Openstack Image Nodes
-#- hosts: glance
-#  become: true
-#  roles:
-#    - { role: "glance-host", when: autoreg == "on" }
-#    - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
-#    - { role: "wait-for-convergence", when: autoreg == "on" }
+- hosts: glance
+  become: true
+  roles:
+    - { role: "glance-host", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
+    - { role: "wait-for-convergence", when: autoreg == "on" }
 
 # Openstack Block Storage Nodes
-#- hosts: cinder
-#  become: true
-#  roles:
-#    - { role: "lvm", when: autoreg == "on" }
-#    - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
-#    - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
-#    - { role: "wait-for-convergence", when: autoreg == "on" }
+- hosts: cinder
+  become: true
+  roles:
+    - { role: "lvm", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
+    - { role: "wait-for-convergence", when: autoreg == "on" }
 
 # Configure OVS Uplink (Bond0)
 - hosts: ovsconfig
