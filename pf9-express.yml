@@ -70,6 +70,12 @@
     - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
 
+# Configure OVS Uplink (Bond0)
+- hosts: ovsconfig
+  become: true
+  roles:
+    - { role: "ovsconfig", when: autoreg == "on" }
+
 # Kubernetes Master Nodes
 - hosts: k8s-master
   become: true
