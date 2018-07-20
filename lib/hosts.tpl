@@ -30,6 +30,13 @@ hv02 glance_ip=10.0.3.12
 [cinder]
 hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 
+## network configuration for bond0 (implemented by network-hook if defined)
+[ovsconfig]
+hv01 bond_members='["ens192"]' bond_sub_interfaces='[{"vlanid":"243","ip":"172.16.243.10","mask":"255.255.255.0"}]'
+hv02 bond_members='["ens192"]' bond_sub_interfaces='[{"vlanid":"243","ip":"172.16.243.11","mask":"255.255.255.0"}]'
+hv03 bond_members='["ens192"]' bond_sub_interfaces='[{"vlanid":"243","ip":"172.16.243.12","mask":"255.255.255.0"}]'
+hv04 bond_members='["ens192"]' bond_sub_interfaces='[{"vlanid":"243","ip":"172.16.243.13","mask":"255.255.255.0"}]'
+
 ################################################################################################
 ## Kubernetes Groups
 ################################################################################################
