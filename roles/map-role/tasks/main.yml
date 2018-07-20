@@ -79,19 +79,6 @@
   template:
     src: "{{rolename}}.j2"
     dest: "{{role_metadata}}"
-  when: rolename != "pf9-neutron-ovs-agent"
-
-- name: prepare role json data (pf9-neutron-ovs-agent)
-  template:
-    src: "{{rolename}}.j2"
-    dest: "{{role_metadata}}"
-  when: rolename == "pf9-neutron-ovs-agent" and vxlan_status == "disabled"
-
-- name: prepare role json data (pf9-neutron-ovs-agent with vxlan)
-  template:
-    src: "{{rolename}}-vxlan.j2"
-    dest: "{{role_metadata}}"
-  when: rolename == "pf9-neutron-ovs-agent" and vxlan_status == "enabled"
 
 ##############################################################################
 # Enforce required role parameters
