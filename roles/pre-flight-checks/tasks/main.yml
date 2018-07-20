@@ -39,8 +39,20 @@
 - set_fact:
     neutron_ovs_net_type: "{{ net_list_filtered | join(',') }}"
 
+- set_fact:
+    vxlan_status: "disabled"
+
+- name: set vxlan_status
+  set_fact:
+    vxlan_status: "enabled"
+  when: item == "vxlan"
+  with_items: '{{net_list|list}}'
+
 - fail: msg="ALERT - DVR is disabled. You must enable it or use the '-b' flag"
   when: skip_prereq == "0" and not du_result.json.neutron.DEFAULT.router_distributed
+
+- debug: msg="neutron_ovs_net_type = {{neutron_ovs_net_type}}"
+- debug: msg="vxlan_status = {{vxlan_status}}"
 
 ###########################################################################################
 ## validate free space in filesystem that the Cinder temp directory lives on
