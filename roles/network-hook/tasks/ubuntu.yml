@@ -1,1 +1,3 @@
 ---
+
+- debug: msg="running network-hook/tasks/ubuntu.yml"

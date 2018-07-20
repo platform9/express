@@ -39,8 +39,30 @@
 - set_fact:
     neutron_ovs_net_type: "{{ net_list_filtered | join(',') }}"
 
+- set_fact:
+    tunnel_ip: "{{ha_cluster_ip}}"
+  when: tunnel_ip is undefined
+
+- set_fact:
+    neutron_tunnel_types: ""
+
+- name: set vxlan_status
+  set_fact:
+    neutron_tunnel_types: "vxlan"
+  when: item == "vxlan"
+  with_items: '{{net_list|list}}'
+
+- set_fact:
+    neutron_ovs_enable_tunneling: "False"
+- set_fact:
+    neutron_ovs_enable_tunneling: "True"
+  when: neutron_tunnel_types == "vxlan"
+
 - fail: msg="ALERT - DVR is disabled. You must enable it or use the '-b' flag"
   when: skip_prereq == "0" and not du_result.json.neutron.DEFAULT.router_distributed
+
+- debug: msg="neutron_ovs_net_type = {{neutron_ovs_net_type}}"
+- debug: msg="neutron_tunnel_types = {{neutron_tunnel_types}}"
 
 ###########################################################################################
 ## validate free space in filesystem that the Cinder temp directory lives on
