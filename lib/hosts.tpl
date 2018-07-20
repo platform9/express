@@ -40,7 +40,7 @@ hv03 bond_members='["ens192"]' bond_sub_interfaces='[{"vlanid":"243","ip":"172.1
 hv04 bond_members='["ens192"]' bond_sub_interfaces='[{"vlanid":"243","ip":"172.16.243.13","mask":"255.255.255.0"}]'
 
 ################################################################################################
-## Kubernetes Groups
+## Kubernetes Groups (PMK)
 ################################################################################################
 ## global variables defined in group_vars/containervisors.yml
 [k8s-master]
@@ -49,3 +49,12 @@ cv01 ansible_host=10.0.0.14 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-
 [k8s-worker]
 cv02 ansible_host=10.0.0.15 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 cv03 ansible_host=10.0.0.16 ansible_user=centos cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
+
+################################################################################################
+## Kubernetes Groups (ISV)
+################################################################################################
+## global variables defined in group_vars/containervisors.yml
+[isv]
+isv01 ansible_host=10.238.0.12
+isv02 ansible_host=10.238.0.13
+isv03 ansible_host=10.238.0.14

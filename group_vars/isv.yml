@@ -1,0 +1,16 @@
+---
+# Global Variables for 'isv' Inventory Group
+
+ansible_ssh_private_key_file: /root/.ssh/cm-master
+isv_repo: http://10.238.0.10/cm-repo/isv-installer-build-186
+isv_public_key: /root/.ssh/isv-public-key
+isv_private_key: /root/.ssh/isv-private-key
+isv_bin: /opt/bin
+isv_user: root
+isv_user_home: /root
+isv_cluster_name: c1
+isv_pod_cidr: 10.2.0.0/16
+isv_services_cidr: 10.1.0.0/16
+isv_keepalived_routerid: 201
+isv_vip: 10.238.0.250
+isv_node_ifname: eth0

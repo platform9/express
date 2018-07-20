@@ -4,6 +4,7 @@
     - hypervisors
     - k8s-master
     - k8s-worker
+    - isv
   become: true
   gather_facts: False
   pre_tasks:
@@ -98,25 +99,20 @@
     - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "k8s-cluster-attach", k8s_node_type: "worker", when: autoreg == "on" }
 
-# Kubernetes Master Nodes (ISV)
-- hosts: isv-master
+# Kubernetes Nodes (ISV)
+- hosts: isv
   become: true
   roles:
     - common
-    - ntp
-
-# Kubernetes Worker Nodes (ISV)
-- hosts: isv-master
-  become: true
-  roles:
-    - common
-    - ntp
+  # - ntp
+    - { role: "isv", when: autoreg == "on" }
 
 # Run post_hook
 - hosts:
     - hypervisors
     - k8s-master
     - k8s-worker
+    - isv
   become: true
   roles:
     - post-hook

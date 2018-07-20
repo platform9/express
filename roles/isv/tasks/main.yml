@@ -1,0 +1,57 @@
+---
+
+- debug: msg="performing air-gapped ISV installation"
+
+- fail: msg="undefined required variable - isv_repo"
+  when: isv_repo is undefined
+
+- name: download isv installer
+  get_url:
+    url: "{{isv_repo}}"
+    dest: /tmp/isv-installer
+    mode: 0755
+
+- name: validate download
+  stat:
+    path: /tmp/isv-installer
+  register: stat_isv
+
+- fail: msg="failed to download isv installer"
+  when: stat_isv.stat.exists == false
+
+- name: run installer
+  shell: /tmp/isv-installer
+  
+- name: copy public key
+  copy:
+    src: "{{isv_public_key}}"
+    dest: "{{isv_user_home}}/.ssh"
+    mode: 0400
+
+- name: copy private key
+  copy:
+    src: "{{isv_private_key}}"
+    dest: "{{isv_user_home}}/.ssh"
+    mode: 0400
+
+- name: update authorized_keys
+  shell: "cat {{isv_public_key}} >> ~/.ssh/authorized_keys"
+
+- name: add credential
+  shell: "{{isv_bin}}/cctl create credentials --user {{isv_user}} --privateKey {{isv_private_key}}"
+
+- name: create cluster
+  shell: "{{isv_bin}}/cctl create cluster --name {{isv_cluster_name}} --podNetwork {{isv_pod_cidr}} --serviceNetwork {{isv_services_cidr}} --routerID {{isv_keepalived_routerid}} --vip {{isv_vip}}"
+
+- name: validate cluster
+  shell: "{{isv_bin}}/cctl get cluster | grep \"^Cluster Name\" | cut -d : -f2 | cut -d ' ' -f2"
+  register: get_cluster
+
+- fail: msg="failed to create cluster - {{isv_cluster_name}}"
+  when: get_cluster.stdout.strip() != isv_cluster_name
+
+- name: add machine to cluster
+  shell: "{{isv_bin}}/cctl create machine --ip {{ansible_host}} --iface {{isv_node_ifname}} --role {{isv_role}} --publicKeys {{isv_public_key}}"
+  register: add_master
+
+- debug: var=add_master
