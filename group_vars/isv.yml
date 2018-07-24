@@ -12,5 +12,5 @@ isv_cluster_name: c1
 isv_pod_cidr: 10.2.0.0/16
 isv_services_cidr: 10.1.0.0/16
 isv_keepalived_routerid: 201
-isv_vip: 10.238.0.250
+isv_vip: 10.105.16.38
 isv_node_ifname: eth0
