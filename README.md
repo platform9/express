@@ -7,18 +7,25 @@ Platform9 Express must be installed on a control host with IP connectivity to th
 ## Installation
 Perform the following steps to install Platform9 Express:
 
-1. Login as root on the control host (or a user with sudo access)
+1. Login as root (or a user with sudo access) on the host that you plan to install Platform9 Express on.
 
-2. Clone the Platform9 Express repository. 
+2. Install git
+```
+yum install git # CentOS
+
+apt-get update && apt-get install git # Ubuntu
+```
+
+3. Clone the Platform9 Express repository. 
 
 ```
 git clone https://github.com/platform9/pf9-express.git /opt/pf9-express
 ```
 NOTE: In this example, the installation directory is /opt/pf9-express, but any directory can be used.
 
-3. Git Branching Strategy
+3a. Git Branching Strategy
 
-By default, you'll be on the "master" branch after cloning the repository.  If you'd like to use the latest version (but perhaps not fully tested) you should checkout the "develop" branch.  If instructed to use a private branch, you'll need to checkout a specific branch.  To checkout a branch, use the following command:
+By default, you'll be on the "master" branch after cloning the repository.  If you'd like to use the latest version (but perhaps not fully tested) you should checkout the "develop" branch.  If instructed to use a private branch, you'll need to checkout that specific branch.  To checkout a branch, use the following command:
 
 ```
 cd /opt/pf9-express
@@ -59,8 +66,8 @@ DNS Resolver 1 [8.8.8.8]:
 DNS Resolver 2 [8.8.4.4]:
 --> accepted: 8.8.4.4
  
-DNS Domain for Nova Hypervisors [company.com]:
---> accepted: company.com
+DNS Domain for Nova Hypervisors [cloud.company.com]:
+--> accepted: cloud.company.com
  
 Proxy URL:
 --> accepted: -
