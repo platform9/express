@@ -7,5 +7,5 @@ du_url|
 os_username|
 os_password|
 os_region|
-nova_dns_domain|
+neutron_dhcp_dns_domain|
 proxy_url|

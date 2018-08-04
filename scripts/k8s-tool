@@ -1,6 +1,6 @@
 #!/bin/bash
 ####################################################################################################
-# Reference script for managing Platform9 kubernetes deployments
+# Reference script for managing Platform9 Kubernetes deployments
 ####################################################################################################
 basedir=$(dirname $0)
 tokendb=/tmp/token.dat
@@ -8,7 +8,7 @@ flag_update_token=0
 object_id=""
 project_id=""
 cluster_fqdn=""
-config_file=${basedir}/../pf9-autodeploy.conf
+config_file=${basedir}/../pf9-express.conf
 
 # usage strings
 usage_get_node="get-node [<nodeId>]"
@@ -44,11 +44,11 @@ assert() {
 validate_platform() {
   if [ -r /etc/centos-release ]; then
     release=$(cat /etc/centos-release | cut -d ' ' -f 4)
-    if [[ ! "${release}" == 7.4.* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    if [[ ! "${release}" == 7.* ]]; then assert "unsupported CentOS release: ${release}"; fi
     platform="centos"
   elif [ -r /etc/lsb-release ]; then
     release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
-    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported Ubuntu release: ${release}"; fi
     platform="ubuntu"
   else
     assert "unsupported platform"

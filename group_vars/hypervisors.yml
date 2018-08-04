@@ -7,7 +7,6 @@ snat: "off"
 ceilometer: "on"
 glance: "off"
 nova_instances_path: /opt/pf9/data/instances/
-neutron_dhcp_dns_domain: cloud.company.com
 neutron_dhcp_dnsmasq_dns_servers: 8.8.8.8
 neutron_ovs_allow_dhcp_vms: "False"
 neutron_ovs_bridge_name: "br-pf9"

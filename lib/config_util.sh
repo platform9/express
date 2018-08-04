@@ -155,7 +155,7 @@ run_setup() {
   v7=$(grep ^manage_resolver ${pf9_config} | cut -d \| -f2)
   v8=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
   v9=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
-  v10=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
+  v10=$(grep ^neutron_dhcp_dns_domain ${pf9_config} | cut -d \| -f2)
   v11=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
 
   pf9_nv_pairs=(
@@ -168,7 +168,7 @@ run_setup() {
     "manage_resolver|Manage DNS Resolver [true,false]|${v7}|true,false"
     "dns_resolver1|DNS Resolver 1|${v8}"
     "dns_resolver2|DNS Resolver 2|${v9}"
-    "nova_dns_domain|DNS Domain for Nova Hypervisors|${v10}"
+    "neutron_dhcp_dns_domain|DNS Domain for Nova Hypervisors|${v10}"
     "proxy_url|Proxy URL|${v11}"
   )
 
@@ -213,7 +213,7 @@ build_config() {
   local manage_resolver=$(grep ^manage_resolver ${pf9_config} | cut -d \| -f2)
   local dns_resolver1=$(grep ^dns_resolver1 ${pf9_config} | cut -d \| -f2)
   local dns_resolver2=$(grep ^dns_resolver2 ${pf9_config} | cut -d \| -f2)
-  local nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
+  local neutron_dhcp_dns_domain=$(grep ^neutron_dhcp_dns_domain ${pf9_config} | cut -d \| -f2)
   local proxy_url=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
 
   # build group_vars/all.yml
@@ -248,7 +248,7 @@ validate_config() {
   os_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
   os_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
   os_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
-  nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
+  neutron_dhcp_dns_domain=$(grep ^neutron_dhcp_dns_domain ${pf9_config} | cut -d \| -f2)
   proxy_url=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
 
   # validate manage_hostname
@@ -275,8 +275,8 @@ validate_config() {
   # validate dns_resolver2
   if [ -z "${dns_resolver2}" ]; then assert "config:dns_resolver2 : illegal value - run './pf9-express -s'\n"; fi
 
-  # validate nova_dns_domain
-  if [ -z "${nova_dns_domain}" ]; then assert "config:nova_dns_domain : illegal value - run './pf9-express -s'\n"; fi
+  # validate neutron_dhcp_dns_domain
+  if [ -z "${neutron_dhcp_dns_domain}" ]; then assert "config:neutron_dhcp_dns_domain : illegal value - run './pf9-express -s'\n"; fi
 
   # validate os_tenant
   if [ -z "${os_tenant}" ]; then assert "config:os_tenant : illegal value - run './pf9-express -s'\n"; fi

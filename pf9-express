@@ -10,7 +10,7 @@ min_ansible_version="2.2"
 oscli_version=pike
 oscli_rc_file=${basedir}/pf9-openstack.rc
 inventory=${basedir}/inventory/hosts
-autodeplopy_script=${basedir}/pf9-express.yml
+express_script=${basedir}/pf9-express.yml
 platform=""
 target=""
 log=/tmp/pf9-express.log
@@ -456,7 +456,7 @@ fi
 ## lookup configuration values from config file
 du_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
 du_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
-nova_dns_domain=$(grep ^nova_dns_domain ${pf9_config} | cut -d \| -f2)
+neutron_dhcp_dns_domain=$(grep ^neutron_dhcp_dns_domain ${pf9_config} | cut -d \| -f2)
 du_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
 du_tenant=$(grep ^os_tenant ${pf9_config} | cut -d \| -f2)
 proxy_url=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
@@ -489,7 +489,7 @@ if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "An
 ## validate target
 if [ -z "${target}" ]; then usage; fi
 
-## toggle auto-regsister flag
+## toggle auto-register flag
 if [ ${flag_autoregister} -eq 1 ]; then
   autoreg="on"
 else
@@ -497,10 +497,10 @@ else
 fi
 
 ## inform user of Ansible command being run
-echo -e "\n[Executing: ansible-playbook ${autodeplopy_script}]"
+echo -e "\n[Executing: ansible-playbook ${express_script}]"
 
-## call pf9-autopdeplopy
-sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} nova_dns_domain=${nova_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${autodeplopy_script} 2>&1 | tee ${install_log}
+## call pf9-express
+sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} neutron_dhcp_dns_domain=${neutron_dhcp_dns_domain} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${express_script} 2>&1 | tee ${install_log}
 
 ## display log path
 echo -e "Installation Log: ${install_log}\n"
