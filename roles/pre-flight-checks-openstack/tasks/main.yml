@@ -1,6 +1,6 @@
 ---
 
-- debug: msg="running pre_flight_checks():"
+- debug: msg="running OpenStack pre_flight_checks():"
 
 ###########################################################################################
 ## Verify DVR is on / validate step 1 in the UI is complete / test credentials

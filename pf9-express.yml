@@ -19,7 +19,6 @@
   become: true
   roles:
     - pf9-auth
-    - pre-flight-checks
 
 # Run pre_hook
 - hosts:
@@ -30,10 +29,11 @@
   roles:
     - pre-hook
 
-# Openstack Hypervisor Nodes
+# OpenStack Hypervisor Nodes
 - hosts: hypervisors
   become: true
   roles:
+    - pre-flight-checks-openstack
     - common
     - ntp
     - pf9-hostagent
