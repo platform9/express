@@ -3,7 +3,7 @@
 - debug: msg="running OpenStack pre_flight_checks():"
 
 ###########################################################################################
-## Verify DVR is on / validate step 1 in the UI is complete / test credentials
+## Verify DVR is on, step 1 in the UI is complete, import vars, and test credentials
 ###########################################################################################
 
 - name: read api token
@@ -21,6 +21,15 @@
       X-Auth-Token: "{{api_token.stdout.strip()}}"
   register: du_result
   delegate_to: localhost
+
+- set_fact:
+    dvr_status: "{{du_result.json.neutron.DEFAULT.router_distributed}}"
+
+- set_fact:
+    neutron_dns_domain: "{{du_result.json.neutron.DEFAULT.dns_domain}}"
+
+- set_fact:
+    neutron_dnsmasq_dns_servers: "{{du_result.json.extra.dnsmasq_dns_servers}}"
 
 - set_fact:
     du_neutron_type_drivers: "{{du_result.json.ml2.ml2.type_drivers}}"
@@ -58,9 +67,10 @@
     neutron_ovs_enable_tunneling: "True"
   when: neutron_tunnel_types == "vxlan"
 
-- fail: msg="ALERT - DVR is disabled. You must enable it or use the '-b' flag"
-  when: skip_prereq == "0" and not du_result.json.neutron.DEFAULT.router_distributed
+- fail: msg="ALERT - Distributed Virtual Routing is disabled. You must enable it or use the '-b' flag to bypass this check"
+  when: skip_prereq == "0" and not dvr_status == "true"
 
+- debug: msg="dvr_status = {{dvr_status}}"
 - debug: msg="neutron_ovs_net_type = {{neutron_ovs_net_type}}"
 - debug: msg="neutron_tunnel_types = {{neutron_tunnel_types}}"
 

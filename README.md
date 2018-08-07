@@ -66,9 +66,6 @@ DNS Resolver 1 [8.8.8.8]:
 DNS Resolver 2 [8.8.4.4]:
 --> accepted: 8.8.4.4
  
-DNS Domain for Nova Hypervisors [cloud.company.com]:
---> accepted: cloud.company.com
- 
 Proxy URL:
 --> accepted: -
 ```
