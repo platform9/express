@@ -1,0 +1,10 @@
+---
+- name: Install curl
+  apt:
+    name: curl
+    state: present
+
+- name: Install uuid-runtime
+  apt:
+    name: uuid-runtime
+    state: present

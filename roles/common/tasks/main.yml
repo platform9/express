@@ -89,3 +89,6 @@
 
 - include: redhat.yml
   when: ansible_os_family == "RedHat"
+
+- include: ubuntu.yml
+  when: ansible_distribution == "Ubuntu"
