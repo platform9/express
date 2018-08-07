@@ -76,6 +76,7 @@
   roles:
     - common
     - ntp
+    - disable-swap
     - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
@@ -87,6 +88,7 @@
   roles:
     - common
     - ntp
+    - disable-swap
     - pf9-hostagent
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
