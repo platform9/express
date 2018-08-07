@@ -10,9 +10,6 @@ ansible_sudo_pass=winterwonderland
 ## Optional Settings
 ################################################################################################
 manage_network=True
-live_migration=True
-nested_virt=False
-kernel_same_page_merging=False
 
 ################################################################################################
 ## OpenStack Groups

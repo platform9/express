@@ -1,6 +1,9 @@
 ---
 # Global Variables for 'hypervisors' Inventory Group
 
+live_migration: "True"
+nested_virt: "False"
+kernel_same_page_merging: "False"
 dhcp: "off"
 snat: "off"
 ceilometer: "on"

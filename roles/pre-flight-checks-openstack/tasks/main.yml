@@ -71,6 +71,8 @@
   when: skip_prereq == "0" and not dvr_status == "true"
 
 - debug: msg="dvr_status = {{dvr_status}}"
+- debug: msg="neutron_dns_domain = {{neutron_dns_domain}}"
+- debug: msg="neutron_dnsmasq_dns_servers = {{neutron_dnsmasq_dns_servers}}"
 - debug: msg="neutron_ovs_net_type = {{neutron_ovs_net_type}}"
 - debug: msg="neutron_tunnel_types = {{neutron_tunnel_types}}"
 
