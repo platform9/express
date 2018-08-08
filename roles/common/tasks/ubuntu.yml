@@ -8,3 +8,8 @@
   apt:
     name: uuid-runtime
     state: present
+
+- name: Install software-properties-common
+  apt:
+    name: software-properties-common
+    state: present
