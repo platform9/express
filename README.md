@@ -142,11 +142,11 @@ If these variables are not defined, the Host Agent Installer will allow the syst
 NOTE: This feature is not idempotent.  If the 'pf9' user had not been created yet, Platform9 Express will create the 'pf9' user and 'pf9group' group based on the values of pf9_uid and pf9_gid.  If the 'pf9' user already exists, Platform9 Express will skip the user/group management section; it will not attempt to alter the UID/GID settings.
 
 ## Running Platform9 Express
-The basic syntax for starting Platform9 Express includes a target (which can be a host group, individual host, or comma-delimited list of hosts) and an optional flag ('-a') that instructs it to perform role deployment.
+The basic syntax for starting Platform9 Express includes a target (host group, individual host, comma-delimited list of hosts, or "all" to run all groups) and an optional flag ('-a') that instructs it to perform role deployment.
 
 Here's an example of invoking Platform9 Express against a number of hosts:
 ```
-# ./pf9-express hyper201,hyper202,hyper203
+# ./pf9-express hv01,hv02,hv03
 ################################################################
 # Platform9 Express Utility
 ################################################################
@@ -160,9 +160,25 @@ Here's an example of invoking Platform9 Express against a number of hosts:
 .
 .
 ```
-Here's an example of invoking Platform9 Express against a host group and performing role deployments (based on metadata defined in /opt/pf9-express/inventory/hosts):
+Here's an example of invoking Platform9 Express a single host groups and performing role deployments (based on metadata defined in /opt/pf9-express/inventory/hosts):
 ```
-# ./pf9-express -a hyper201,hyper202,hyper203,hyper204
+# ./pf9-express -a hypervisors
+################################################################
+# Platform9 Express Utility
+################################################################
+--> Installation Log: ./log/pf9-express.2018-05-22_16:29:01.log
+--> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible setupd
+--> Updating setupd libraries: pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py attach-node add-cluster
+--> ansible_version = 2.5
+ 
+[Executing: ansible-playbook ./pf9-express.yml]
+.
+.
+.
+```
+Here's an example of invoking Platform9 Express against all host groups and performing role deployments (based on metadata defined in /opt/pf9-express/inventory/hosts):
+```
+# ./pf9-express -a all
 ################################################################
 # Platform9 Express Utility
 ################################################################
