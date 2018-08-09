@@ -310,6 +310,23 @@ install_prereqs() {
         fi
       fi
     done
+
+    ## upgrade pip
+    sudo pip install --upgrade pip > ${log} 2>&1
+    if [ $? -ne 0 ]; then
+      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
+      tail -10 ${log}; exit 1
+    fi
+
+    ## install additional pip-based packages
+    for pkg in shade docker-py; do
+      echo -n "${pkg} "
+      sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    done
     echo
   fi
 
