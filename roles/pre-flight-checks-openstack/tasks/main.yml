@@ -68,7 +68,7 @@
   when: neutron_tunnel_types == "vxlan"
 
 - fail: msg="ALERT - Distributed Virtual Routing is disabled. You must enable it or use the '-b' flag to bypass this check"
-  when: skip_prereq == "0" and not dvr_status == "false"
+  when: skip_prereq == "0" and not dvr_status == True
 
 - debug: msg="dvr_status = {{dvr_status}}"
 - debug: msg="neutron_dns_domain = {{neutron_dns_domain}}"

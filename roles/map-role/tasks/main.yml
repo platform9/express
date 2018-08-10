@@ -21,10 +21,10 @@
   # neutron_l3_agent_mode
   - set_fact:
       neutron_l3_agent_mode: "dvr_snat"
-    when: dvr_status == "true" and snat == "on"
+    when: dvr_status == True and snat == "on"
   - set_fact:
       neutron_l3_agent_mode: "dvr"
-    when: dvr_status == "true" and snat == "off"
+    when: dvr_status == True and snat == "off"
   - set_fact:
       neutron_l3_agent_mode: "dvr"
     when: neutron_l3_agent_mode is undefined
@@ -32,10 +32,10 @@
   # neutron_ovs_enable_distributed_routing
   - set_fact:
       neutron_ovs_enable_distributed_routing: "True"
-    when: dvr_status == "true"
+    when: dvr_status == True
   - set_fact:
       neutron_ovs_enable_distributed_routing: "False"
-    when: dvr_status == "false"
+    when: dvr_status == False
   - set_fact:
       neutron_ovs_enable_distributed_routing: "True"
     when: dvr_status is undefined
