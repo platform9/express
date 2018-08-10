@@ -13,7 +13,10 @@
 - block:
   # glance_endpoint_address
   - set_fact:
-      glance_endpoint_address: "{{ha_cluster_ip}}"
+      glance_ip: "{{vm_console_ip}}"
+    when: glance_ip is undefined
+  - set_fact:
+      glance_endpoint_address: "{{glance_ip}}"
 
   # neutron_l3_agent_mode
   - set_fact:
@@ -39,7 +42,7 @@
 
   # neutron_novncproxy_base_url
   - set_fact:
-      neutron_novncproxy_base_url: "http://{{ha_cluster_ip}}:6080/vnc_auto.html"
+      neutron_novncproxy_base_url: "http://{{vm_console_ip}}:6080/vnc_auto.html"
     when: neutron_novncproxy_base_url is undefined
   when: rolename != "pf9-kube" and rolename != "pf9-cindervolume-lvm" and rolename != "pf9-cindervolume-base"
 
