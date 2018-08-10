@@ -158,11 +158,11 @@ run_setup() {
   v10=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
 
   pf9_nv_pairs=(
-    "du_url|Instance URL|${v1}"
-    "os_username|Admin Username|${v2}"
+    "du_url|PF9 Control Plane URL [https://company.platform9.net]|${v1}"
+    "os_username|Admin Username [user@company.com]|${v2}"
     "os_password|Admin Password|${v3}"
     "os_region|Region|${v4}"
-    "os_tenant|Tenant|${v5}"
+    "os_tenant|Tenant [service]|${v5}"
     "manage_hostname|Manage Hostname [true,false]|${v6}|true,false"
     "manage_resolver|Manage DNS Resolver [true,false]|${v7}|true,false"
     "dns_resolver1|DNS Resolver 1|${v8}"

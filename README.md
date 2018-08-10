@@ -39,8 +39,8 @@ To configure the Platform9 Express CLI to communicate with the Platform9 control
 # ./pf9-express -s
 NOTE: to enter a NULL value for prompt, enter '-'
  
-Instance URL [https://sample.platform9.net]:
---> accepted: https://sample.platform9.net
+PF9 Control Plane URL [https://company.platform9.net]:
+--> accepted: https://company.platform9.net
  
 Admin Username [user@company.com]:
 --> accepted: user@company.com
@@ -48,8 +48,8 @@ Admin Username [user@company.com]:
 Admin Password [********]:
 --> accepted: ********
  
-Region [KVM-01]:
---> accepted: KVM-01
+Region [Sunnyvale]:
+--> accepted: Sunnyvale
  
 Tenant [service]:
 --> accepted: service
