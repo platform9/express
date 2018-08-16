@@ -7,7 +7,6 @@
 # initialize variables
 basedir=$(dirname $0)
 min_ansible_version="2.2"
-oscli_version=pike
 oscli_rc_file=${basedir}/pf9-openstack.rc
 inventory=${basedir}/inventory/hosts
 express_script=${basedir}/pf9-express.yml
@@ -218,19 +217,11 @@ install_oscli() {
     done
     echo
 
-    echo "--> Configuring Python Virtual Environment"
-    if [ ! -r /usr/bin/virtualenvwrapper.sh ]; then assert "missing script: /usr/bin/virtualenvwrapper.sh"; fi
-    source /usr/bin/virtualenvwrapper.sh
-    export WORKON_HOME=$HOME/.virtenvs
-    mkvirtualenv os_cli > ${log} 2>&1
-
     echo "--> Upgrading PIP"
     pip install pip --upgrade > ${log} 2>&1
 
     echo "--> Installing OpenStack CLI"
-    pip install --upgrade --requirement \
-        https://raw.githubusercontent.com/platform9/support-locker/master/openstack-clients/requirements.txt \
-        --constraint http://raw.githubusercontent.com/openstack/requirements/stable/${oscli_version}/upper-constraints.txt > ${log} 2>&1
+    pip install python-openstackclient> ${log} 2>&1
   fi
 
   # install openstack cli packages (Ubuntu)

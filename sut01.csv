@@ -1,0 +1,4 @@
+kvm01|CentOS-7-x86_64-GenericCloud-1802|m1.medium|1-Network-VMs-172.16.7.0_24-vLan-104,2-Network-Trunk-All-vLans|cm-master|default
+kvm02|CentOS-7-x86_64-GenericCloud-1802|m1.medium|1-Network-VMs-172.16.7.0_24-vLan-104,2-Network-Trunk-All-vLans|cm-master|default
+kvm03|CentOS-7-x86_64-GenericCloud-1802|m1.medium|1-Network-VMs-172.16.7.0_24-vLan-104,2-Network-Trunk-All-vLans|cm-master|default
+kvm04|CentOS-7-x86_64-GenericCloud-1802|m1.medium|1-Network-VMs-172.16.7.0_24-vLan-104,2-Network-Trunk-All-vLans|cm-master|default

@@ -1,0 +1,56 @@
+#!/bin/bash
+
+basedir=$(dirname $0)
+install_log="${basedir}/log/pf9-builder.`date "+%Y-%m-%d_%H:%M:%S"`.log"
+
+usage() {
+  echo "Usage: `basename $0` <csv-file>"
+  exit 1
+}
+
+assert() {
+  if [ $# -eq 1 ]; then
+    echo -e "ASSERT : ${1}"
+  else
+    echo -e "ASSERT : "
+  fi
+  exit 1
+}
+
+# validate command line
+if [ $# -ne 1 ]; then usage; fi
+csv_file=${1}
+if [ ! -r ${csv_file} ]; then assert "cannot open csv file: ${csv_file}"; fi
+
+# Build OpenStack Instances
+echo -e "\n[ BUILDING OPENSTACK INSTANCES ]"
+echo "--> Installation Log: ${install_log}"
+IFS="|"
+min_fields=6
+while read line; do
+  # validate csv
+  lineArgs=(${line})
+  if [ ${#lineArgs[@]} -lt ${min_fields} ]; then assert "invalid line format: expected at least ${min_fields} - got ${#lineArgs[@]}"; fi
+
+  # build instance
+  echo "--> Building ${lineArgs[0]}"
+  echo "    Image          : ${lineArgs[1]}"
+  echo "    Flavor         : ${lineArgs[2]}"
+  echo "    Network        : ${lineArgs[3]}"
+  echo "    Security Group : ${lineArgs[5]}"
+  echo "    Key            : ${lineArgs[4]}"
+
+  ${basedir}/openstack-cli "server create --image ${lineArgs[1]} --flavor ${lineArgs[2]} --key-name ${lineArgs[4]} ${lineArgs[0]}" > ${install_log} 2>&1
+done < ${csv_file}
+
+# Poll for Instances to Spawn
+
+# Configure Ansible Inventory
+echo -e "\n[ CONFIGURING ANSIBLE INVENTORY ]"
+
+# Run PF9-Express
+echo -e "\n[ RUNNING PF9-EXPRESS ]"
+
+# EXit Cleanly
+exit 0
+
