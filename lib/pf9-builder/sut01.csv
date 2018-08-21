@@ -1,0 +1,4 @@
+kvm01|CentOS-7-x86_64-GenericCloud-1802|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|cm-master|default|dhcp,snat,glance,glance-public
+kvm02|CentOS-7-x86_64-GenericCloud-1802|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|cm-master|default|dhcp,snat,glance
+kvm03|CentOS-7-x86_64-GenericCloud-1802|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|cm-master|default|cinder|pvs=["/dev/sdb","/dev/sdc"]|kvm03-vol01:50,kvm03-vol02:50
+kvm04|CentOS-7-x86_64-GenericCloud-1802|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|cm-master|default|cinder|pvs=["/dev/sdb","/dev/sdc"]|kvm04-vol01:50,kvm04-vol02:50

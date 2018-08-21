@@ -25,8 +25,8 @@
 - set_fact:
     dvr_status: "{{du_result.json.neutron.DEFAULT.router_distributed}}"
 
-- set_fact:
-    neutron_dns_domain: "{{du_result.json.neutron.DEFAULT.dns_domain}}"
+#- set_fact:
+#    neutron_dns_domain: "{{du_result.json.neutron.DEFAULT.dns_domain}}"
 
 - set_fact:
     neutron_dnsmasq_dns_servers: "{{du_result.json.extra.dnsmasq_dns_servers}}"

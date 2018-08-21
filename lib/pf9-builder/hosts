@@ -1,0 +1,23 @@
+[all]
+[all:vars]
+#ansible_ssh_pass=Pl@tform9
+#ansible_sudo_pass=Pl@tform9
+ansible_ssh_private_key_file=~/cm-master
+manage_network=True
+live_migration=True
+nested_virt=True
+kernel_same_page_merging=False
+
+[hypervisors]
+kvm01 ansible_host=172.16.7.216 ansible_user=centos cluster_ip=172.16.7.216 vm_console_ip=172.16.7.216 dhcp=on snat=on
+kvm02 ansible_host=172.16.7.219 ansible_user=centos cluster_ip=172.16.7.219 vm_console_ip=172.16.7.219 dhcp=on snat=on
+kvm03 ansible_host=172.16.7.211 ansible_user=centos cluster_ip=172.16.7.211 vm_console_ip=172.16.7.211
+kvm04 ansible_host=172.16.7.190 ansible_user=centos cluster_ip=172.16.7.190 vm_console_ip=172.16.7.190
+
+[glance]
+kvm01 glance_public_endpoint=True
+kvm02 glance_public_endpoint=False
+
+[cinder]
+kvm03 cinder_ip=172.16.7.211 pvs=["/dev/sdb","/dev/sdc"]
+kvm04 cinder_ip=172.16.7.190 pvs=["/dev/sdb","/dev/sdc"]
