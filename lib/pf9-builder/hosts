@@ -9,15 +9,19 @@ nested_virt=True
 kernel_same_page_merging=False
 
 [hypervisors]
-kvm01 ansible_host=172.16.7.216 ansible_user=centos cluster_ip=172.16.7.216 vm_console_ip=172.16.7.216 dhcp=on snat=on
-kvm02 ansible_host=172.16.7.219 ansible_user=centos cluster_ip=172.16.7.219 vm_console_ip=172.16.7.219 dhcp=on snat=on
-kvm03 ansible_host=172.16.7.211 ansible_user=centos cluster_ip=172.16.7.211 vm_console_ip=172.16.7.211
-kvm04 ansible_host=172.16.7.190 ansible_user=centos cluster_ip=172.16.7.190 vm_console_ip=172.16.7.190
+kvm01 ansible_host=172.16.7.229 ansible_user=centos cluster_ip=172.16.7.229 vm_console_ip=172.16.7.229
+kvm02 ansible_host=172.16.7.231 ansible_user=centos cluster_ip=172.16.7.231 vm_console_ip=172.16.7.231
+kvm03 ansible_host=172.16.7.51 ansible_user=centos cluster_ip=172.16.7.51 vm_console_ip=172.16.7.51 dhcp=on snat=on
+kvm04 ansible_host=172.16.7.239 ansible_user=centos cluster_ip=172.16.7.239 vm_console_ip=172.16.7.239 dhcp=on snat=on
+kvm05 ansible_host=172.16.7.214 ansible_user=centos cluster_ip=172.16.7.214 vm_console_ip=172.16.7.214
+kvm06 ansible_host=172.16.7.17 ansible_user=centos cluster_ip=172.16.7.17 vm_console_ip=172.16.7.17
+kvm07 ansible_host=172.16.7.18 ansible_user=centos cluster_ip=172.16.7.18 vm_console_ip=172.16.7.18
+kvm08 ansible_host=172.16.7.56 ansible_user=centos cluster_ip=172.16.7.56 vm_console_ip=172.16.7.56
 
 [glance]
 kvm01 glance_public_endpoint=True
 kvm02 glance_public_endpoint=False
 
 [cinder]
-kvm03 cinder_ip=172.16.7.211 pvs=["/dev/sdb","/dev/sdc"]
-kvm04 cinder_ip=172.16.7.190 pvs=["/dev/sdb","/dev/sdc"]
+kvm07 cinder_ip=172.16.7.18 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
+kvm08 cinder_ip=172.16.7.56 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]

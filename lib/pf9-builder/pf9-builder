@@ -3,14 +3,15 @@
 basedir=$(dirname $0)
 network_args=""
 provider=openstack
-os_cli=/home/centos/.virtenvs/os_cli/bin/openstack
-instances=""
+os_cli=~/.virtenvs/os_cli/bin/openstack
 inventory=${basedir}/hosts
 tpl_global=${basedir}/template/hosts-global.tpl
 tpl_hypervisors=${basedir}/template/hosts-hypervisors.tpl
 tpl_glance=${basedir}/template/hosts-glance.tpl
 tpl_cinder=${basedir}/template/hosts-cinder.tpl
 tpl_ovsconfig=${basedir}/template/hosts-ovsconfig.tpl
+tpl_k8s_master=${basedir}/template/hosts-k8s-master.tpl
+tpl_k8s_worker=${basedir}/template/hosts-k8s-worker.tpl
 host_list=""
 flag_launch=1
 
@@ -68,7 +69,18 @@ if [ ! -r ${openstack_rc_file} ]; then assert "cannot open openstack-rc-file: ${
 # setup OpenStack environment
 source ${openstack_rc_file}
 
+# read schema from csv
+csv_schema=$(head -1 ${csv_file})
+if [ "${csv_schema}" == "## openstack" ]; then
+  node_type="openstack"
+elif [ "${csv_schema}" == "## kubernetes" ]; then
+  node_type="kubernetes"
+else
+  node_type="openstack"
+fi
+
 # Build OpenStack Instances
+instances=""
 if [ ${flag_launch} -eq 1 ]; then
   echo -e "\n--- LAUNCHING OPENSTACK INSTANCES ---"
   printf "%-20s %-40s %-20s %-40s %-20s %-10s\n" \
@@ -99,9 +111,14 @@ if [ ${flag_launch} -eq 1 ]; then
     # parse network string
     IFS=","; networks=(${lineArgs[3]})
 
+    # parse image string
+    IFS=":"; image_parts=(${lineArgs[1]})
+    image_name=${image_parts[0]}
+    image_user=${image_parts[1]}
+
     # build instance
     printf "%-20s %-40s %-20s %-40s %-20s %-10s\n" \
-        "${lineArgs[0]}" "${lineArgs[1]}" "${lineArgs[2]}" "${networks[0]}" "${lineArgs[5]}" "${lineArgs[4]}"
+        "${lineArgs[0]}" "${image_name}" "${lineArgs[2]}" "${networks[0]}" "${lineArgs[5]}" "${lineArgs[4]}"
 
     n=0
     for network in "${networks[@]}"; do
@@ -118,7 +135,7 @@ if [ ${flag_launch} -eq 1 ]; then
     # build instance using Nova
     case ${provider} in
     openstack)
-      eval openstack server create --image '${lineArgs[1]}' --flavor '${lineArgs[2]}' ${network_args} \
+      eval openstack server create --image '${image_name}' --flavor '${lineArgs[2]}' ${network_args} \
            --key-name '${lineArgs[4]}' ${lineArgs[0]} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR : instance failed to launch"
@@ -126,7 +143,7 @@ if [ ${flag_launch} -eq 1 ]; then
       fi
       ;;
     nova)
-      eval nova boot --image '${lineArgs[1]}' --flavor '${lineArgs[2]}' ${network_args} \
+      eval nova boot --image '${image_name}' --flavor '${lineArgs[2]}' ${network_args} \
            --key-name '${lineArgs[4]}' ${lineArgs[0]} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR : instance failed to launch"
@@ -134,10 +151,14 @@ if [ ${flag_launch} -eq 1 ]; then
       fi
       ;;
     esac
-  done < ${csv_file}
 
-  # validate at least one instance to pool
-  if [ -z "${instances}" ]; then exit 1; fi
+    # update instances
+    if [ -z "${instances}" ]; then
+      instances="${lineArgs[0]}"
+    else
+      instances="${instances} ${lineArgs[0]}"
+    fi
+  done < ${csv_file}
 
   # Poll for Instances to Spawn
   echo -e "--- WAITING FOR INSTANCES TO LAUNCH ---"
@@ -172,7 +193,7 @@ if [ ${flag_launch} -eq 1 ]; then
         IFS=","; volumes=(${lineArgs[8]})
         for colval in "${volumes[@]}"; do
           IFS=":"; volArgs=(${colval})
-          echo "create-volume: name=${volArgs[0]}, size=${volArgs[1]} --> ${lineArgs[0]} (uuid=${host_uuid})"
+          echo "create/attach-volume: name=${volArgs[0]}, size=${volArgs[1]} --> ${lineArgs[0]} (uuid=${host_uuid})"
           ${os_cli} volume create --size ${volArgs[1]} ${volArgs[0]} > /dev/null 2>&1
           if [ $? -ne 0 ]; then assert "failed to create volume"; fi
   
@@ -185,104 +206,194 @@ if [ ${flag_launch} -eq 1 ]; then
   done < ${csv_file}
 fi
 
+# validate at least one instance to pool
+if [ -z "${instances}" ]; then exit 1; fi
+
 # Initialize Inventory (from template)
 if [ -r ${inventory} ]; then rm -f ${inventory}; fi
 cat ${tpl_global} > ${inventory}
-cat ${tpl_hypervisors} >> ${inventory}
 
 # Configure Ansible Inventory
 echo -e "\n--- CONFIGURING ANSIBLE INVENTORY ---"
-echo "[hypervisors]"
-while read line; do
-  # validate csv
-  if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
-  IFS="|"; lineArgs=(${line})
+if [ "${node_type}" == "openstack" ]; then
+  echo "[hypervisors]"
+  cat ${tpl_hypervisors} >> ${inventory}
+  instances=""
+  while read line; do
+    # validate csv
+    if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
+    IFS="|"; lineArgs=(${line})
 
-  # get assigned IP
-  ip=$(${os_cli} server show ${lineArgs[0]} | grep "| addresses" | cut -d \| -f 3 | awk -F ' ' '{print $1}' | cut -d = -f 2)
-  if [ -z "${ip}" ]; then
-    echo "--> ${lineArgs[0]} : <lookup-failed>"
-    continue
-  else
-    # initialize inventory entry
-    inv_entry="${lineArgs[0]} ansible_host=${ip} ansible_user=centos cluster_ip=${ip} vm_console_ip=${ip}"
-    IFS=","; kvmArgs=(${lineArgs[6]})
+    # parse image string
+    IFS=":"; image_parts=(${lineArgs[1]})
+    image_name=${image_parts[0]}
+    image_user=${image_parts[1]}
 
-    # check for dhcp
-    in_array dhcp "${kvmArgs[@]}"
-    if [ $? -eq 0 ]; then
-      inv_entry="${inv_entry} dhcp=on"
-    fi
-
-    # check for snat
-    in_array snat "${kvmArgs[@]}"
-    if [ $? -eq 0 ]; then
-      inv_entry="${inv_entry} snat=on"
-    fi
-    echo "${inv_entry}" >> ${inventory}
-    echo "${inv_entry}"
-  fi
-
-  # update instances
-  if [ -z "${instances}" ]; then
-    instances="${lineArgs[0]}"
-  else
-    instances="${instances} ${lineArgs[0]}"
-  fi
-done < ${csv_file}
-
-echo "[glance]"
-cat ${tpl_glance} >> ${inventory}
-while read line; do
-  # validate csv
-  if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
-  IFS="|"; lineArgs=(${line})
-
-  # get assigned IP
-  ip=$(${os_cli} server show ${lineArgs[0]} | grep "| addresses" | cut -d \| -f 3 | awk -F ' ' '{print $1}' | cut -d = -f 2)
-  if [ -z "${ip}" ]; then
-    echo "--> ${lineArgs[0]} : <lookup-failed>"
-    continue
-  else
-    # check for glance
-    IFS=","; kvmArgs=(${lineArgs[6]})
-    in_array glance "${kvmArgs[@]}"
-    if [ $? -eq 0 ]; then
-      in_array glance-public "${kvmArgs[@]}"
+    # get assigned IP
+    ip=$(${os_cli} server show ${lineArgs[0]} | grep "| addresses" | cut -d \| -f 3 | awk -F ' ' '{print $1}' | cut -d = -f 2)
+    if [ -z "${ip}" ]; then
+      echo "--> ${lineArgs[0]} : <lookup-failed>"
+      continue
+    else
+      # initialize inventory entry
+      inv_entry="${lineArgs[0]} ansible_host=${ip} ansible_user=${image_user} cluster_ip=${ip} vm_console_ip=${ip}"
+      IFS=","; kvmArgs=(${lineArgs[6]})
+  
+      # check for dhcp
+      in_array dhcp "${kvmArgs[@]}"
       if [ $? -eq 0 ]; then
-        inv_entry="${lineArgs[0]} glance_public_endpoint=True"
-      else
-        inv_entry="${lineArgs[0]} glance_public_endpoint=False"
+        inv_entry="${inv_entry} dhcp=on"
+      fi
+  
+      # check for snat
+      in_array snat "${kvmArgs[@]}"
+      if [ $? -eq 0 ]; then
+        inv_entry="${inv_entry} snat=on"
       fi
       echo "${inv_entry}" >> ${inventory}
       echo "${inv_entry}"
     fi
-  fi
-done < ${csv_file}
+  
+    # update instances
+    if [ -z "${instances}" ]; then
+      instances="${lineArgs[0]}"
+    else
+      instances="${instances} ${lineArgs[0]}"
+    fi
+  done < ${csv_file}
 
-echo "[cinder]"
-cat ${tpl_cinder} >> ${inventory}
-while read line; do
-  # validate csv
-  if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
-  IFS="|"; lineArgs=(${line})
+  echo "[glance]"
+  cat ${tpl_glance} >> ${inventory}
+  while read line; do
+    # validate csv
+    if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
+    IFS="|"; lineArgs=(${line})
 
-  # get assigned IP
-  ip=$(${os_cli} server show ${lineArgs[0]} | grep "| addresses" | cut -d \| -f 3 | awk -F ' ' '{print $1}' | cut -d = -f 2)
-  if [ -z "${ip}" ]; then
-    echo "--> ${lineArgs[0]} : <lookup-failed>"
-    continue
-  else
-    # check for cinder
-    IFS=","; kvmArgs=(${lineArgs[6]})
-    in_array cinder "${kvmArgs[@]}"
-    if [ $? -eq 0 ]; then
-      inv_entry="${lineArgs[0]} cinder_ip=${ip} ${lineArgs[7]}"
+    # get assigned IP
+    ip=$(${os_cli} server show ${lineArgs[0]} | grep "| addresses" | cut -d \| -f 3 | awk -F ' ' '{print $1}' | cut -d = -f 2)
+    if [ -z "${ip}" ]; then
+      echo "--> ${lineArgs[0]} : <lookup-failed>"
+      continue
+    else
+      # check for glance
+      IFS=","; kvmArgs=(${lineArgs[6]})
+      in_array glance "${kvmArgs[@]}"
+      if [ $? -eq 0 ]; then
+        in_array glance-public "${kvmArgs[@]}"
+        if [ $? -eq 0 ]; then
+          inv_entry="${lineArgs[0]} glance_public_endpoint=True"
+        else
+          inv_entry="${lineArgs[0]} glance_public_endpoint=False"
+        fi
+        echo "${inv_entry}" >> ${inventory}
+        echo "${inv_entry}"
+      fi
+    fi
+  done < ${csv_file}
+
+  echo "[cinder]"
+  cat ${tpl_cinder} >> ${inventory}
+  while read line; do
+    # validate csv
+    if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
+    IFS="|"; lineArgs=(${line})
+
+    # get assigned IP
+    ip=$(${os_cli} server show ${lineArgs[0]} | grep "| addresses" | cut -d \| -f 3 | awk -F ' ' '{print $1}' | cut -d = -f 2)
+    if [ -z "${ip}" ]; then
+      echo "--> ${lineArgs[0]} : <lookup-failed>"
+      continue
+    else
+      # check for cinder
+      IFS=","; kvmArgs=(${lineArgs[6]})
+      in_array cinder "${kvmArgs[@]}"
+      if [ $? -eq 0 ]; then
+        inv_entry="${lineArgs[0]} cinder_ip=${ip} ${lineArgs[7]}"
+        echo "${inv_entry}" >> ${inventory}
+        echo "${inv_entry}"
+      fi
+    fi
+  done < ${csv_file}
+fi
+
+if [ "${node_type}" == "kubernetes" ]; then
+  echo "[k8s-master]"
+  cat ${tpl_k8s_master} >> ${inventory}
+  instances=""
+  while read line; do
+    # validate csv
+    if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
+    IFS="|"; lineArgs=(${line})
+
+    # parse image string
+    IFS=":"; image_parts=(${lineArgs[1]})
+    image_name=${image_parts[0]}
+    image_user=${image_parts[1]}
+
+    # get assigned IP
+    ip=$(${os_cli} server show ${lineArgs[0]} | grep "| addresses" | cut -d \| -f 3 | awk -F ' ' '{print $1}' | cut -d = -f 2)
+    if [ -z "${ip}" ]; then
+      echo "--> ${lineArgs[0]} : <lookup-failed>"
+      continue
+    else
+      # initialize inventory entry
+      IFS=","; k8sArgs=(${lineArgs[6]})
+  
+      # check for master role
+      in_array master "${k8sArgs[@]}"
+      if [ $? -eq 0 ]; then
+        inv_entry="${lineArgs[0]} ansible_host=${ip} ansible_user=${image_user}"
+      fi
+
+      if [ ${#lineArgs[@]} -eq 8 ]; then
+        inv_entry="${inv_entry} ${lineArgs[7]}"
+      fi
+
       echo "${inv_entry}" >> ${inventory}
       echo "${inv_entry}"
     fi
-  fi
-done < ${csv_file}
+  
+    # update instances
+    if [ -z "${instances}" ]; then
+      instances="${lineArgs[0]}"
+    else
+      instances="${instances} ${lineArgs[0]}"
+    fi
+  done < ${csv_file}
+
+  echo "[k8s-worker]"
+  cat ${tpl_k8s_worker} >> ${inventory}
+  while read line; do
+    # validate csv
+    if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
+    IFS="|"; lineArgs=(${line})
+
+    # parse image string
+    IFS=":"; image_parts=(${lineArgs[1]})
+    image_name=${image_parts[0]}
+    image_user=${image_parts[1]}
+
+    # get assigned IP
+    ip=$(${os_cli} server show ${lineArgs[0]} | grep "| addresses" | cut -d \| -f 3 | awk -F ' ' '{print $1}' | cut -d = -f 2)
+    if [ -z "${ip}" ]; then
+      echo "--> ${lineArgs[0]} : <lookup-failed>"
+      continue
+    else
+      # check for master role
+      in_array worker "${k8sArgs[@]}"
+      if [ $? -eq 0 ]; then
+        inv_entry="${lineArgs[0]} ansible_host=${ip} ansible_user=${image_user}"
+      fi
+
+      if [ ${#lineArgs[@]} -eq 8 ]; then
+        inv_entry="${inv_entry} ${lineArgs[7]}"
+      fi
+
+      echo "${inv_entry}" >> ${inventory}
+      echo "${inv_entry}"
+    fi
+  done < ${csv_file}
+fi
 
 # Run PF9-Express
 echo -e "\n--- RUNNING PF9-EXPRESS ---"

@@ -1,0 +1,6 @@
+## kubernetes
+# <hostname>|<image>:<username>|<flavor>|<network[,network,...]>|<key>|<security-group>|<roles>[|<cluster-uuid>]
+k8s01|CentOS-7-x86_64-GenericCloud-1802:centos|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af|cm-master|default|master|2ace9b11-96d3-422d-b84b-0778a2f845cf
+k8s02|CentOS-7-x86_64-GenericCloud-1802:centos|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af|cm-master|default|worker|2ace9b11-96d3-422d-b84b-0778a2f845cf
+k8s03|CentOS-7-x86_64-GenericCloud-1802:centos|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af|cm-master|default|worker|2ace9b11-96d3-422d-b84b-0778a2f845cf
+k8s04|CentOS-7-x86_64-GenericCloud-1802:centos|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af|cm-master|default|worker|2ace9b11-96d3-422d-b84b-0778a2f845cf
