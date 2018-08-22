@@ -17,6 +17,9 @@ flag_launch=1
 
 usage() {
   echo "Usage: `basename $0` [--nova] [-s] <csv-file> <openstack-rc-file>"
+  echo -e "\n[Optional Args]\n"
+  echo "    --nova : use 'nova boot' to start instances (for VMware regions)"
+  echo -e "    -s     : skip instance provisioning\n"
   exit 1
 }
 
