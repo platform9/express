@@ -164,7 +164,7 @@ if [ ${flag_launch} -eq 1 ]; then
   done < ${csv_file}
 
   # Poll for Instances to Spawn
-  echo -e "--- WAITING FOR INSTANCES TO LAUNCH ---"
+  echo -e "\n--- WAITING FOR INSTANCES TO LAUNCH ---"
   launch_status=0
   while [ ${launch_status} -ne 1 ]; do
     launch_status=1
@@ -336,12 +336,20 @@ if [ "${node_type}" == "openstack" ]; then
       fi
     fi
   done < ${csv_file}
+
+  # Run PF9-Express
+  echo -e "\n--- RUNNING PF9-EXPRESS ---"
+  IFS=" "
+  instance_list=$(echo ${instances} | sed -e 's/ /,/g')
+  echo pf9-express -b -v ${inventory} -a ${instance_list}
+  eval ${basedir}/../../pf9-express -b -v ${inventory} -a ${instance_list}
 fi
 
 if [ "${node_type}" == "kubernetes" ]; then
   echo "[k8s-master]"
   cat ${tpl_k8s_master} >> ${inventory}
-  instances=""
+  instances_master=""
+  instances_worker=""
   while read line; do
     # validate csv
     if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
@@ -370,16 +378,23 @@ if [ "${node_type}" == "kubernetes" ]; then
         fi
         echo "${inv_entry}" >> ${inventory}
         echo "${inv_entry}"
+  
+        # update instances_master
+        if [ -z "${instances_master}" ]; then
+          instances_master="${lineArgs[0]}"
+        else
+          instances_master="${instances_master} ${lineArgs[0]}"
+        fi
       fi
     fi
-  
-    # update instances
-    if [ -z "${instances}" ]; then
-      instances="${lineArgs[0]}"
-    else
-      instances="${instances} ${lineArgs[0]}"
-    fi
   done < ${csv_file}
+
+  # Run PF9-Express
+  echo -e "\n--- RUNNING PF9-EXPRESS ---"
+  IFS=" "
+  instance_list=$(echo ${instances_master} | sed -e 's/ /,/g')
+  echo pf9-express -b -v ${inventory} -a ${instance_list}
+  eval ${basedir}/../../pf9-express -b -v ${inventory} -a ${instance_list}
 
   echo "[k8s-worker]"
   cat ${tpl_k8s_worker} >> ${inventory}
@@ -411,17 +426,24 @@ if [ "${node_type}" == "kubernetes" ]; then
         fi
         echo "${inv_entry}" >> ${inventory}
         echo "${inv_entry}"
+  
+        # update instances_worker
+        if [ -z "${instances_worker}" ]; then
+          instances_worker="${lineArgs[0]}"
+        else
+          instances_worker="${instances_worker} ${lineArgs[0]}"
+        fi
       fi
     fi
   done < ${csv_file}
-fi
 
-# Run PF9-Express
-echo -e "\n--- RUNNING PF9-EXPRESS ---"
-IFS=" "
-instance_list=$(echo ${instances} | sed -e 's/ /,/g')
-echo pf9-express -b -v ${inventory} -a ${instance_list}
-eval ${basedir}/../../pf9-express -b -v ${inventory} -a ${instance_list}
+  # Run PF9-Express
+  echo -e "\n--- RUNNING PF9-EXPRESS ---"
+  IFS=" "
+  instance_list=$(echo ${instances_worker} | sed -e 's/ /,/g')
+  echo pf9-express -b -v ${inventory} -a ${instance_list}
+  eval ${basedir}/../../pf9-express -b -v ${inventory} -a ${instance_list}
+fi
 
 # Exit Cleanly
 exit 0

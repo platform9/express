@@ -1,5 +1,5 @@
 ## kubernetes
-# <hostname>|<image>:<username>|<flavor>|<network[,network,...]>|<key>|<security-group>|<roles>[|<cluster-uuid>]
+# <hostname>|<image>:<username>|<flavor>|<network[,network,...]>|<key>|<security-group>|<role[,role]>[|<cluster-uuid>]
 k8s01|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af||cm-master|default|worker
 k8s02|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af||cm-master|default|worker
 k8s03|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af||cm-master|default|worker
