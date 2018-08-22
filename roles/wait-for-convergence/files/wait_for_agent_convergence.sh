@@ -5,6 +5,7 @@
 
 basedir=$(dirname $0)
 TIMEOUT=600
+flag_k8s=0
 
 usage() {
   echo -e "usage: `basename $0` <ctrl_ip> <host_id> <admin_user> <admin_password>"
@@ -17,11 +18,18 @@ assert() {
 }
 
 ## validate commandline
-if [ $# -ne 4 ]; then usage; fi
+if [ $# -lt 4 ]; then usage; fi
 ctrl_ip=${1}
 host_id=${2}
 admin_user=${3}
 admin_password=${4}
+
+# check for flags (optional parameters)
+if [ $# -eq 5 -a "${5}" == "k8s" ]; then
+  flag_k8s=1
+  sleep 120
+  exit 0
+fi
 
 ## set auth url
 auth_url=https://${ctrl_ip}/keystone/v3
@@ -38,15 +46,18 @@ token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?no
 
 echo "[ waiting for pf9-hostagent to complete convergence ]"
 echo "--> TIMEOUT = ${TIMEOUT} seconds"
+echo "--> flag_k8s=${flag_k8s}"
 start_time=`date +%s`
 elapsedTime=0
 while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
   role_status=$(curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
       https://${ctrl_ip}/resmgr/v1/hosts/${host_id} 2>/dev/null | python -m json.tool | grep role_status)
+  echo "--> pre.role_status= [${role_status}]"
   if [ -n "${role_status}" ]; then
     role_status=$(echo ${role_status} | cut -d : -f2 | sed -e 's/\"//g' | sed -e 's/,//g' | sed -e 's/ //g')
   fi
 
+  echo "--> parsed.role_status= [${role_status}]"
   if [ "${role_status}" == "ok" ]; then break; fi
 
   # update elapsed time

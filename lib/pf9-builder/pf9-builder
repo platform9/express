@@ -93,7 +93,7 @@ if [ ${flag_launch} -eq 1 ]; then
           "----------------------------------------" "--------------------" "--------------------"
 
   # process csv file
-  min_fields=6
+  min_fields=7
   while read line; do
     # validate csv
     if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
@@ -118,7 +118,7 @@ if [ ${flag_launch} -eq 1 ]; then
 
     # build instance
     printf "%-20s %-40s %-20s %-40s %-20s %-10s\n" \
-        "${lineArgs[0]}" "${image_name}" "${lineArgs[2]}" "${networks[0]}" "${lineArgs[5]}" "${lineArgs[4]}"
+        "${lineArgs[0]}" "${image_name}" "${lineArgs[2]}" "${networks[0]}" "${lineArgs[6]}" "${lineArgs[5]}"
 
     n=0
     for network in "${networks[@]}"; do
@@ -136,7 +136,7 @@ if [ ${flag_launch} -eq 1 ]; then
     case ${provider} in
     openstack)
       eval openstack server create --image '${image_name}' --flavor '${lineArgs[2]}' ${network_args} \
-           --key-name '${lineArgs[4]}' ${lineArgs[0]} > /dev/null 2>&1
+           --key-name '${lineArgs[5]}' ${lineArgs[0]} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR : instance failed to launch"
         continue
@@ -144,7 +144,7 @@ if [ ${flag_launch} -eq 1 ]; then
       ;;
     nova)
       eval nova boot --image '${image_name}' --flavor '${lineArgs[2]}' ${network_args} \
-           --key-name '${lineArgs[4]}' ${lineArgs[0]} > /dev/null 2>&1
+           --key-name '${lineArgs[5]}' ${lineArgs[0]} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
         echo "ERROR : instance failed to launch"
         continue
@@ -188,9 +188,9 @@ if [ ${flag_launch} -eq 1 ]; then
       continue
     else
       # check for storage mappings
-      if [ ${#lineArgs[@]} -eq 9 ]; then
+      if [ ${#lineArgs[@]} -eq 10 ]; then
         host_uuid=$(${os_cli} server show ${lineArgs[0]} | grep '| id' | cut -d \| -f 3 | awk -F ' ' '{print $1}')
-        IFS=","; volumes=(${lineArgs[8]})
+        IFS=","; volumes=(${lineArgs[9]})
         for colval in "${volumes[@]}"; do
           IFS=":"; volArgs=(${colval})
           echo "create/attach-volume: name=${volArgs[0]}, size=${volArgs[1]} --> ${lineArgs[0]} (uuid=${host_uuid})"
@@ -206,18 +206,15 @@ if [ ${flag_launch} -eq 1 ]; then
   done < ${csv_file}
 fi
 
-# validate at least one instance to pool
-if [ -z "${instances}" ]; then exit 1; fi
-
 # Initialize Inventory (from template)
 if [ -r ${inventory} ]; then rm -f ${inventory}; fi
 cat ${tpl_global} > ${inventory}
+cat ${tpl_hypervisors} >> ${inventory}
 
 # Configure Ansible Inventory
 echo -e "\n--- CONFIGURING ANSIBLE INVENTORY ---"
 if [ "${node_type}" == "openstack" ]; then
   echo "[hypervisors]"
-  cat ${tpl_hypervisors} >> ${inventory}
   instances=""
   while read line; do
     # validate csv
@@ -237,7 +234,7 @@ if [ "${node_type}" == "openstack" ]; then
     else
       # initialize inventory entry
       inv_entry="${lineArgs[0]} ansible_host=${ip} ansible_user=${image_user} cluster_ip=${ip} vm_console_ip=${ip}"
-      IFS=","; kvmArgs=(${lineArgs[6]})
+      IFS=","; kvmArgs=(${lineArgs[7]})
   
       # check for dhcp
       in_array dhcp "${kvmArgs[@]}"
@@ -276,7 +273,7 @@ if [ "${node_type}" == "openstack" ]; then
       continue
     else
       # check for glance
-      IFS=","; kvmArgs=(${lineArgs[6]})
+      IFS=","; kvmArgs=(${lineArgs[7]})
       in_array glance "${kvmArgs[@]}"
       if [ $? -eq 0 ]; then
         in_array glance-public "${kvmArgs[@]}"
@@ -305,10 +302,32 @@ if [ "${node_type}" == "openstack" ]; then
       continue
     else
       # check for cinder
-      IFS=","; kvmArgs=(${lineArgs[6]})
+      IFS=","; kvmArgs=(${lineArgs[7]})
       in_array cinder "${kvmArgs[@]}"
       if [ $? -eq 0 ]; then
-        inv_entry="${lineArgs[0]} cinder_ip=${ip} ${lineArgs[7]}"
+        inv_entry="${lineArgs[0]} cinder_ip=${ip} ${lineArgs[8]}"
+        echo "${inv_entry}" >> ${inventory}
+        echo "${inv_entry}"
+      fi
+    fi
+  done < ${csv_file}
+
+  echo "[ovsconfig]"
+  cat ${tpl_ovsconfig} >> ${inventory}
+  while read line; do
+    # validate csv
+    if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
+    IFS="|"; lineArgs=(${line})
+
+    # get assigned IP
+    ip=$(${os_cli} server show ${lineArgs[0]} | grep "| addresses" | cut -d \| -f 3 | awk -F ' ' '{print $1}' | cut -d = -f 2)
+    if [ -z "${ip}" ]; then
+      echo "--> ${lineArgs[0]} : <lookup-failed>"
+      continue
+    else
+      # check for ovsconfig
+      if [ -n "${lineArgs[4]}" ]; then
+        inv_entry="${lineArgs[0]} ${lineArgs[4]}"
         echo "${inv_entry}" >> ${inventory}
         echo "${inv_entry}"
       fi
@@ -337,20 +356,18 @@ if [ "${node_type}" == "kubernetes" ]; then
       continue
     else
       # initialize inventory entry
-      IFS=","; k8sArgs=(${lineArgs[6]})
+      IFS=","; k8sArgs=(${lineArgs[7]})
   
       # check for master role
       in_array master "${k8sArgs[@]}"
       if [ $? -eq 0 ]; then
         inv_entry="${lineArgs[0]} ansible_host=${ip} ansible_user=${image_user}"
+        if [ ${#lineArgs[@]} -eq 9 ]; then
+          inv_entry="${inv_entry} cluster_uuid=${lineArgs[8]}"
+        fi
+        echo "${inv_entry}" >> ${inventory}
+        echo "${inv_entry}"
       fi
-
-      if [ ${#lineArgs[@]} -eq 8 ]; then
-        inv_entry="${inv_entry} ${lineArgs[7]}"
-      fi
-
-      echo "${inv_entry}" >> ${inventory}
-      echo "${inv_entry}"
     fi
   
     # update instances
@@ -379,18 +396,19 @@ if [ "${node_type}" == "kubernetes" ]; then
       echo "--> ${lineArgs[0]} : <lookup-failed>"
       continue
     else
+      # initialize inventory entry
+      IFS=","; k8sArgs=(${lineArgs[7]})
+
       # check for master role
       in_array worker "${k8sArgs[@]}"
       if [ $? -eq 0 ]; then
         inv_entry="${lineArgs[0]} ansible_host=${ip} ansible_user=${image_user}"
+        if [ ${#lineArgs[@]} -eq 9 ]; then
+          inv_entry="${inv_entry} cluster_uuid=${lineArgs[8]}"
+        fi
+        echo "${inv_entry}" >> ${inventory}
+        echo "${inv_entry}"
       fi
-
-      if [ ${#lineArgs[@]} -eq 8 ]; then
-        inv_entry="${inv_entry} ${lineArgs[7]}"
-      fi
-
-      echo "${inv_entry}" >> ${inventory}
-      echo "${inv_entry}"
     fi
   done < ${csv_file}
 fi

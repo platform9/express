@@ -1,8 +1,8 @@
 ## openstack
 # <hostname>|<image>:<username>|<flavor>|<network[,network,...]>|<key>|<security-group>|<roles>[|<pv-list>|<volume[,volume]>]
-kvm01|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|cm-master|default|glance,glance-public
-kvm02|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|cm-master|default|glance
-kvm03|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|cm-master|default|dhcp,snat
-kvm04|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|cm-master|default|dhcp,snat
-kvm05|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|cm-master|default|cinder|pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]|kvm05-vol01:50,kvm05-vol02:50,kvm05-vol03:50,kvm05-vol04:50
-kvm06|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|cm-master|default|cinder|pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]|kvm06-vol01:50,kvm06-vol02:50,kvm06-vol03:50,kvm06-vol04:50
+kvm01|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780||cm-master|default|glance,glance-public
+kvm02|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780||cm-master|default|glance
+kvm03|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780||cm-master|default|dhcp,snat
+kvm04|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780||cm-master|default|dhcp,snat
+kvm05|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780||cm-master|default|cinder|pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]|kvm05-vol01:50,kvm05-vol02:50,kvm05-vol03:50,kvm05-vol04:50
+kvm06|ubuntu-16.04-cloudimg-amd64-20180427:ubuntu|m1.medium|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780||cm-master|default|cinder|pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]|kvm06-vol01:50,kvm06-vol02:50,kvm06-vol03:50,kvm06-vol04:50

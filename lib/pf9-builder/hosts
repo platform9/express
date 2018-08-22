@@ -9,19 +9,11 @@ nested_virt=True
 kernel_same_page_merging=False
 
 [hypervisors]
-kvm01 ansible_host=172.16.7.229 ansible_user=centos cluster_ip=172.16.7.229 vm_console_ip=172.16.7.229
-kvm02 ansible_host=172.16.7.231 ansible_user=centos cluster_ip=172.16.7.231 vm_console_ip=172.16.7.231
-kvm03 ansible_host=172.16.7.51 ansible_user=centos cluster_ip=172.16.7.51 vm_console_ip=172.16.7.51 dhcp=on snat=on
-kvm04 ansible_host=172.16.7.239 ansible_user=centos cluster_ip=172.16.7.239 vm_console_ip=172.16.7.239 dhcp=on snat=on
-kvm05 ansible_host=172.16.7.214 ansible_user=centos cluster_ip=172.16.7.214 vm_console_ip=172.16.7.214
-kvm06 ansible_host=172.16.7.17 ansible_user=centos cluster_ip=172.16.7.17 vm_console_ip=172.16.7.17
-kvm07 ansible_host=172.16.7.18 ansible_user=centos cluster_ip=172.16.7.18 vm_console_ip=172.16.7.18
-kvm08 ansible_host=172.16.7.56 ansible_user=centos cluster_ip=172.16.7.56 vm_console_ip=172.16.7.56
 
-[glance]
-kvm01 glance_public_endpoint=True
-kvm02 glance_public_endpoint=False
+[k8s-master]
+k8s01 ansible_host=172.16.7.126 ansible_user=centos cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
 
-[cinder]
-kvm07 cinder_ip=172.16.7.18 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
-kvm08 cinder_ip=172.16.7.56 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
+[k8s-worker]
+k8s02 ansible_host=172.16.7.61 ansible_user=centos cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
+k8s03 ansible_host=172.16.7.174 ansible_user=centos cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
+k8s04 ansible_host=172.16.7.181 ansible_user=centos cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
