@@ -14,6 +14,7 @@ tpl_k8s_master=${basedir}/template/hosts-k8s-master.tpl
 tpl_k8s_worker=${basedir}/template/hosts-k8s-worker.tpl
 host_list=""
 flag_launch=1
+k8s_delay_time=120
 
 usage() {
   echo "Usage: `basename $0` [--nova] [-s] <csv-file> <openstack-rc-file>"
@@ -391,6 +392,7 @@ if [ "${node_type}" == "kubernetes" ]; then
 
   # Run PF9-Express
   echo -e "\n--- RUNNING PF9-EXPRESS ---"
+  echo "pausing for ${k8s_delay_time} seconds"
   IFS=" "
   instance_list=$(echo ${instances_master} | sed -e 's/ /,/g')
   echo pf9-express -b -v ${inventory} -a ${instance_list}
@@ -439,6 +441,7 @@ if [ "${node_type}" == "kubernetes" ]; then
 
   # Run PF9-Express
   echo -e "\n--- RUNNING PF9-EXPRESS ---"
+  echo "pausing for ${k8s_delay_time} seconds"
   IFS=" "
   instance_list=$(echo ${instances_worker} | sed -e 's/ /,/g')
   echo pf9-express -b -v ${inventory} -a ${instance_list}

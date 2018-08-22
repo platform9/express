@@ -11,9 +11,9 @@ kernel_same_page_merging=False
 [hypervisors]
 
 [k8s-master]
-k8s01 ansible_host=172.16.7.184 ansible_user=ubuntu cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
+k8s01 ansible_host=172.16.7.29 ansible_user=ubuntu cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
 
 [k8s-worker]
-k8s02 ansible_host=172.16.7.191 ansible_user=ubuntu cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
-k8s03 ansible_host=172.16.7.26 ansible_user=ubuntu cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
-k8s04 ansible_host=172.16.7.186 ansible_user=ubuntu cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
+k8s02 ansible_host=172.16.7.66 ansible_user=ubuntu cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
+k8s03 ansible_host=172.16.7.235 ansible_user=ubuntu cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
+k8s04 ansible_host=172.16.7.118 ansible_user=ubuntu cluster_uuid=2ace9b11-96d3-422d-b84b-0778a2f845cf
