@@ -256,5 +256,5 @@ For example, http://<ip_address>/api/v1/
 
 ## License
 
-Commerical
+Apache 2.0
 
