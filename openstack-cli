@@ -35,7 +35,12 @@ while [ $# -gt 0 ]; do
     shift 2
     ;;
   *)
-    os_cmd=${1}
+    if [ -z "${os_cmd}" ]; then
+      os_cmd=${1}
+    else
+      os_cmd="${os_cmd} ${1}"
+    fi
+    shift
     ;;
   esac
 done
