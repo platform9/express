@@ -5,6 +5,8 @@ group_vars/all.yml
 lib/INSTALL.log
 inventory/hosts
 log/*.log
+roles/pre-hook
+roles/post-hook
 *.pyc
 *.swp
 *.retry
