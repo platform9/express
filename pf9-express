@@ -44,11 +44,7 @@ usage() {
   echo "-a|--autoRegister          : auto-register host with control plane"
   echo "-i|--installPrereqs        : install pre-requisites and exit"
   echo "-s|--setup                 : run setup and exit"
-  echo "-u|--ui                    : install web UI (Ansible AWX)"
   echo "-o|--oscli                 : install OpenStack CLI"
-  echo "-r|--restartAwx            : restart AWX"
-  echo "-d|--dbinit                : initialize AWX database"
-  echo "-x|--dbExport <exportFile> : use <exportFile> for dbinit"
   echo "-c|--config <configFile>   : use custom configuration file"
   echo "-e|--extra-vars <string>   : ansible extra-vars <name=val,...>"
   echo "-b|--bypassPrereqs         : bypass pre-requisites"
@@ -359,28 +355,14 @@ while [ $# -gt 0 ]; do
   -i|--installPrereqs)
     flag_prereqs=1
     ;;
-  -u|--ui)
-    flag_ui=1
-    ;;
   -o|--oscli)
     flag_oscli=1
-    ;;
-  -d|--dbinit)
-    flag_dbinit=1
-    ;;
-  -r|--restartAwx)
-    flag_awx_restart=1
     ;;
   -a|--autoRegister)
     flag_autoregister=1
     ;;
   -b|--bypassPrereqs)
     flag_skip_prereqs=1
-    ;;
-  -x|--dbExport)
-    if [ $# -lt 2 ]; then usage; fi
-    awx_db_export=${2}
-    shift
     ;;
   -c|--config)
     if [ $# -lt 2 ]; then usage; fi
