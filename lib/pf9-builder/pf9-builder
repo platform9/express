@@ -109,6 +109,14 @@ if [ ${flag_launch} -eq 1 ]; then
     if [ $? -eq 0 ]; then
       printf "%-20s %-40s %-20s %-40s %-20s %-10s\n" \
              "${lineArgs[0]}" "already exists - skipping" "" "" "" ""
+
+      # update instances
+      if [ -z "${instances}" ]; then
+        instances="${lineArgs[0]}"
+      else
+        instances="${instances} ${lineArgs[0]}"
+      fi
+
       continue
     fi
 
@@ -338,6 +346,20 @@ if [ "${node_type}" == "openstack" ]; then
     fi
   done < ${csv_file}
 
+  # Wait for SSH
+  echo -e "\n--- VALIDATING SSH CONNECTIVITY  ---"
+  launch_status=0
+  while [ ${launch_status} -ne 1 ]; do
+    launch_status=1
+    IFS=" "
+    for instance in ${instances}; do
+      echo -n "."
+      status=$(ansible -i ${inventory} -m ping ${instance})
+      if [ $? -ne 0 ]; then launch_status=0; fi
+    done
+  done
+  echo
+
   # Run PF9-Express
   echo -e "\n--- RUNNING PF9-EXPRESS ---"
   IFS=" "
@@ -390,6 +412,20 @@ if [ "${node_type}" == "kubernetes" ]; then
     fi
   done < ${csv_file}
 
+  # Wait for SSH
+  echo -e "\n--- VALIDATING SSH CONNECTIVITY  ---"
+  launch_status=0
+  while [ ${launch_status} -ne 1 ]; do
+    launch_status=1
+    IFS=" "
+    for instance in ${instances_master}; do
+      echo -n "."
+      status=$(ansible -i ${inventory} -m ping ${instance})
+      if [ $? -ne 0 ]; then launch_status=0; fi
+    done
+  done
+  echo
+
   # Run PF9-Express
   echo -e "\n--- RUNNING PF9-EXPRESS ---"
   echo "pausing for ${k8s_delay_time} seconds"
@@ -438,6 +474,20 @@ if [ "${node_type}" == "kubernetes" ]; then
       fi
     fi
   done < ${csv_file}
+
+  # Wait for SSH
+  echo -e "\n--- VALIDATING SSH CONNECTIVITY  ---"
+  launch_status=0
+  while [ ${launch_status} -ne 1 ]; do
+    launch_status=1
+    IFS=" "
+    for instance in ${instances_worker}; do
+      echo -n "."
+      status=$(ansible -i ${inventory} -m ping ${instance})
+      if [ $? -ne 0 ]; then launch_status=0; fi
+    done
+  done
+  echo
 
   # Run PF9-Express
   echo -e "\n--- RUNNING PF9-EXPRESS ---"
