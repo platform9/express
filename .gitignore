@@ -2,6 +2,8 @@ pf9-express.conf
 pf9-openstack.rc
 platform9-install-redhat.sh
 group_vars/all.yml
+lib/pf9-builder/openstack.rc
+lib/pf9-builder/hosts
 lib/INSTALL.log
 inventory/hosts
 log/*.log

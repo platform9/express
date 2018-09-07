@@ -52,6 +52,7 @@ usage() {
   echo "-c|--config <configFile>   : use custom configuration file"
   echo "-e|--extra-vars <string>   : ansible extra-vars <name=val,...>"
   echo "-b|--bypassPrereqs         : bypass pre-requisites"
+  echo "-v|--inventory <file>      : use alternate inventory file for Ansible"
   echo -e "-h|--help                  : display this message\n"
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
     :
@@ -231,6 +232,10 @@ install_oscli() {
     pip install --upgrade --requirement \
         https://raw.githubusercontent.com/platform9/support-locker/master/openstack-clients/requirements.txt \
         --constraint http://raw.githubusercontent.com/openstack/requirements/stable/${oscli_version}/upper-constraints.txt > ${log} 2>&1
+
+    # tracking alternate method of installation
+    # echo "--> Installing OpenStack CLI"
+    # pip install python-openstackclient> ${log} 2>&1
   fi
 
   # install openstack cli packages (Ubuntu)
@@ -380,6 +385,11 @@ while [ $# -gt 0 ]; do
   -c|--config)
     if [ $# -lt 2 ]; then usage; fi
     pf9_custom_configFile=${2}
+    shift
+    ;;
+  -v|--inventory)
+    if [ $# -lt 2 ]; then usage; fi
+    inventory=${2}
     shift
     ;;
   -e|--extra-vars)
