@@ -49,7 +49,7 @@
     neutron_ovs_net_type: "{{ net_list_filtered | join(',') }}"
 
 - set_fact:
-    tunnel_ip: "{{vm_console_ip}}"
+    tunnel_ip: "{{ansible_host}}"
   when: tunnel_ip is undefined
 
 - set_fact:
