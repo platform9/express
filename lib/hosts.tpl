@@ -19,7 +19,7 @@ manage_network=True
 hv01 ansible_host=10.0.0.11 ansible_user=centos vm_console_ip=10.0.0.11 ha_cluster_ip=10.0.1.11 tunnel_ip=10.0.2.11 dhcp=on snat=on
 hv02 ansible_host=10.0.0.12 ansible_user=centos vm_console_ip=10.0.0.12 tunnel_ip=10.0.2.12 dhcp=on snat=on
 hv03 ansible_host=10.0.0.13 ansible_user=ubuntu vm_console_ip=10.0.0.13 tunnel_ip=10.0.2.13
-hv04 ansible_host=10.0.0.14 ansible_user=ubuntu vm_console_ip=10.0.0.14
+hv04 ansible_host=10.0.0.14 ansible_user=ubuntu
 
 ## global variables defined in group_vars/glance.yml
 [glance]
