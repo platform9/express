@@ -3,7 +3,6 @@
     state: present
     name: "{{ item }}"
   with_items: "{{ neutron_kernel_modules }}"
-  ignore_errors: true
 
 - name: Persist modules on boot
   lineinfile:
