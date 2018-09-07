@@ -52,9 +52,6 @@
     tunnel_ip: "{{ansible_host}}"
   when: tunnel_ip is undefined
 
-- set_fact:
-    neutron_tunnel_types: ""
-
 - name: set vxlan_status
   set_fact:
     neutron_tunnel_types: "vxlan"
@@ -74,7 +71,9 @@
 - debug: msg="neutron_dns_domain = {{neutron_dns_domain}}"
 - debug: msg="neutron_dnsmasq_dns_servers = {{neutron_dnsmasq_dns_servers}}"
 - debug: msg="neutron_ovs_net_type = {{neutron_ovs_net_type}}"
-- debug: msg="neutron_tunnel_types = {{neutron_tunnel_types}}"
+- debug: 
+    msg: "neutron_tunnel_types = {{neutron_tunnel_types}}"
+  when: neutron_tunnel_types is defined
 
 ###########################################################################################
 ## validate free space in filesystem that the Cinder temp directory lives on
