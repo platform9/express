@@ -62,7 +62,7 @@
     neutron_ovs_enable_tunneling: "False"
 - set_fact:
     neutron_ovs_enable_tunneling: "True"
-  when: neutron_tunnel_types == "vxlan"
+  when: neutron_tunnel_types == "vxlan" and neutron_tunnel_types is defined
 
 - fail: msg="ALERT - Distributed Virtual Routing is disabled. You must enable it or use the '-b' flag to bypass this check"
   when: skip_prereq == "0" and not dvr_status == True
