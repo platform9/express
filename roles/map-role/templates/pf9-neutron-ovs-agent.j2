@@ -5,5 +5,6 @@
     "enable_tunneling": "{{neutron_ovs_enable_tunneling}}",
 {% if neutron_tunnel_types is defined %}    "local_ip": "{{tunnel_ip}}",{% endif %}
     "net_type": "{{neutron_ovs_net_type}}"{% if neutron_tunnel_types is defined %},
-    "tunnel_types": "{{neutron_tunnel_types}}"{% endif %}
+    "tunnel_types": "{{neutron_tunnel_types}}"
+{% endif %}
 }
