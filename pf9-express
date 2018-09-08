@@ -41,7 +41,7 @@ awx_db_export=awx-db-backup-v0.2.sql
 usage() {
   echo "Usage: $0 [Args] <target>"
   echo -e "\nArgs (Optional):\n"
-  echo "-a|--autoRegister          : auto-register host with control plane"
+  echo "-a|--autoRegister          : auto-register host with management plane"
   echo "-i|--installPrereqs        : install pre-requisites and exit"
   echo "-s|--setup                 : run setup and exit"
   echo "-o|--oscli                 : install OpenStack CLI"

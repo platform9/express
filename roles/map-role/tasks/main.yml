@@ -13,7 +13,7 @@
 - block:
   # glance_endpoint_address
   - set_fact:
-      glance_ip: "{{vm_console_ip}}"
+      glance_ip: "{{ansible_host}}"
     when: glance_ip is undefined
   - set_fact:
       glance_endpoint_address: "{{glance_ip}}"
@@ -42,6 +42,9 @@
 
   # neutron_novncproxy_base_url
   - set_fact:
+      vm_console_ip: "{{ansible_host}}"
+    when: vm_console_ip is undefined
+  - set_fact:
       neutron_novncproxy_base_url: "http://{{vm_console_ip}}:6080/vnc_auto.html"
     when: neutron_novncproxy_base_url is undefined
 
@@ -56,6 +59,9 @@
 ################################################################################
 - block:
   # cinder_iscsi_ip_address
+  - set_fact:
+      cinder_ip: "{{ansible_host}}"
+    when: cinder_ip is undefined
   - set_fact:
       cinder_iscsi_ip_address: "{{cinder_ip}}"
 
