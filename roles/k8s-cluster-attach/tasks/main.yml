@@ -22,21 +22,24 @@
 # Attach to Cluster
 ################################################################################
 - debug: msg="TOKEN = {{api_token.stdout.strip()}}"
-- debug: msg="URI = https://{{ctrl_ip}}/qbert/v1/clusters/{{cluster_uuid}}/attach"
-- debug: msg="BODY = {{host_id.stdout.strip()}}"
 
-- name: "Attaching to Cluster : UUID = {{cluster_uuid}}"
-  uri:
-    url: "https://{{ctrl_ip}}/qbert/v1/clusters/{{cluster_uuid}}/attach"
-    method: POST
-    body: "['{{host_id.stdout.strip()}}']"
-    body_format: json
-    validate_certs: False
-    headers:
-      Content-Type: "application/json"
-      X-Auth-Token: "{{api_token.stdout.strip()}}"
-  register: uri_result
-  delegate_to: localhost
-  ignore_errors: true
+- block:
+  - debug: msg="URI = https://{{ctrl_ip}}/qbert/v1/clusters/{{cluster_uuid}}/attach"
+  - debug: msg="BODY = {{host_id.stdout.strip()}}"
 
-- debug: var=uri_result
+  - name: "Attaching to Cluster : UUID = {{cluster_uuid}}"
+    uri:
+      url: "https://{{ctrl_ip}}/qbert/v1/clusters/{{cluster_uuid}}/attach"
+      method: POST
+      body: "['{{host_id.stdout.strip()}}']"
+      body_format: json
+      validate_certs: False
+      headers:
+        Content-Type: "application/json"
+        X-Auth-Token: "{{api_token.stdout.strip()}}"
+    register: uri_result
+    delegate_to: localhost
+    ignore_errors: true
+
+  - debug: var=uri_result
+  when: cluster_uuid is defined
