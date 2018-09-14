@@ -19,7 +19,7 @@ apt-get update && apt-get install git # Ubuntu
 3. Clone the Platform9 Express repository. 
 
 ```
-git clone https://github.com/platform9/pf9-express.git /opt/pf9-express
+git clone https://github.com/platform9/express.git /opt/pf9-express
 ```
 NOTE: In this example, the installation directory is /opt/pf9-express, but any directory can be used.
 
