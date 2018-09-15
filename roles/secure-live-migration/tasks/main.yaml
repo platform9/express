@@ -1,0 +1,5 @@
+---
+- include: packages.yaml
+- include: configure.yaml
+- include: services.yaml
+- include: passwordless-ssh.yaml

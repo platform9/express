@@ -4,12 +4,16 @@
     policy: targeted
     state: permissive
 
+- name: Check if firewalld is installed
+  shell: "`which rpm` -qa | grep firewalld > /dev/null 2>&1; if [ $? -eq 0 ]; then echo 'installed'; fi"
+  register: firewalld_install_status
+
 - name: Disable firewalld
   service:
     state: stopped
     name: firewalld
     enabled: no
-  ignore_errors: True
+  when: firewalld_install_status.stdout is defined and firewalld_install_status.stdout.strip() == "installed"
 
 - name: Installing iptables-services
   yum:
@@ -33,12 +37,16 @@
   with_items: "{{ ifcfg_files.files|map(attribute='path')|list }}"
   when: ifcfg_files is defined
 
+- name: Check if NetworkManager is installed
+  shell: "`which rpm` -qa | grep NetworkManager > /dev/null 2>&1; if [ $? -eq 0 ]; then echo 'installed'; fi"
+  register: NetworkManager_install_status
+
 - name: Disable NetworkManager
   service:
     state: stopped
     name: NetworkManager
     enabled: no
-  ignore_errors: True
+  when: NetworkManager_install_status.stdout_lines is defined and NetworkManager_install_status.stdout_lines == "installed"
 
 - name: Add Platform9 Yum repository
   yum:

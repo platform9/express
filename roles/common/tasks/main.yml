@@ -14,18 +14,20 @@
   when: hw_virt|failed and
         inventory_hostname in groups.hypervisors
 
-- name: Set system hostname
-  hostname:
-    name: "{{ inventory_hostname }}"
-  register: hostname_result
+- block:
+  - name: Set system hostname
+    hostname:
+      name: "{{ inventory_hostname }}"
+    register: hostname_result
 
-- name: Update /etc/hosts to reflect hostname change
-  lineinfile:
-    state: present
-    dest: /etc/hosts
-    regexp: "^(127.0.0.1).*$"
-    line: "127.0.0.1\t{{ inventory_hostname_short }}\t{{ inventory_hostname }}\tlocalhost"
-  register: etc_hosts_result
+  - name: Update /etc/hosts to reflect hostname change
+    lineinfile:
+      state: present
+      dest: /etc/hosts
+      regexp: "^(127.0.0.1).*$"
+      line: "127.0.0.1\t{{ inventory_hostname_short }}\t{{ inventory_hostname }}\tlocalhost"
+    register: etc_hosts_result
+  when: manage_hostname == True
 
 - name: Set DNS resolvers
   lineinfile:
@@ -36,5 +38,57 @@
   with_items: "{{ dns_resolvers }}"
   when: manage_resolvers == True
 
+- name: Check if pf9 user already exists
+  shell: "grep pf9 /etc/passwd > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-exist'; else echo 'exists'; fi"
+  register: pf9_account_status
+
+# pf9 user does not exist
+- block:
+  - name: create /opt/pf9 directory
+    file:
+      path: /opt/pf9
+      state: directory
+      mode: 0755
+
+  - block:
+    - name: Check if custom uid is already in-use
+      shell: "awk -F : '{print $3}' /etc/passwd | grep {{pf9_uid}}; if [ $? -ne 0 ]; then echo 'not-exist'; else echo 'exists'; fi"
+      register: pf9_uid_status
+
+    - fail: msg="Custom UID {{pf9_uid}} already in-use"
+      when: pf9_uid_status.stdout.strip() == "exists"
+    when: pf9_uid is defined
+
+  - block:
+    - name: Check if custom gid is already in-use
+      shell: "awk -F : '{print $3}' /etc/group | grep {{pf9_gid}}; if [ $? -ne 0 ]; then echo 'not-exist'; else echo 'exists'; fi"
+      register: pf9_gid_status
+
+    - fail: msg="Custom GID {{pf9_gid}} already in-use"
+      when: pf9_gid_status.stdout.strip() == "exists"
+    when: pf9_gid is defined
+
+  # create Platform9 service account
+  - name: create Platform9 service group (pf9group)
+    group:
+      name: pf9group
+      gid: "{{pf9_gid}}"
+      state: present
+    when: pf9_gid is defined
+
+  - name: create Platform9 service account (pf9)
+    user:
+      name: pf9
+      shell: /bin/bash
+      uid: "{{pf9_uid}}"
+      home: /opt/pf9/home
+      create_home: True
+      groups: pf9group
+    when: pf9_uid is defined
+  when: pf9_account_status is defined and pf9_account_status.stdout.strip() == "not-exist"
+
 - include: redhat.yml
   when: ansible_os_family == "RedHat"
+
+- include: ubuntu.yml
+  when: ansible_distribution == "Ubuntu"

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+method_usage() {
+  echo "get-clusterNode"
+  exit 1
+}
+
+# process paramters
+if [ $# -eq 1 -a "${1}" == "-h" ]; then
+  method_usage
+fi

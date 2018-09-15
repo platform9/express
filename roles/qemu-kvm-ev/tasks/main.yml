@@ -1,0 +1,18 @@
+---
+- name: ensure contentdir is configured in yum vars
+  copy:
+    dest: /etc/yum/vars/contentdir
+    content: 'centos'
+  when: ansible_os_family == "RedHat"
+
+- name: install the centos-release-qemu-ev repo
+  yum:
+    name: centos-release-qemu-ev
+    state: latest
+  when: ansible_os_family == "RedHat"
+
+- name: install the latest version of qemu-kvm-ev
+  yum:
+    name: qemu-kvm-ev
+    state: latest
+  when: ansible_os_family == "RedHat"

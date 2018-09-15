@@ -1,0 +1,92 @@
+---
+
+- debug: msg="running OpenStack pre_flight_checks():"
+
+###########################################################################################
+## Verify DVR is on, step 1 in the UI is complete, import vars, and test credentials
+###########################################################################################
+
+- name: read api token
+  shell: "cat /tmp/keystone-token.txt"
+  register: api_token
+
+- name: validate DU global network settings have been configured
+  uri:
+    url: "https://{{ctrl_ip}}/resmgr/v1/services/neutron-server"
+    method: GET
+    body_format: json
+    validate_certs: False
+    headers:
+      Content-Type: "application/json"
+      X-Auth-Token: "{{api_token.stdout.strip()}}"
+  register: du_result
+  delegate_to: localhost
+
+- set_fact:
+    dvr_status: "{{du_result.json.neutron.DEFAULT.router_distributed}}"
+
+- set_fact:
+    neutron_dns_domain: "{{du_result.json.neutron.DEFAULT.dns_domain}}"
+
+- set_fact:
+    neutron_dnsmasq_dns_servers: "{{du_result.json.extra.dnsmasq_dns_servers}}"
+
+- set_fact:
+    du_neutron_type_drivers: "{{du_result.json.ml2.ml2.type_drivers}}"
+
+- set_fact:
+    net_list: "{{du_neutron_type_drivers.split(',')}}"
+- set_fact:
+    net_list_filtered: []
+
+- name: build list of net types
+  set_fact:
+    net_list_filtered: '{{net_list_filtered + [item]}}'
+  when: item != "flat"
+  with_items: '{{net_list|list}}'
+
+- set_fact:
+    neutron_ovs_net_type: "{{ net_list_filtered | join(',') }}"
+
+- set_fact:
+    tunnel_ip: "{{ansible_host}}"
+  when: tunnel_ip is undefined
+
+- name: set vxlan_status
+  set_fact:
+    neutron_tunnel_types: "vxlan"
+  when: item == "vxlan"
+  with_items: '{{net_list|list}}'
+
+- set_fact:
+    neutron_ovs_enable_tunneling: "False"
+- set_fact:
+    neutron_ovs_enable_tunneling: "True"
+  when: neutron_tunnel_types == "vxlan" and neutron_tunnel_types is defined
+
+- fail: msg="ALERT - Distributed Virtual Routing is disabled. You must enable it or use the '-b' flag to bypass this check"
+  when: skip_prereq == "0" and not dvr_status == True
+
+- debug: msg="dvr_status = {{dvr_status}}"
+- debug: msg="neutron_dns_domain = {{neutron_dns_domain}}"
+- debug: msg="neutron_dnsmasq_dns_servers = {{neutron_dnsmasq_dns_servers}}"
+- debug: msg="neutron_ovs_net_type = {{neutron_ovs_net_type}}"
+- debug: 
+    msg: "neutron_tunnel_types = {{neutron_tunnel_types}}"
+  when: neutron_tunnel_types is defined
+
+###########################################################################################
+## validate free space in filesystem that the Cinder temp directory lives on
+###########################################################################################
+
+- block:
+  - debug: msg="Validate minimum free space for cinder_image_conversion_cache (at least {{cinder_image_cache_min_free_space}} KBytes)"
+  - name: get free space for cinder_image_conversion_cache
+    shell: "df -k {{cinder_image_conversion_cache}} | tail -1 | awk '{print $2}'"
+    register: cinder_cache_free_space
+  - debug: var=cinder_cache_free_space
+  
+  - fail:
+      msg="Insufficient free space in {{cinder_image_conversion_cache}} (mimimum required = {{cinder_image_cache_min_free_space}})"
+    when: cinder_cache_free_space.stdout.strip() < cinder_image_cache_min_free_space
+  when: inventory_hostname in groups['cinder']

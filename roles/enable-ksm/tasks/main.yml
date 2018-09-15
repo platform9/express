@@ -1,0 +1,27 @@
+---
+- block:
+  - name: Enable and start Kernel Same-Page Merging (RedHat)
+    service:
+      name: ksm
+      state: restarted
+      enabled: yes
+
+  - name: Enable and start Kernel Same-Page Merging Tuning
+    service:
+      name: ksmtuned
+      state: restarted
+      enabled: yes
+  when: ansible_os_family == "RedHat"
+
+- block:
+  - name: Install Kernel Same-Page Merging (Ubuntu)
+    apt:
+      name: ksmtuned
+      state: latest
+
+  - name: Enable and start Kernel Same-Page Merging Tuning
+    service:
+      name: ksmtuned
+      state: restarted
+      enabled: yes
+  when: ansible_distribution == "Ubuntu"

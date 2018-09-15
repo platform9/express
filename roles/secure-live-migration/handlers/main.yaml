@@ -1,0 +1,10 @@
+---
+- name: restart libvirtd
+  service:
+    name: "{{ libvirtd_service_name }}"
+    state: restarted
+
+- name: restart pf9-ostackhost
+  service:
+    name: pf9-ostackhost
+    state: restarted

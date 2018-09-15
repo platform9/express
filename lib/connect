@@ -1,0 +1,45 @@
+#!/bin/bash
+
+basedir=$(dirname $0)
+inventory=${basedir}/../inventory/hosts
+remote_cmd=""
+
+usage() {
+  echo "Usage: `basename $0` <ansible-hostname> [-c <command>]"
+  exit 1
+}
+
+assert() {
+  if [ $# -eq 1 ]; then echo -e "ASSERT : ${1}"; fi
+  exit 1
+}
+
+# validate command-line
+if [ $# -lt 1 ]; then usage; fi
+hostname=${1}
+
+# process optional args
+shift 1
+while [ $# -gt 0 ]; do
+  case ${1} in
+  -c)
+    if [ $# -lt 2 ]; then usage; fi
+    remote_cmd=${2}
+    shift 2
+    ;;
+  *)
+    usage
+    ;;
+  esac
+done
+
+# lookup ip
+ip=$(grep "^${hostname} ansible_host" ${inventory} | awk -F ' ' '{print $2}' | cut -d = -f2)
+if [ -z "${ip}" ]; then assert "failed to lookup IP"; fi
+
+# lookup hostname
+username=$(grep "${hostname} ansible_host" ${inventory} | awk -F ' ' '{print $3}' | cut -d = -f2)
+if [ -z "${username}" ]; then assert "failed to lookup username"; fi
+
+# ssh to host
+ssh ${username}@${ip} "${remote_cmd}"

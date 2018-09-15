@@ -12,11 +12,17 @@
   with_items: "{{ neutron_kernel_modules }}"
   when: ansible_os_family == "Debian"
 
-- name: Persist modules on boot
-  lineinfile:
-    state: present
-    dest: /etc/modules-load.d/neutron.conf
-    create: yes
-    line: "{{ item }}"
-  with_items: "{{ neutron_kernel_modules }}"
+- block:
+  - name: Persist modules on boot
+    lineinfile:
+      state: present
+      dest: /etc/modules-load.d/pf9.conf
+      create: yes
+      line: "{{ item }}"
+    with_items: "{{ neutron_kernel_modules }}"
+
+  - name: Remove old modules conf file
+    file:
+      state: absent
+      path: /etc/modules-load.d/neutron.conf
   when: ansible_os_family == "RedHat"

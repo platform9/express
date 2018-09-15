@@ -1,0 +1,148 @@
+---
+################################################################################
+# Dynamically-Assigned Role Values (static values are initialized in inventory)
+################################################################################
+- debug: msg="DEPLOYING ROLE - {{rolename}}"
+  when: autoreg == "on"
+- debug: msg="SKIPPING ROLE - {{rolename}}"
+  when: autoreg == "off"
+
+################################################################################
+# Neutron Settings
+################################################################################
+- block:
+  # glance_endpoint_address
+  - set_fact:
+      glance_ip: "{{ansible_host}}"
+    when: glance_ip is undefined
+  - set_fact:
+      glance_endpoint_address: "{{glance_ip}}"
+
+  # neutron_l3_agent_mode
+  - set_fact:
+      neutron_l3_agent_mode: "dvr_snat"
+    when: dvr_status == True and snat == "on"
+  - set_fact:
+      neutron_l3_agent_mode: "dvr"
+    when: dvr_status == True and snat == "off"
+  - set_fact:
+      neutron_l3_agent_mode: "dvr"
+    when: neutron_l3_agent_mode is undefined
+
+  # neutron_ovs_enable_distributed_routing
+  - set_fact:
+      neutron_ovs_enable_distributed_routing: "True"
+    when: dvr_status == True
+  - set_fact:
+      neutron_ovs_enable_distributed_routing: "False"
+    when: dvr_status == False
+  - set_fact:
+      neutron_ovs_enable_distributed_routing: "True"
+    when: dvr_status is undefined
+
+  # neutron_novncproxy_base_url
+  - set_fact:
+      vm_console_ip: "{{ansible_host}}"
+    when: vm_console_ip is undefined
+  - set_fact:
+      neutron_novncproxy_base_url: "http://{{vm_console_ip}}:6080/vnc_auto.html"
+    when: neutron_novncproxy_base_url is undefined
+
+  # neutron_ha_cluster_ip
+  - set_fact:
+      cluster_ip: ""
+    when: ha_cluster_ip is undefined
+  when: rolename != "pf9-kube" and rolename != "pf9-cindervolume-lvm" and rolename != "pf9-cindervolume-base"
+
+################################################################################
+# Cinder Settings
+################################################################################
+- block:
+  # cinder_iscsi_ip_address
+  - set_fact:
+      cinder_ip: "{{ansible_host}}"
+    when: cinder_ip is undefined
+  - set_fact:
+      cinder_iscsi_ip_address: "{{cinder_ip}}"
+
+  # cinder_volume_backend_name
+  - set_fact:
+      cinder_volume_backend_name: "{{cinder_backend_name}}"
+  when: rolename == "pf9-cindervolume-lvm"
+
+################################################################################
+# Configure JSON Metadata
+################################################################################
+- name: validate pf9/host_id.conf
+  stat:
+    path: /etc/pf9/host_id.conf
+  register: stat_hostid
+
+- fail: msg="failed to open /etc/pf9/host_id.conf"
+  when: stat_hostid.stat.exists == false
+
+- name: get host_id
+  shell: cat /etc/pf9/host_id.conf | grep ^host_id | cut -d = -f2 | cut -d ' ' -f2
+  register: host_id
+
+- set_fact:
+    role_metadata: "/tmp/{{inventory_hostname}}.{{rolename}}.json"
+
+# Build template JSON
+- name: prepare role json data
+  template:
+    src: "{{rolename}}.j2"
+    dest: "{{role_metadata}}"
+
+##############################################################################
+# Enforce required role parameters
+##############################################################################
+# pf9-cindervolume-lvm
+- fail: msg="role 'pf9-cindervolume-lvm' is missing required parameter - pvs"
+  when: rolename == "pf9-cindervolume-lvm" and pvs is undefined
+
+##############################################################################
+# Cinder: perform SCSI discovery and LVM configuration
+##############################################################################
+- block:
+  - name: discover volumes
+    script: files/pf9-scsi-rescan
+    register: scsi_rescan
+  - debug: var=scsi_rescan
+
+  - set_fact:
+      pvs_string: ""
+  - set_fact:
+      pvs_string: "{{pvs_string}},{{item}}"
+    with_items: "{{pvs}}"
+
+  - name: configure LVM
+    script: "files/pf9-configure-lvm cinder-volumes '{{pvs_string}}'"
+    register: config_lvm
+  - debug: var=config_lvm
+  when: rolename == "pf9-cindervolume-lvm"
+
+################################################################################
+# Role Assignment (for both OpenStack and Kubernetes)
+################################################################################
+- name: read role json
+  shell: "cat {{role_metadata}}"
+  register: role_json
+- name: read api token
+  shell: "cat /tmp/keystone-token.txt"
+  register: api_token
+
+- name: "Assigning Role - {{rolename}}"
+  uri:
+    url: "https://{{ctrl_ip}}/resmgr/v1/hosts/{{host_id.stdout.strip()}}/roles/{{rolename}}"
+    method: PUT
+    body: "{{role_json.stdout.strip()}}"
+    body_format: json
+    validate_certs: False
+    headers:
+      Content-Type: "application/json"
+      X-Auth-Token: "{{api_token.stdout.strip()}}"
+  register: uri_result
+  delegate_to: localhost
+- debug: var=uri_result
+

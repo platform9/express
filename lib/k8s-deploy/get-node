@@ -1,0 +1,33 @@
+#!/bin/bash
+
+target_uuid=""
+
+method_usage() {
+  echo "get-node [<uuid>]"
+  exit 1
+}
+
+# process paramters
+if [ $# -eq 1 -a "${1}" == "-h" ]; then
+  method_usage
+elif [ $# -eq 2 ]; then
+  case ${2} in
+  -h|--help)
+    method_usage
+    ;;
+  *)
+    target_uuid=${2}
+    ;;
+  esac
+fi
+
+# invoke API
+result=`curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" ${du_url}/resmgr/v1/hosts/${target_uuid} 2>/dev/null`
+if [ $? -ne 0 ]; then exit 1; fi
+echo ${result} | grep ^404 > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+  echo ${result}
+  exit 1
+fi
+echo ${result} | python -m json.tool
+echo -e "\nNodes : `echo ${result} | python -m json.tool | grep '"id": "' | wc -l`"

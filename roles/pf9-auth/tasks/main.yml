@@ -1,65 +1,36 @@
 ---
-- name: Ensure required Keystone variables exist
-  fail:
-    msg: "{{ item }} variable is not defined."
-  when: "{{ item }} is not defined"
-  with_items:
-    - du_url
-    - os_username
-    - os_password
-    - os_region
-    - os_tenant
 
-- name: Create local files/ directory
-  connection: local
-  become: no
-  file:
-    state: directory
-    path: files/
+# Ensure required Keystone variables exist
+- fail: msg="variable undefined - du_url"
+  when: du_url is undefined
+- fail: msg="variable undefined - os_username"
+  when: os_username is undefined
+- fail: msg="variable undefined - os_password"
+  when: os_password is undefined
+- fail: msg="variable undefined - os_region"
+  when: os_region is undefined
+- fail: msg="variable undefined - os_tenant"
+  when: os_tenant is undefined
 
-- name: Check if cached Keystone token exists
-  stat:
-    path: files/keystone-token.txt
-  register: cached_token
+- name: Set OS_AUTH fact
+  set_fact:
+    os_auth:
+      auth_url: "{{du_url}}/keystone/v2.0"
+      username: "{{os_username}}"
+      password: "{{os_password}}"
+      project_name: "{{os_tenant}}"
 
-- block:
-    - name: Load OS_AUTH_TOKEN into fact
-      set_fact: "os_auth_token={{ lookup('file', 'files/keystone-token.txt') | trim }}"
+- name: Obtain authentication token from Keystone
+  os_auth:
+    auth: "{{os_auth}}"
+    region_name: "{{os_tenant}}"
+  delegate_to: localhost
+  register: auth_reply
 
-    - name: Validate Keystone token
-      uri:
-        url: "{{ du_url }}/keystone/v2.0"
-        headers:
-          X-Auth-Token: "{{ os_auth_token }}"
-        status_code: 200, 401
-        validate_certs: no
-      register: validate_response
-  when: cached_token.stat.exists == True
+- name: Save OS Auth Token
+  copy:
+    content: "{{ auth_reply.ansible_facts.auth_token }}"
+    dest: /tmp/keystone-token.txt
 
-- block:
-    - name: Set OS_AUTH fact
-      set_fact:
-        os_auth:
-          auth_url: "{{ du_url }}/keystone/v2.0"
-          username: "{{ os_username }}"
-          password: "{{ os_password }}"
-          project_name: "{{ os_tenant }}"
-
-    - name: Obtain authentication token from Keystone
-      become: no
-      local_action: "os_auth auth={{ os_auth }} region_name={{ os_tenant }}"
-      check_mode: no
-      register: auth_reply
-
-    - name: Save OS Auth Token
-      connection: local
-      become: no
-      copy:
-        content: "{{ auth_reply.ansible_facts.auth_token }}"
-        dest: files/keystone-token.txt
-
-    - name: Store OS_AUTH_TOKEN in fact
-      set_fact: "os_auth_token={{ auth_reply.ansible_facts.auth_token }}"
-
-  when: (cached_token.stat.exists == False) or
-        (validate_response is defined and validate_response.status != 200)
+- name: Store OS_AUTH_TOKEN in fact
+  set_fact: "os_auth_token={{ auth_reply.ansible_facts.auth_token }}"

@@ -1,0 +1,9 @@
+---
+# Global Variables for 'cinder' Inventory Group
+
+cinder_volume_driver: cinder.volume.drivers.lvm.LVMVolumeDriver
+cinder_backend_name: cinder-volumes
+
+# variables for pre-flight-checks
+cinder_image_conversion_cache: /opt/pf9/pf9-cindervolume-base/lib/python2.7/site-packages/cinder/conversion
+cinder_image_cache_min_free_space: 20000000

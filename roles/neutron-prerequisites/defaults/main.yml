@@ -1,12 +1,14 @@
 ---
 neutron_sysctl:
-  net.bridge.bridge-nf-call-iptables: 1
   net.ipv4.conf.all.rp_filter: 0
   net.ipv4.conf.default.rp_filter: 0
+  net.bridge.bridge-nf-call-iptables: 1
   net.ipv4.ip_forward: 1
-  net.ipv4.tcp_mtu_probing: 1
+  net.ipv4.tcp_mtu_probing: 2
+
 neutron_kernel_modules:
+  - bridge
   - 8021q
   - bonding
-  - bridge
   - tun
+  - br_netfilter

@@ -1,15 +1,21 @@
 ---
+- name: stage agent download script
+  template:
+    src: files/pf9_get_hostagent.py.j2
+    dest: /tmp/pf9_get_hostagent.py
+    mode: 0755
+
 - name: Download Platform9 installers
-  connection: local
-  become: no
-  get_url:
-    url: "{{ du_url }}/private/platform9-install-{{ item }}.sh"
-    dest: "/tmp/platform9-install-{{ item }}.sh"
-    headers: "X-Auth-Token: {{ hostvars[inventory_hostname]['os_auth_token'] }}"
-    validate_certs: no
-  with_items:
-    - debian
-    - redhat
+  shell: "./pf9_get_hostagent.py --account_endpoint {{du_fqdn}} --region {{os_region}} --user {{os_username}} --password '{{os_password}}' --tenant {{os_tenant}} --platform {{ansible_os_family|lower}}"
+  args:
+    chdir: "/tmp"
+  when: proxy_url is undefined
+
+- name: Download Platform9 installers
+  shell: "./pf9_get_hostagent.py --account_endpoint {{du_fqdn}} --region {{os_region}} --user {{os_username}} --password '{{os_password}}' --tenant {{os_tenant}} --proxy {{proxy_url}} --platform {{ansible_os_family|lower}}"
+  args:
+    chdir: "/tmp"
+  when: proxy_url is defined
 
 - include: packages.yml
 

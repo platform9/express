@@ -1,0 +1,500 @@
+#!/bin/bash
+################################################################################
+## Platform9 Assimilation Utility
+## Copyright(c) 2018 Platform9 Systems, Inc.
+################################################################################
+
+# initialize variables
+basedir=$(dirname $0)
+min_ansible_version="2.2"
+oscli_version=pike
+oscli_rc_file=${basedir}/pf9-openstack.rc
+inventory=${basedir}/inventory/hosts
+express_script=${basedir}/pf9-express.yml
+platform=""
+target=""
+log=/tmp/pf9-express.log
+install_log="${basedir}/log/pf9-express.`date "+%Y-%m-%d_%H:%M:%S"`.log"
+pf9_config=${basedir}/pf9-express.conf
+pf9_config_tpl=${basedir}/lib/pf9-express.tpl
+pf9_group_vars=${basedir}/group_vars/all.yml
+pf9_custom_configFile=""
+awx_repo_dir=/opt/awx
+awx_repo=https://github.com/ansible/awx.git
+awxcli_repo_dir=/opt/tower-cli
+awxcli_repo=https://github.com/ansible/tower-cli.git
+flag_setup=0
+flag_prereqs=0
+flag_ui=0
+flag_oscli=0
+flag_dbinit=0
+flag_skip_prereqs=0
+flag_awx_restart=0
+flag_autoregister=0
+extra_vars=""
+awx_pf9_user="pf9"
+awx_pf9_password="Pl@tform9"
+awx_pf9_email="user@company.com"
+awx_db_export=awx-db-backup-v0.2.sql
+
+# functions
+usage() {
+  echo "Usage: $0 [Args] <target>"
+  echo -e "\nArgs (Optional):\n"
+  echo "-a|--autoRegister          : auto-register host with management plane"
+  echo "-i|--installPrereqs        : install pre-requisites and exit"
+  echo "-s|--setup                 : run setup and exit"
+  echo "-o|--oscli                 : install OpenStack CLI"
+  echo "-c|--config <configFile>   : use custom configuration file"
+  echo "-e|--extra-vars <string>   : ansible extra-vars <name=val,...>"
+  echo "-b|--bypassPrereqs         : bypass pre-requisites"
+  echo "-v|--inventory <file>      : use alternate inventory file for Ansible"
+  echo -e "-h|--help                  : display this message\n"
+  if [ $# -eq 1 -a "${1}" == "-q" ]; then
+    :
+  else
+    exit 1
+  fi
+}
+
+validate_platform() {
+  # check if running CentOS 7 or Ubuntu 16.04
+  if [ -r /etc/centos-release ]; then
+    release=$(cat /etc/centos-release | cut -d ' ' -f 4)
+    if [[ ! "${release}" == 7.* ]]; then assert "unsupported CentOS release: ${release}"; fi
+    platform="centos"
+    host_os_info=$(cat /etc/centos-release)
+  elif [ -r /etc/lsb-release ]; then
+    release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
+    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported Ubuntu release: ${release}"; fi
+    platform="ubuntu"
+    ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
+    host_os_info="${platform} ${ubuntu_release}"
+  else
+    assert "unsupported platform"
+  fi
+}
+
+banner() {
+  echo "################################################################"
+  echo "# Platform9 Express Utility"
+  echo "################################################################"
+}
+
+restart_awx() {
+  echo "[ Restarting AWX ]"
+
+  # stop awx
+  for container in awx_task awx_web; do
+    echo "--> stopping ${container}"
+    sudo docker stop ${container} > /dev/null 2>&1
+    sudo docker stop ${container} > /dev/null 2>&1
+  done
+
+  # start awx
+  sleep 5
+  ${basedir}/pf9-express -u
+
+  exit 0
+}
+
+nginx_init() {
+  # copy nginx.conf
+  sudo docker cp ${basedir}/lib/nginx.conf awx_web:/etc/nginx/nginx.conf
+
+  # restart nginx container
+  docker exec awx_web nginx -s reload
+}
+
+db_init() {
+  echo "[ Installing AWX Database ]"
+
+  # copy database export
+  echo "--> copying default database"
+  sudo docker cp ${basedir}/lib/${awx_db_export} postgres:/tmp
+
+  # stop awx
+  docker stop awx_web > /dev/null 2>&1
+  docker stop awx_task > /dev/null 2>&1
+
+  # drop awx database
+  echo "--> importing default database"
+  docker exec postgres bash -c "su - postgres -c 'psql -c \"drop database awx;\"'" > /dev/null 2>&1
+
+  # initialize awx database
+  docker exec postgres bash -c "su - postgres -c 'psql -c \"create database awx with template template0;\"'" > /dev/null 2>&1
+
+  # import awx database (exported using 'pg_dump awx > db.sql')
+  docker exec postgres bash -c "su - postgres -c 'psql -d awx -f /tmp/${awx_db_export};'" > /dev/null 2>&1
+
+  # start awx
+  echo "--> restarting AWX"
+  ${basedir}/pf9-express -u > /dev/null 2>&1
+}
+
+install_awx() {
+  echo "[ Installing Web UI (Ansible AWX) ]"
+  echo "--> Installation Log: ${log}"
+
+  # check if docker is installed
+  docker -h > /dev/null 2>&1
+  if [ $? -ne 0 ]; then assert "Docker is not installed"; fi
+
+  # clone AWX repo
+  echo -n "--> validating awx repository: "
+  if [ -r ${awx_repo_dir} ]; then
+    echo "present"
+  else
+    echo "missing - cloning..."
+    sudo git clone ${awx_repo} ${awx_repo_dir} > ${log} 2>&1
+    if [ $? -ne 0 ]; then assert "failed to clone git repo: ${awx_repo}"; fi
+  fi
+
+  # Install Tower CLI
+  echo "--> installing tower-cli"
+  sudo pip install ansible-tower-cli > ${log} 2>&1
+  if [ $? -ne 0 ]; then assert "failed to pip install ansible-tower-cli"; fi
+  sudo /bin/cp -f ${basedir}/lib/tower_cli.cfg.tpl /root/.tower_cli.cfg
+  if [ $? -ne 0 ]; then assert "failed to copy lib/tower_cli.cfg.tpl"; fi
+  sudo chmod 0400 /root/.tower_cli.cfg
+  if [ $? -ne 0 ]; then assert "failed to set permissions on /root/.tower_cli.cfg"; fi
+
+  # Install AWX (Docker-based)
+  echo "--> installing awx (this will take a while - monitor log for status)"
+  (cd ${awx_repo_dir}/installer && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
+
+  # Validate Tower CLI (timeout loop)
+  echo "--> waiting for awx to initialize"
+  TIMEOUT=600
+  start_time=`date +%s`
+  elapsedTime=0
+  while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
+    sudo tower-cli version > /dev/null 2>&1
+    if [ $? -eq 0 ]; then break; fi
+
+    # update elapsed time
+    current_t=`date +%s`; elapsedTime=$((current_t - start_time))
+    sleep 5
+  done
+
+  # display timeout message
+  if [ ${elapsedTime} -ge ${TIMEOUT} ]; then
+    assert "*** TIMEOUT EXCEEDED *** waiting to connect to awx"
+  fi
+}
+
+# install_oscli <ctrl-hostname> <region> <tenant> <username> <password>
+install_oscli() {
+  echo "[ Installing OpenStack CLI ]"
+  echo "--> Installation Log: ${log}"
+  if [ $# -ne 5 ]; then
+    echo "install_oscli(): missing arguments (expected 3; got $#)"
+    return 1
+  fi
+
+  # configure pf9-openstack.rc
+  echo "--> Building pf9-openstack.rc"
+  update_openstack_rc ${1} ${2} ${3} ${4} ${5}
+
+  # source rc file
+  source ${oscli_rc_file}
+
+  # install openstack cli packages (CentOS)
+  if [ "${platform}" == "centos" ]; then
+    echo -n "--> Installing Package Dependencies: "
+    for pkg in gcc openssl-devel python-pip python-wheel python-virtualenv python-virtualenvwrapper; do
+      echo -n "${pkg} "
+      rpm -q ${pkg} > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        sudo yum -y install ${pkg} > ${log} 2>&1
+        if [ $? -ne 0 ]; then
+          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+          tail -10 ${log}; exit 1
+        fi
+      fi
+    done
+    echo
+
+    echo "--> Configuring Python Virtual Environment"
+    if [ ! -r /usr/bin/virtualenvwrapper.sh ]; then assert "missing script: /usr/bin/virtualenvwrapper.sh"; fi
+    source /usr/bin/virtualenvwrapper.sh
+    export WORKON_HOME=$HOME/.virtenvs
+    mkvirtualenv os_cli > ${log} 2>&1
+
+    echo "--> Upgrading PIP"
+    pip install pip --upgrade > ${log} 2>&1
+
+    echo "--> Installing OpenStack CLI"
+    pip install --upgrade --requirement \
+        https://raw.githubusercontent.com/platform9/support-locker/master/openstack-clients/requirements.txt \
+        --constraint http://raw.githubusercontent.com/openstack/requirements/stable/${oscli_version}/upper-constraints.txt > ${log} 2>&1
+
+    # tracking alternate method of installation
+    # echo "--> Installing OpenStack CLI"
+    # pip install python-openstackclient> ${log} 2>&1
+  fi
+
+  # install openstack cli packages (Ubuntu)
+  if [ "${platform}" == "ubuntu" ]; then
+    assert "Not Implemented (for platform = ${platform})"
+  fi
+
+}
+
+install_prereqs() {
+  # display log
+  echo "--> Installation Log: ${install_log}"
+
+  # install Ansible (and dependencies)
+  echo -n "--> Validating package dependencies: "
+  if [ "${platform}" == "centos" ]; then
+    for pkg in epel-release ntp nginx gcc python-devel python2-pip bc; do
+      echo -n "${pkg} "
+      rpm -q ${pkg} > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        sudo yum -y install ${pkg} > ${log} 2>&1
+        if [ $? -ne 0 ]; then
+          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+          tail -10 ${log}; exit 1
+        fi
+      fi
+    done
+
+    ## upgrade pip
+    sudo pip install --upgrade pip > ${log} 2>&1
+    if [ $? -ne 0 ]; then
+      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
+      tail -10 ${log}; exit 1
+    fi
+
+    ## install additional pip-based packages
+    for pkg in shade docker-py; do
+      echo -n "${pkg} "
+      sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    done
+
+    ## install additional yum-based packages
+    for pkg in ansible; do
+      echo -n "${pkg} "
+      sudo yum -y install ${pkg} > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    done
+    echo
+  elif [ "${platform}" == "ubuntu" ]; then
+    # add ansible repository
+    dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      sudo apt-add-repository -y ppa:ansible/ansible > /dev/null 2>&1
+      sudo apt-get update> /dev/null 2>&1
+      sudo apt-get -y install ansible > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    fi
+
+    for pkg in ansible bc python-pip; do
+      echo -n "${pkg} "
+      dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        sudo apt -y install ${pkg} > ${log} 2>&1
+        if [ $? -ne 0 ]; then
+          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+          tail -10 ${log}; exit 1
+        fi
+      fi
+    done
+
+    ## upgrade pip
+    sudo pip install --upgrade pip > ${log} 2>&1
+    if [ $? -ne 0 ]; then
+      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
+      tail -10 ${log}; exit 1
+    fi
+
+    ## install additional pip-based packages
+    for pkg in shade docker-py; do
+      echo -n "${pkg} "
+      sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    done
+    echo
+  fi
+
+  # create log directory
+  if [ ! -d /var/log/pf9 ]; then sudo mkdir -p /var/log/pf9; fi
+}
+
+################################################################################
+## main
+################################################################################
+# include libraries
+source ${basedir}/lib/config_util.sh
+source ${basedir}/lib/utility.sh
+
+## validate commandline arguments
+if [ $# -lt 1 ]; then usage; fi
+while [ $# -gt 0 ]; do
+  case ${1} in
+  -h|--help)
+    usage ;;
+  -s|--setup)
+    if [ ! -r ${pf9_config} ]; then init_config; fi
+    flag_setup=1
+    ;;
+  -i|--installPrereqs)
+    flag_prereqs=1
+    ;;
+  -o|--oscli)
+    flag_oscli=1
+    ;;
+  -a|--autoRegister)
+    flag_autoregister=1
+    ;;
+  -b|--bypassPrereqs)
+    flag_skip_prereqs=1
+    ;;
+  -c|--config)
+    if [ $# -lt 2 ]; then usage; fi
+    pf9_custom_configFile=${2}
+    shift
+    ;;
+  -v|--inventory)
+    if [ $# -lt 2 ]; then usage; fi
+    inventory=${2}
+    shift
+    ;;
+  -e|--extra-vars)
+    if [ $# -lt 2 ]; then usage; fi
+    extra_vars=${2}
+    shift
+    ;;
+  *)
+    if [ $# -ne 1 ]; then usage; fi
+    target=${1}
+    ;;
+  esac
+  shift
+done
+
+# validate platform (CentOS 7.4 or Ubuntu 16.04)
+validate_platform
+
+## validate sudo priviledges
+sudo bash <<< "exit 200"
+if [ $? -ne 200 ]; then assert "you need sudo privilidges to run this script - please update /etc/sudoers"; fi
+
+## enforce setup/custom-config mutual exclusivity
+if [ ${flag_setup} -eq 1 -a -n "${pf9_custom_configFile}" ]; then assert "'-s' and '-c' are mutually exclusive"; fi
+
+## run setup
+if [ ${flag_setup} -eq 1 ]; then
+  run_setup
+  exit 0
+fi
+
+## use custom config (if specified on commandline)
+if [ -n "${pf9_custom_configFile}" ]; then
+  pf9_config=${pf9_custom_configFile}
+fi
+
+# run setup if config file missing
+if [ ! -r ${pf9_config} ]; then
+  init_config
+  run_setup
+fi
+
+## build group_vars/all.yml
+build_config --skip-inventory-check
+
+# validate all config values are set
+validate_config
+
+## install prequisite packages
+if [ ${flag_prereqs} -eq 1 ]; then
+  install_prereqs; echo
+  exit 0
+fi
+
+## restart awx
+if [ ${flag_awx_restart} -eq 1 ]; then
+  restart_awx; echo
+  exit 0
+fi
+
+## install web ui
+if [ ${flag_ui} -eq 1 -o ${flag_dbinit} -eq 1 ]; then
+  if [ ${flag_ui} -eq 1 ]; then
+    install_awx; echo
+  fi
+
+  ## install awx database
+  if [ ${flag_dbinit} -eq 1 ]; then
+    db_init; echo
+  fi
+  exit 0
+fi
+
+## lookup configuration values from config file
+du_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
+du_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
+du_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
+du_tenant=$(grep ^os_tenant ${pf9_config} | cut -d \| -f2)
+proxy_url=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
+
+## append proxy_url to extra_args
+if [ "${proxy_url}" != "-" ]; then extra_vars="${extra_vars} proxy_url=${proxy_url}"; fi
+
+## assign/validate ctrl_ip from config file and resolve IP for ctrl_hostname
+ctrl_hostname=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
+tmp_ip=$(ping -c 1 ${ctrl_hostname} | grep PING | cut -d ' ' -f3)
+ctrl_ip=${tmp_ip:1:((${#tmp_ip}-2))}
+
+## install openstack cli
+if [ ${flag_oscli} -eq 1 ]; then
+  install_oscli ${ctrl_hostname} ${du_region} ${du_tenant} ${du_username} ${du_password}
+  exit 0
+fi
+
+## display banner
+banner
+
+# install prerequisite packages
+if [ ${flag_skip_prereqs} -eq 0 ]; then install_prereqs; fi
+
+## validate minimum Ansible version
+ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
+echo "--> ansible_version = ${ansible_version}"
+if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
+
+## validate target
+if [ -z "${target}" ]; then usage; fi
+
+## toggle auto-register flag
+if [ ${flag_autoregister} -eq 1 ]; then
+  autoreg="on"
+else
+  autoreg="off"
+fi
+
+## inform user of Ansible command being run
+echo -e "\n[Executing: ansible-playbook ${express_script}]"
+
+## call pf9-express
+sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${express_script} 2>&1 | tee ${install_log}
+
+## display log path
+echo -e "Installation Log: ${install_log}\n"
+
+## exit cleanly
+exit 0
