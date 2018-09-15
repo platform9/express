@@ -29,6 +29,12 @@
   roles:
     - pre-hook
 
+# Configure bond0
+- hosts: bond0-config
+  become: true
+  roles:
+    - bond0-config
+
 # OpenStack Hypervisor Nodes
 - hosts: hypervisors
   become: true
@@ -69,12 +75,6 @@
     - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
-
-# Configure OVS Uplink (Bond0)
-- hosts: ovsconfig
-  become: true
-  roles:
-    - { role: "ovsconfig", when: autoreg == "on" }
 
 # Kubernetes Master Nodes
 - hosts: k8s-master

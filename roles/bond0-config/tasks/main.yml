@@ -1,8 +1,8 @@
 ---
 ##########################################################################################################
-## ovsconfig:
+## bond0-config:
 ##
-## Configure the physical and sub-interfaces behind bond0 (the physical uplink for the OVS switch)
+## Configure the physical and sub-interfaces behind bond0
 ##########################################################################################################
 
 - debug: var=bond_members

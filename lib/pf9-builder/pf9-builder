@@ -9,7 +9,7 @@ tpl_global=${basedir}/template/hosts-global.tpl
 tpl_hypervisors=${basedir}/template/hosts-hypervisors.tpl
 tpl_glance=${basedir}/template/hosts-glance.tpl
 tpl_cinder=${basedir}/template/hosts-cinder.tpl
-tpl_ovsconfig=${basedir}/template/hosts-ovsconfig.tpl
+tpl_bond0_config=${basedir}/template/hosts-bond0-config.tpl
 tpl_k8s_master=${basedir}/template/hosts-k8s-master.tpl
 tpl_k8s_worker=${basedir}/template/hosts-k8s-worker.tpl
 host_list=""
@@ -324,8 +324,8 @@ if [ "${node_type}" == "openstack" ]; then
     fi
   done < ${csv_file}
 
-  echo "[ovsconfig]"
-  cat ${tpl_ovsconfig} >> ${inventory}
+  echo "[bond0-config]"
+  cat ${tpl_bond0_config} >> ${inventory}
   while read line; do
     # validate csv
     if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
@@ -337,7 +337,7 @@ if [ "${node_type}" == "openstack" ]; then
       echo "--> ${lineArgs[0]} : <lookup-failed>"
       continue
     else
-      # check for ovsconfig
+      # check for bond0 config
       if [ -n "${lineArgs[4]}" ]; then
         inv_entry="${lineArgs[0]} ${lineArgs[4]}"
         echo "${inv_entry}" >> ${inventory}
