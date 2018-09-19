@@ -1,2 +1,2 @@
 
-[bond0-config]
+[bond-config]

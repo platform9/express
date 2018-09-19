@@ -1,15 +1,15 @@
 ---
 ##########################################################################################################
-## bond0-config:
+## bond-config:
 ##
-## Configure the physical and sub-interfaces behind bond0
+## Configure the physical and sub-interfaces behind the bond
 ##########################################################################################################
 
 - debug: var=bond_members
 - debug: var=bond_sub_interfaces
 
 - block:
-  - name: attach physical interfaces to bond0
+  - name: attach physical interfaces to the bond
     template:
       src: ifcfg-interface.j2
       dest: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
@@ -18,10 +18,10 @@
   when: bond_members is defined
 
 - block:
-  - name: attach physical interfaces to bond0
+  - name: attach physical interfaces to the bond
     template:
       src: ifcfg-sub-interface.j2
-      dest: "/etc/sysconfig/network-scripts/ifcfg-bond0.{{item['vlanid']}}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}.{{item['vlanid']}}"
       mode: 0644
     with_items: "{{bond_sub_interfaces|list}}"
   when: bond_sub_interfaces is defined

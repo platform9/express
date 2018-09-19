@@ -3,7 +3,7 @@
 configNetworking=y
 OS="{{ ansible_os_family }}"
 mgmtIp="{{ ansible_default_ipv4.address }}"
-phyInt=bond0
+phyInt="{{bond_ifname}}"
 mgmtVlan=1
 mgmtSubnet="{{ ansible_default_ipv4.netmask }}"
 mgmtGateway="{{ ansible_default_ipv4.gateway }}"
@@ -84,7 +84,7 @@ if [[ -n $OS && $OS == 'RedHat' ]]; then
 				BOOTPROTO=none
 				ONBOOT=yes
 				TYPE=Ethernet
-				MASTER=bond0
+				MASTER={{bond_ifname}}
 				SLAVE=yes
 				EOF
 			done

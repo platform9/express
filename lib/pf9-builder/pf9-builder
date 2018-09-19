@@ -9,18 +9,20 @@ tpl_global=${basedir}/template/hosts-global.tpl
 tpl_hypervisors=${basedir}/template/hosts-hypervisors.tpl
 tpl_glance=${basedir}/template/hosts-glance.tpl
 tpl_cinder=${basedir}/template/hosts-cinder.tpl
-tpl_bond0_config=${basedir}/template/hosts-bond0-config.tpl
+tpl_bond_config=${basedir}/template/hosts-bond-config.tpl
 tpl_k8s_master=${basedir}/template/hosts-k8s-master.tpl
 tpl_k8s_worker=${basedir}/template/hosts-k8s-worker.tpl
 host_list=""
 flag_launch=1
+flag_express=1
 k8s_delay_time=120
 
 usage() {
   echo "Usage: `basename $0` [--nova] [-s] <csv-file> <openstack-rc-file>"
   echo -e "\n[Optional Args]\n"
   echo "    --nova : use 'nova boot' to start instances (for VMware regions)"
-  echo -e "    -s     : skip instance provisioning\n"
+  echo "    -s     : skip instance provisioning"
+  echo -e "    -e     : skip pf9-express\n"
   exit 1
 }
 
@@ -55,6 +57,10 @@ while [ $# -gt 0 ]; do
     ;;
   -s)
     flag_launch=0
+    shift
+    ;;
+  -e)
+    flag_express=0
     shift
     ;;
   *)
@@ -218,6 +224,9 @@ if [ ${flag_launch} -eq 1 ]; then
   done < ${csv_file}
 fi
 
+# Check flag_express flag
+if [ ${flag_express} -eq 0 ]; then exit 0; fi
+
 # Initialize Inventory (from template)
 if [ -r ${inventory} ]; then rm -f ${inventory}; fi
 cat ${tpl_global} > ${inventory}
@@ -324,8 +333,8 @@ if [ "${node_type}" == "openstack" ]; then
     fi
   done < ${csv_file}
 
-  echo "[bond0-config]"
-  cat ${tpl_bond0_config} >> ${inventory}
+  echo "[bond-config]"
+  cat ${tpl_bond_config} >> ${inventory}
   while read line; do
     # validate csv
     if [ "${line:0:1}" == "#" -o -z "${line}" ]; then continue; fi
@@ -337,7 +346,7 @@ if [ "${node_type}" == "openstack" ]; then
       echo "--> ${lineArgs[0]} : <lookup-failed>"
       continue
     else
-      # check for bond0 config
+      # check for bond config
       if [ -n "${lineArgs[4]}" ]; then
         inv_entry="${lineArgs[0]} ${lineArgs[4]}"
         echo "${inv_entry}" >> ${inventory}

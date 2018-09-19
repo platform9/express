@@ -29,11 +29,11 @@
   roles:
     - pre-hook
 
-# Configure bond0
-- hosts: bond0-config
+# Configure the bond
+- hosts: bond-config
   become: true
   roles:
-    - bond0-config
+    - bond-config
 
 # OpenStack Hypervisor Nodes
 - hosts: hypervisors
