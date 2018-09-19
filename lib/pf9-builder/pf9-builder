@@ -18,7 +18,7 @@ flag_express=1
 k8s_delay_time=120
 
 usage() {
-  echo "Usage: `basename $0` [--nova] [-s] <csv-file> <openstack-rc-file>"
+  echo "Usage: `basename $0` [--nova] [-s] [-e] <csv-file> <openstack-rc-file>"
   echo -e "\n[Optional Args]\n"
   echo "    --nova : use 'nova boot' to start instances (for VMware regions)"
   echo "    -s     : skip instance provisioning"
@@ -211,11 +211,21 @@ if [ ${flag_launch} -eq 1 ]; then
         IFS=","; volumes=(${lineArgs[9]})
         for colval in "${volumes[@]}"; do
           IFS=":"; volArgs=(${colval})
-          echo "create/attach-volume: name=${volArgs[0]}, size=${volArgs[1]} --> ${lineArgs[0]} (uuid=${host_uuid})"
-          ${os_cli} volume create --size ${volArgs[1]} ${volArgs[0]} > /dev/null 2>&1
-          if [ $? -ne 0 ]; then assert "failed to create volume"; fi
+
+          # check if volume exists
+          echo "create/attach volume: ${lineArgs[0]} --> ${volArgs[0]} (${volArgs[1]})"
+          ${os_cli} volume show ${volArgs[0]} > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            ${os_cli} volume create --size ${volArgs[1]} ${volArgs[0]} > /dev/null 2>&1
+            if [ $? -ne 0 ]; then assert "failed to create volume"; fi
+          fi
   
+          # check if volume already mounted
           volume_uuid=$(${os_cli} volume show ${volArgs[0]} | grep '| id' | cut -d \| -f 3 | awk -F ' ' '{print $1}')
+          volume_status=$(${os_cli} volume list | grep ${volume_uuid} | cut -d \| -f4 | awk -F ' ' '{print $1}')
+          if [ "${volume_status}" == "in-use" ]; then
+            continue
+          fi
           ${os_cli} server add volume ${host_uuid} ${volume_uuid} > /dev/null 2>&1
           if [ $? -ne 0 ]; then assert "failed to attach volume"; fi
         done
