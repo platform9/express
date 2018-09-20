@@ -25,6 +25,8 @@ cv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"
 ################################################################################################
 [pmo:children]
 hypervisors
+glance
+cinder
 
 ## global variables defined in group_vars/hypervisors.yml
 [hypervisors]
