@@ -98,7 +98,7 @@ ansible_sudo_pass=winterwonderland
 ################################################################################################
 manage_network=True
 
-## network configuration for bondX (implemented by network-hook if defined)
+## network configuration for bond (implemented if manage_network=True)
 [bond-config]
 hv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.11","mask":"255.255.255.0"}]'
 hv02 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.12","mask":"255.255.255.0"}]'
