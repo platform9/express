@@ -29,6 +29,12 @@
   roles:
     - pre-hook
 
+# Configure the bond
+- hosts: bond-config
+  become: true
+  roles:
+    - { role: "bond-config", when: manage_network == True }
+
 # OpenStack Hypervisor Nodes
 - hosts: hypervisors
   become: true

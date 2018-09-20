@@ -1,5 +1,5 @@
 ---
-- name: "Create the network configuration file for {{bond_ifname}}"
+- name: Create the network configuration file for the bond
   template:
     src: bond_redhat.j2
     dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}"

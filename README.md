@@ -97,6 +97,13 @@ ansible_sudo_pass=winterwonderland
 ## Optional Settings
 ################################################################################################
 manage_network=True
+bond_ifname=bond0
+
+## network configuration for bond (implemented if manage_network=True)
+[bond-config]
+hv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.11","mask":"255.255.255.0"}]'
+hv02 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.12","mask":"255.255.255.0"}]'
+cv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.15","mask":"255.255.255.0"}]'
 
 ################################################################################################
 ## OpenStack Groups
@@ -203,6 +210,7 @@ Args (Optional):
 -c|--config <configFile>   : use custom configuration file
 -e|--extra-vars <string>   : ansible extra-vars <name=val,...>
 -b|--bypassPrereqs         : bypass pre-requisites
+-d|--deauth                : de-authorize host
 -v|--inventory <file>      : use alternate inventory file for Ansible
 -h|--help                  : display this message
 ```

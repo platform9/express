@@ -10,10 +10,24 @@ ansible_sudo_pass=winterwonderland
 ## Optional Settings
 ################################################################################################
 manage_network=True
+bond_ifname=bond0
+bond_mode=1
+bond_mtu=9000
+
+## network configuration for bond (implemented if manage_network=True)
+[bond-config]
+hv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.11","mask":"255.255.255.0"}]'
+hv02 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.12","mask":"255.255.255.0"}]'
+cv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.15","mask":"255.255.255.0"}]'
 
 ################################################################################################
 ## OpenStack Groups
 ################################################################################################
+[pmo:children]
+hypervisors
+glance
+cinder
+
 ## global variables defined in group_vars/hypervisors.yml
 [hypervisors]
 hv01 ansible_host=10.0.0.11 ansible_user=centos vm_console_ip=10.0.0.11 ha_cluster_ip=10.0.1.11 tunnel_ip=10.0.2.11 dhcp=on snat=on
@@ -33,6 +47,10 @@ hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 ################################################################################################
 ## Kubernetes Groups
 ################################################################################################
+[pmk:children]
+k8s-master
+k8s-worker
+
 ## global variables defined in group_vars/containervisors.yml
 [k8s-master]
 cv01 ansible_host=10.0.0.15 ansible_user=ubuntu cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27

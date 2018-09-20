@@ -11,6 +11,7 @@ oscli_version=pike
 oscli_rc_file=${basedir}/pf9-openstack.rc
 inventory=${basedir}/inventory/hosts
 express_script=${basedir}/pf9-express.yml
+deauth_script=${basedir}/pf9-deauth.yml
 platform=""
 target=""
 log=/tmp/pf9-express.log
@@ -31,6 +32,7 @@ flag_dbinit=0
 flag_skip_prereqs=0
 flag_awx_restart=0
 flag_autoregister=0
+flag_deauth=0
 extra_vars=""
 awx_pf9_user="pf9"
 awx_pf9_password="Pl@tform9"
@@ -48,6 +50,7 @@ usage() {
   echo "-c|--config <configFile>   : use custom configuration file"
   echo "-e|--extra-vars <string>   : ansible extra-vars <name=val,...>"
   echo "-b|--bypassPrereqs         : bypass pre-requisites"
+  echo "-d|--deauth                : de-authorize host"
   echo "-v|--inventory <file>      : use alternate inventory file for Ansible"
   echo -e "-h|--help                  : display this message\n"
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
@@ -335,6 +338,13 @@ install_prereqs() {
   if [ ! -d /var/log/pf9 ]; then sudo mkdir -p /var/log/pf9; fi
 }
 
+display_warning() {
+  echo -e "\n################################################################################"
+  echo "#### WARNING : This action is destructive and cannot be undone"
+  echo -e "################################################################################\n"
+  getYN "Continue? "
+}
+
 ################################################################################
 ## main
 ################################################################################
@@ -363,6 +373,9 @@ while [ $# -gt 0 ]; do
     ;;
   -b|--bypassPrereqs)
     flag_skip_prereqs=1
+    ;;
+  -d|--deauth)
+    flag_deauth=1
     ;;
   -c|--config)
     if [ $# -lt 2 ]; then usage; fi
@@ -489,6 +502,17 @@ fi
 
 ## inform user of Ansible command being run
 echo -e "\n[Executing: ansible-playbook ${express_script}]"
+
+## deauth host
+if [ ${flag_deauth} -eq 1 ]; then
+  display_warning
+  if [ $? -eq 0 ]; then
+    extra_vars="${extra_vars} flag_deauth=1"
+    sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${deauth_script} 2>&1 | tee ${install_log}
+    echo -e "Log: ${install_log}\n"
+  fi
+  exit 0
+fi
 
 ## call pf9-express
 sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${express_script} 2>&1 | tee ${install_log}
