@@ -33,7 +33,7 @@
 - hosts: bond-config
   become: true
   roles:
-    - bond-config
+    - { role: "bond-config", when: manage_network == True }
 
 # OpenStack Hypervisor Nodes
 - hosts: hypervisors

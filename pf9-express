@@ -338,6 +338,13 @@ install_prereqs() {
   if [ ! -d /var/log/pf9 ]; then sudo mkdir -p /var/log/pf9; fi
 }
 
+display_warning() {
+  echo -e "\n################################################################################"
+  echo "#### WARNING : This action is destructive and cannot be un-done"
+  echo -e "################################################################################\n"
+  getYN "Continue? "
+}
+
 ################################################################################
 ## main
 ################################################################################
@@ -498,9 +505,12 @@ echo -e "\n[Executing: ansible-playbook ${express_script}]"
 
 ## deauth host
 if [ ${flag_deauth} -eq 1 ]; then
-  extra_vars="${extra_vars} flag_deauth=1"
-  sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${deauth_script} 2>&1 | tee ${install_log}
-  echo -e "Log: ${install_log}\n"
+  display_warning
+  if [ $? -eq 0 ]; then
+    extra_vars="${extra_vars} flag_deauth=1"
+    sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${deauth_script} 2>&1 | tee ${install_log}
+    echo -e "Log: ${install_log}\n"
+  fi
   exit 0
 fi
 

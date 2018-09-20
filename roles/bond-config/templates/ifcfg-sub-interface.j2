@@ -1,4 +1,4 @@
-DEVICE=bond0.{{item['vlanid']}}
+DEVICE={{bond_ifname}}.{{item['vlanid']}}
 ONBOOT=yes
 BOOTPROTO=none
 TYPE=Vlan
