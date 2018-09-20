@@ -340,7 +340,7 @@ install_prereqs() {
 
 display_warning() {
   echo -e "\n################################################################################"
-  echo "#### WARNING : This action is destructive and cannot be un-done"
+  echo "#### WARNING : This action is destructive and cannot be undone"
   echo -e "################################################################################\n"
   getYN "Continue? "
 }

@@ -10,6 +10,7 @@ ansible_sudo_pass=winterwonderland
 ## Optional Settings
 ################################################################################################
 manage_network=True
+bond_ifname=bond0
 
 ## network configuration for bond (implemented if manage_network=True)
 [bond-config]

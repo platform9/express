@@ -97,6 +97,7 @@ ansible_sudo_pass=winterwonderland
 ## Optional Settings
 ################################################################################################
 manage_network=True
+bond_ifname=bond0
 
 ## network configuration for bond (implemented if manage_network=True)
 [bond-config]
@@ -209,6 +210,7 @@ Args (Optional):
 -c|--config <configFile>   : use custom configuration file
 -e|--extra-vars <string>   : ansible extra-vars <name=val,...>
 -b|--bypassPrereqs         : bypass pre-requisites
+-d|--deauth                : de-authorize host
 -v|--inventory <file>      : use alternate inventory file for Ansible
 -h|--help                  : display this message
 ```
