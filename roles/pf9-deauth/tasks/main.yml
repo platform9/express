@@ -53,6 +53,10 @@
     name: pf9-hostagent
     state: absent
 
+- name: kill pf9-sidekick
+  shell: "kill -9 `ps -ef | grep sidekick-stdout.log | grep -v grep | awk -F ' ' '{print $2}'` > /dev/null 2>&1"
+  ignore_errors: true
+
 - name: cleanup /opt/pf9
   shell: rm -rf /opt/pf9
 
