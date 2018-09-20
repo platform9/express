@@ -11,6 +11,8 @@ ansible_sudo_pass=winterwonderland
 ################################################################################################
 manage_network=True
 bond_ifname=bond0
+bond_mode=1
+bond_mtu=9000
 
 ## network configuration for bond (implemented if manage_network=True)
 [bond-config]

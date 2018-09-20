@@ -1,5 +1,5 @@
 DEVICE={{bond_ifname}}
 ONBOOT=yes
 BONDING_MASTER=yes
-BONDING_OPTS="mode=1"
-MTU=9000
+BONDING_OPTS="mode={{bond_mode}}"
+MTU={{bond_mtu}}
