@@ -1,0 +1,61 @@
+---
+
+- name: validate pf9/host_id.conf
+  stat:
+    path: /etc/pf9/host_id.conf
+  register: hostid_conf_status
+
+- fail: msg="failed to open /etc/pf9/host_id.conf"
+  when: hostid_conf_status.stat.exists == false
+
+- name: get host_id
+  shell: cat /etc/pf9/host_id.conf | grep ^host_id | cut -d = -f2 | cut -d ' ' -f2
+  register: host_id
+
+- name: read api token
+  shell: "cat /tmp/keystone-token.txt"
+  register: api_token
+
+- name: delete host from resmgr database
+  uri:
+    url: "https://{{ctrl_ip}}/resmgr/v1/hosts/{{host_id.stdout.strip()}}"
+    method: DELETE
+    validate_certs: False
+    headers:
+      Content-Type: "application/json"
+      X-Auth-Token: "{{api_token.stdout.strip()}}"
+  register: uri_result
+  delegate_to: localhost
+- debug: var=uri_result
+
+- name: wait for deauthorization to complete
+  script: "files/wait_for_agent_deauth.sh {{ctrl_ip}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
+  register: waitfor_agent
+- debug: var=waitfor_agent
+
+- name: stop service - pf9-hostagent
+  service:
+    name: pf9-hostagent
+    state: stopped
+
+- name: stop service - pf9-comms
+  service:
+    name: pf9-comms
+    state: stopped
+
+- name: stop service - pf9-sidekick
+  service:
+    name: pf9-sidekick
+    state: stopped
+
+- name: remove pf9-hostagent
+  yum:
+    name: pf9-hostagent
+    state: absent
+
+- name: cleanup /opt/pf9
+  shell: rm -rf /opt/pf9
+
+- name: cleanup /var/log/pf9
+  shell: rm -rf /var/log/pf9
+

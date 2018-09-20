@@ -213,7 +213,7 @@ if [ ${flag_launch} -eq 1 ]; then
           IFS=":"; volArgs=(${colval})
 
           # check if volume exists
-          echo "create/attach volume: ${lineArgs[0]} --> ${volArgs[0]} (${volArgs[1]})"
+          echo "create/attach volume: ${lineArgs[0]} --> ${volArgs[0]} (${volArgs[1]}Gi)"
           ${os_cli} volume show ${volArgs[0]} > /dev/null 2>&1
           if [ $? -ne 0 ]; then
             ${os_cli} volume create --size ${volArgs[1]} ${volArgs[0]} > /dev/null 2>&1
