@@ -9,7 +9,7 @@
 - debug: msg="running network_hook():"
 
 ##
-## By default, auto-deploy creates an interface named "bond0" and adds it to an OVS bridge named "br-pf9".
+## By default, pf9-express creates an interface named "bond0" and adds it to an OVS bridge named "br-pf9".
 ##
 - include: redhat.yml
   when: ansible_os_family == "RedHat"
