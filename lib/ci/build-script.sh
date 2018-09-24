@@ -9,12 +9,12 @@ echo "### RUNNING - PF9-Express CI Build Script"
 echo "############################################################"
 echo "--> Date   : $(date -u)"
 echo "--> Branch : Branch: $(git branch | grep ^*)"
-echo -e "--> Directory : $(pwd)\n"
+echo "--> Directory : $(pwd)"
 
-# install pf9-express
+# install/configure pf9-express
+cp -f lib/ci/cfe.rc pf9-openstack.rc
+cp -f lib/ci/pf9-express.conf pf9-express.conf
 eval ${exec_pf9_express} -i
-
-# install openstack cli
 eval ${exec_pf9_express} -o
 
 # create OpenStack instances and run pf9-express
