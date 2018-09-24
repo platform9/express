@@ -160,7 +160,7 @@ if [ ${flag_launch} -eq 1 ]; then
     if [ ${flag_debug} -eq 0 ]; then
       args_append="> /dev/null 2>&1"
     else
-      $args_append=""
+      args_append=""
     fi
 
     # build instance using Nova
