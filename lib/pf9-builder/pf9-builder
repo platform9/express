@@ -15,14 +15,16 @@ tpl_k8s_worker=${basedir}/template/hosts-k8s-worker.tpl
 host_list=""
 flag_launch=1
 flag_express=1
+flag_debug=0
 k8s_delay_time=120
 
 usage() {
-  echo "Usage: `basename $0` [--nova] [-s] [-e] <csv-file> <openstack-rc-file>"
+  echo "Usage: `basename $0` [--nova] [-s] [-e] [-d] <csv-file> <openstack-rc-file>"
   echo -e "\n[Optional Args]\n"
   echo "    --nova : use 'nova boot' to start instances (for VMware regions)"
   echo "    -s     : skip instance provisioning"
-  echo -e "    -e     : skip pf9-express\n"
+  echo "    -e     : skip pf9-express"
+  echo -e "    -d     : turn on debug\n"
   exit 1
 }
 
@@ -61,6 +63,10 @@ while [ $# -gt 0 ]; do
     ;;
   -e)
     flag_express=0
+    shift
+    ;;
+  -d)
+    flag_debug=1
     shift
     ;;
   *)
@@ -150,22 +156,27 @@ if [ ${flag_launch} -eq 1 ]; then
       ((n++))
     done
 
+    # manage verbosity level
+    if [ ${flag_debug} -eq 0 ]; then
+      args_append="> /dev/null 2>&1"
+    else
+      $args_append=""
+    fi
+
     # build instance using Nova
     case ${provider} in
     openstack)
       eval openstack server create --image '${image_name}' --flavor '${lineArgs[2]}' ${network_args} \
-           --key-name '${lineArgs[5]}' ${lineArgs[0]} > /dev/null 2>&1
+           --key-name '${lineArgs[5]}' ${lineArgs[0]} ${args_append}
       if [ $? -ne 0 ]; then
-        echo "ERROR : instance failed to launch"
-        continue
+        assert "ERROR : instance failed to launch"
       fi
       ;;
     nova)
       eval nova boot --image '${image_name}' --flavor '${lineArgs[2]}' ${network_args} \
-           --key-name '${lineArgs[5]}' ${lineArgs[0]} > /dev/null 2>&1
+           --key-name '${lineArgs[5]}' ${lineArgs[0]} ${args_append}
       if [ $? -ne 0 ]; then
-        echo "ERROR : instance failed to launch"
-        continue
+        assert "ERROR : instance failed to launch"
       fi
       ;;
     esac

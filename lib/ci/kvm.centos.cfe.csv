@@ -1,0 +1,10 @@
+## openstack
+# <hostname>|<image>:<username>|<flavor>|<network[,network,...]>|<key>|<security-group>|<role[,role]>[|<lvm-pv-list>|<volume[,volume]>]
+
+ci-kvm01|CentOS-7-x86_64-GenericCloud-1802:centos|m1.large-100GB|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|bond_members='["ens192"]' bond_sub_interfaces='[{"vlanid":"243","ip":"172.16.243.11","mask":"255.255.255.0"}]'|cm-master|default|glance,glance-public
+
+ci-kvm02|CentOS-7-x86_64-GenericCloud-1802:centos|m1.large-100GB|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|bond_members='["ens192"]' bond_sub_interfaces='[{"vlanid":"243","ip":"172.16.243.12","mask":"255.255.255.0"}]'|cm-master|default|glance
+
+ci-kvm03|CentOS-7-x86_64-GenericCloud-1802:centos|m1.large-100GB|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|bond_members='["ens192"]' bond_sub_interfaces='[{"vlanid":"243","ip":"172.16.243.15","mask":"255.255.255.0"}]'|cm-master|default|cinder|pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]|ci-kvm03-vol01:50,ci-kvm03-vol02:50,ci-kvm03-vol03:50,ci-kvm03-vol04:50
+
+ci-kvm04|CentOS-7-x86_64-GenericCloud-1802:centos|m1.large-100GB|5ce89f0f-16aa-447a-a4db-d2910499d5af,4bcc7dd1-e8b2-404c-9147-3a8141cf1780|bond_members='["ens192"]' bond_sub_interfaces='[{"vlanid":"243","ip":"172.16.243.16","mask":"255.255.255.0"}]'|cm-master|default|cinder|pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]|ci-kvm04-vol01:50,ci-kvm04-vol02:50,ci-kvm04-vol03:50,ci-kvm04-vol04:50
