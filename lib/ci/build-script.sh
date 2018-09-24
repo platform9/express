@@ -11,6 +11,9 @@ echo "--> Date   : $(date -u)"
 echo "--> Branch : Branch: $(git branch | grep ^*)"
 echo -e "--> Directory : $(pwd)\n"
 
+# install pf9-express
+eval ${exec_pf9_express} -i
+
 # install openstack cli
 eval ${exec_pf9_express} -o
 
