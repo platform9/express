@@ -158,7 +158,7 @@ run_setup() {
   v10=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
 
   pf9_nv_pairs=(
-    "du_url|PF9 Control Plane URL|${v1}"
+    "du_url|PF9 Management Plane URL|${v1}"
     "os_username|Admin Username|${v2}"
     "os_password|Admin Password|${v3}"
     "os_region|Region|${v4}"

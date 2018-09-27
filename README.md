@@ -30,7 +30,7 @@ To configure the Platform9 Express CLI to communicate with the Platform9 managem
 # ./pf9-express -s
 NOTE: to enter a NULL value for prompt, enter '-'
  
-PF9 Control Plane URL [https://company.platform9.net]:
+PF9 Management Plane URL [https://company.platform9.net]:
 --> accepted: https://company.platform9.net
  
 Admin Username [user@company.com]:
@@ -62,7 +62,7 @@ Proxy URL:
 ```
 
 ## Install Prerequisite Packages
-To install prerequisite packages on the control host, run the following command (a sample session is included):
+To install prerequisite packages on the Platform9 Express control host, run the following command (a sample session is included):
 
 ```
 # ./pf9-express -i
