@@ -50,7 +50,7 @@
 
   # neutron_ha_cluster_ip
   - set_fact:
-      cluster_ip: ""
+      ha_cluster_ip: ""
     when: ha_cluster_ip is undefined
   when: rolename != "pf9-kube" and rolename != "pf9-cindervolume-lvm" and rolename != "pf9-cindervolume-base"
 

@@ -1,5 +1,5 @@
 # Platform9 Express
-Platform9 Express (pf9-express) is a Customer Success developed tool for bringing bare-metal hosts under management by a Platform9 management plane.  It can bring a host to the point where it shows up in the Clarify UI as a host waiting to be authorized, or it can (optionally) perform Platform9 role deployments for both OpenStack and Kubernetes.  Platform9 Express includes a CLI and Web UI and can be installed on a CentOS or Ubuntu control host.
+Platform9 Express (pf9-express) is a Customer Success developed tool for bringing bare-metal hosts under management by a Platform9 management plane.  It can bring a host to the point where it shows up in the Clarity UI as a host waiting to be authorized, or it can (optionally) perform Platform9 role deployments for both OpenStack and Kubernetes.  Platform9 Express includes a CLI and Web UI and can be installed on a CentOS or Ubuntu control host.
 
 ## Prerequisites
 Platform9 Express must be installed on a control host with IP connectivity to the hosts to be brought under management.  CentOS 7.4 or Ubuntu 16.04 are supported on the control host.  Before installing Platform9 Express, you'll need administrator credentials for the Platform9 management plane.  If a proxy is required for HTTP/HTTPS traffic, you'll need the URL for the proxy.
@@ -23,15 +23,6 @@ git clone https://github.com/platform9/express.git /opt/pf9-express
 ```
 NOTE: In this example, the installation directory is /opt/pf9-express, but any directory can be used.
 
-3a. Git Branching Strategy
-
-By default, you'll be on the "master" branch after cloning the repository.  If you'd like to use the latest version (but perhaps not fully tested) you should checkout the "develop" branch.  If instructed to use a private branch, you'll need to checkout that specific branch.  To checkout a branch, use the following command:
-
-```
-cd /opt/pf9-express
-git checkout <branchName>
-```
-
 ## Configure Access to the Management Plane (CLI Only)
 To configure the Platform9 Express CLI to communicate with the Platform9 management plane, run the following command (a sample session is included):
 
@@ -39,7 +30,7 @@ To configure the Platform9 Express CLI to communicate with the Platform9 managem
 # ./pf9-express -s
 NOTE: to enter a NULL value for prompt, enter '-'
  
-PF9 Control Plane URL [https://company.platform9.net]:
+PF9 Management Plane URL [https://company.platform9.net]:
 --> accepted: https://company.platform9.net
  
 Admin Username [user@company.com]:
@@ -71,7 +62,7 @@ Proxy URL:
 ```
 
 ## Install Prerequisite Packages
-To install prerequisite packages on the control host, run the following command (a sample session is included):
+To install prerequisite packages on the Platform9 Express control host, run the following command (a sample session is included):
 
 ```
 # ./pf9-express -i
@@ -86,6 +77,7 @@ NOTE: A sample template is installed in the previous command ("./pf9-express -s"
 
 ## Sample Inventory File
 ```
+##
 ## Ansible Inventory
 ##
 [all]
@@ -98,6 +90,8 @@ ansible_sudo_pass=winterwonderland
 ################################################################################################
 manage_network=True
 bond_ifname=bond0
+bond_mode=1
+bond_mtu=9000
 
 ## network configuration for bond (implemented if manage_network=True)
 [bond-config]
@@ -108,6 +102,11 @@ cv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"
 ################################################################################################
 ## OpenStack Groups
 ################################################################################################
+[pmo:children]
+hypervisors
+glance
+cinder
+
 ## global variables defined in group_vars/hypervisors.yml
 [hypervisors]
 hv01 ansible_host=10.0.0.11 ansible_user=centos vm_console_ip=10.0.0.11 ha_cluster_ip=10.0.1.11 tunnel_ip=10.0.2.11 dhcp=on snat=on
@@ -127,6 +126,10 @@ hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 ################################################################################################
 ## Kubernetes Groups
 ################################################################################################
+[pmk:children]
+k8s-master
+k8s-worker
+
 ## global variables defined in group_vars/containervisors.yml
 [k8s-master]
 cv01 ansible_host=10.0.0.15 ansible_user=ubuntu cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27

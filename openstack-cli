@@ -49,7 +49,7 @@ done
 if [ -n "${pf9_custom_configFile}" ]; then pf9_config=${pf9_custom_configFile}; fi
 
 # validate config file
-if [ ! -r ${pf9_config} ]; then assert "could not find auto-deploy config file (looked in ${pf9_config})"; fi
+if [ ! -r ${pf9_config} ]; then assert "could not find pf9-express config file (looked in ${pf9_config})"; fi
 
 ## lookup configuration values from config file
 ctrl_hostname=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
