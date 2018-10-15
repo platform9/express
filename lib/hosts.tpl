@@ -31,6 +31,10 @@ glance
 cinder
 
 ## global variables defined in group_vars/hypervisors.yml
+## note: the following variables, if not defined, inherit the value of ansible_host
+##   - vm_console_ip
+##   - ha_cluster_ip
+##   - tunnel_ip
 [hypervisors]
 hv01 ansible_host=10.0.0.11 vm_console_ip=10.0.0.11 ha_cluster_ip=10.0.1.11 tunnel_ip=10.0.2.11 dhcp=on snat=on
 hv02 ansible_host=10.0.0.12 vm_console_ip=10.0.0.12 tunnel_ip=10.0.2.12 dhcp=on snat=on
@@ -43,6 +47,8 @@ hv01 glance_ip=10.0.3.11 glance_public_endpoint=True
 hv02 glance_ip=10.0.3.12
 
 ## global variables defined in group_vars/cinder.yml
+## note: the following variables, if not defined, inherit the value of ansible_host
+##   - cinder_ip
 [cinder]
 hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 
