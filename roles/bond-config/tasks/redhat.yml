@@ -1,5 +1,33 @@
 ---
-- name: Create the network configuration file for the bond
-  template:
-    src: bond_redhat.j2
-    dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}"
+##########################################################################################################
+## bond-config:
+##
+## Configure the physical and sub-interfaces behind the bond
+##########################################################################################################
+
+- debug: var=bond_members
+- debug: var=bond_sub_interfaces
+
+- block:
+  - name: attach physical interfaces to the bond
+    template:
+      src: ifcfg-interface.j2
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
+      mode: 0644
+    with_items: "{{bond_members}}"
+  when: bond_members is defined
+
+- block:
+  - name: attach physical interfaces to the bond
+    template:
+      src: ifcfg-sub-interface.j2
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}.{{item['vlanid']}}"
+      mode: 0644
+    with_items: "{{bond_sub_interfaces|list}}"
+  when: bond_sub_interfaces is defined
+
+- name: restart network service
+  service:
+    name: network
+    state: restarted
+  when: bond_members is defined or bond_sub_interfaces is defined

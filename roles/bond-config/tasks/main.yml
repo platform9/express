@@ -5,29 +5,8 @@
 ## Configure the physical and sub-interfaces behind the bond
 ##########################################################################################################
 
-- debug: var=bond_members
-- debug: var=bond_sub_interfaces
+- include: redhat.yml
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
-- block:
-  - name: attach physical interfaces to the bond
-    template:
-      src: ifcfg-interface.j2
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
-      mode: 0644
-    with_items: "{{bond_members}}"
-  when: bond_members is defined
-
-- block:
-  - name: attach physical interfaces to the bond
-    template:
-      src: ifcfg-sub-interface.j2
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}.{{item['vlanid']}}"
-      mode: 0644
-    with_items: "{{bond_sub_interfaces|list}}"
-  when: bond_sub_interfaces is defined
-
-- name: restart network service
-  service:
-    name: network
-    state: restarted
-  when: bond_members is defined or bond_sub_interfaces is defined
+- include: ubuntu.yml
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
