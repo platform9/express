@@ -3,6 +3,15 @@
 - debug: var=bond_sub_interfaces
 
 - block:
+  - name: define physical interface
+    template:
+      src: ubuntu-ifcfg-phy-interface.j2
+      dest: "/etc/network/interfaces.d/ifcfg-{{bond_members}}"
+      mode: 0644
+    with_items: "{{bond_members}}"
+  when: bond_members is defined
+
+- block:
   - name: attach physical interface to the bond
     template:
       src: ubuntu-ifcfg-interface.j2
