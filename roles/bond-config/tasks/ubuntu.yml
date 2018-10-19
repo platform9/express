@@ -5,26 +5,17 @@
 - block:
   - name: define physical interface
     template:
-      src: ubuntu-ifcfg-phy-interface.j2
-      dest: "/etc/network/interfaces.d/ifcfg-{{bond_members}}"
-      mode: 0644
-    with_items: "{{bond_members}}"
-  when: bond_members is defined
-
-- block:
-  - name: attach physical interface to the bond
-    template:
       src: ubuntu-ifcfg-interface.j2
-      dest: "/etc/network/interfaces.d/ifcfg-{{item}}"
+      dest: "/etc/network/interfaces.d/ifcfg-{{bond_ifname}}.cfg"
       mode: 0644
     with_items: "{{bond_members}}"
   when: bond_members is defined
 
 - block:
-  - name: attach physical interfaces to the bond
+  - name: create the sub interfaces
     template:
       src: ubuntu-ifcfg-sub-interface.j2
-      dest: "/etc/network/interfaces.d/ifcfg-{{bond_ifname}}.{{item['vlanid']}}"
+      dest: "/etc/network/interfaces.d/ifcfg-{{bond_ifname}}-{{item['vlanid']}}.cfg"
       mode: 0644
     with_items: "{{bond_sub_interfaces|list}}"
   when: bond_sub_interfaces is defined
