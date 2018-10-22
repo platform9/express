@@ -5,7 +5,17 @@
 - block:
   - name: define physical interface
     template:
-      src: ubuntu-ifcfg-interface.j2
+      src: ubuntu-ifcfg-phy-interface.j2
+      dest: "/etc/network/interfaces.d/ifcfg-{{bond_members}}.cfg"
+      mode: 0644
+    with_items: "{{bond_members}}"
+  when: bond_members is defined
+  register: bond_task_result
+
+- block:
+  - name: define bond interface
+    template:
+      src: ubuntu-ifcfg-bond-interface.j2
       dest: "/etc/network/interfaces.d/ifcfg-{{bond_ifname}}.cfg"
       mode: 0644
     with_items: "{{bond_members}}"
@@ -20,8 +30,17 @@
     with_items: "{{bond_sub_interfaces|list}}"
   when: bond_sub_interfaces is defined
 
-- name: restart network service
-  service:
-    name: networking
-    state: restarted
-  when: bond_members is defined or bond_sub_interfaces is defined
+- name: Reboot immediately if there was a change.
+  shell: "sleep 5 && reboot"
+  async: 1
+  poll: 0
+  when: bond_task_result is changed
+
+- name: Wait for the reboot to complete if there was a change.
+  wait_for_connection:
+    connect_timeout: 20
+    sleep: 5
+    delay: 5
+    timeout: 300
+  when: bond_task_result is changed
+
