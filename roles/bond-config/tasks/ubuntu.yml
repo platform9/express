@@ -2,32 +2,29 @@
 - debug: var=bond_members
 - debug: var=bond_sub_interfaces
 
-- block:
-  - name: define physical interface
-    template:
-      src: ubuntu-ifcfg-phy-interface.j2
-      dest: "/etc/network/interfaces.d/ifcfg-{{bond_members}}.cfg"
-      mode: 0644
-    with_items: "{{bond_members}}"
+- name: define physical interface
+  template:
+    src: ubuntu-ifcfg-phy-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{bond_members}}.cfg"
+    mode: 0644
+  with_items: "{{bond_members}}"
   when: bond_members is defined
   register: bond_task_result
 
-- block:
-  - name: define bond interface
-    template:
-      src: ubuntu-ifcfg-bond-interface.j2
-      dest: "/etc/network/interfaces.d/ifcfg-{{bond_ifname}}.cfg"
-      mode: 0644
-    with_items: "{{bond_members}}"
+- name: define bond interface
+  template:
+    src: ubuntu-ifcfg-bond-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{bond_ifname}}.cfg"
+    mode: 0644
+  with_items: "{{bond_members}}"
   when: bond_members is defined
 
-- block:
-  - name: create the sub interfaces
-    template:
-      src: ubuntu-ifcfg-sub-interface.j2
-      dest: "/etc/network/interfaces.d/ifcfg-{{bond_ifname}}-{{item['vlanid']}}.cfg"
-      mode: 0644
-    with_items: "{{bond_sub_interfaces|list}}"
+- name: create the sub interfaces
+  template:
+    src: ubuntu-ifcfg-sub-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{bond_ifname}}-{{item['vlanid']}}.cfg"
+    mode: 0644
+  with_items: "{{bond_sub_interfaces|list}}"
   when: bond_sub_interfaces is defined
 
 - name: Reboot immediately if there was a change.
