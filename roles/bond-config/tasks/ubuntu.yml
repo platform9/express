@@ -2,7 +2,7 @@
 - debug: var=bond_members
 - debug: var=bond_sub_interfaces
 
-- name: define physical interface
+- name: "Ubuntu - define physical interface"
   template:
     src: ubuntu-ifcfg-phy-interface.j2
     dest: "/etc/network/interfaces.d/ifcfg-{{bond_members}}.cfg"
@@ -11,7 +11,7 @@
   when: bond_members is defined
   register: bond_task_result
 
-- name: define bond interface
+- name: "Ubuntu - define bond interface"
   template:
     src: ubuntu-ifcfg-bond-interface.j2
     dest: "/etc/network/interfaces.d/ifcfg-{{bond_ifname}}.cfg"
@@ -19,7 +19,7 @@
   with_items: "{{bond_members}}"
   when: bond_members is defined
 
-- name: create the sub interfaces
+- name: "Ubuntu - create the sub interfaces"
   template:
     src: ubuntu-ifcfg-sub-interface.j2
     dest: "/etc/network/interfaces.d/ifcfg-{{bond_ifname}}-{{item['vlanid']}}.cfg"
@@ -27,13 +27,13 @@
   with_items: "{{bond_sub_interfaces|list}}"
   when: bond_sub_interfaces is defined
 
-- name: Reboot immediately if there was a change.
+- name: "Ubuntu Reboot if there was a change"
   shell: "sleep 5 && reboot"
   async: 1
   poll: 0
   when: bond_task_result is changed
 
-- name: Wait for the reboot to complete if there was a change.
+- name: "Ubuntu - Wait for the reboot to complete if there was a change"
   wait_for_connection:
     connect_timeout: 20
     sleep: 5

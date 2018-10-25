@@ -9,7 +9,7 @@
 - debug: var=bond_sub_interfaces
 
 - block:
-  - name: attach physical interfaces to the bond
+  - name: "RedHat - attach physical interfaces to the bond"
     template:
       src: ifcfg-interface.j2
       dest: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
@@ -18,7 +18,7 @@
   when: bond_members is defined
 
 - block:
-  - name: attach physical interfaces to the bond
+  - name: "RedHat - attach physical interfaces to the bond"
     template:
       src: ifcfg-sub-interface.j2
       dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}.{{item['vlanid']}}"
