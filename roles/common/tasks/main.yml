@@ -12,7 +12,8 @@
   fail:
     msg: "Hardware virtualization is not present, or not enabled."
   when: hw_virt|failed and
-        inventory_hostname in groups.hypervisors
+        inventory_hostname in groups.hypervisors and
+        ansible_distribution == "CentOS"
 
 - block:
   - name: Set system hostname
