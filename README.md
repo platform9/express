@@ -83,8 +83,9 @@ NOTE: A sample template is installed in the previous command ("./pf9-express -s"
 [all]
 [all:vars]
 ansible_user=ubuntu
-ansible_ssh_pass=winterwonderland
 ansible_sudo_pass=winterwonderland
+ansible_ssh_pass=winterwonderland
+#ansible_ssh_private_key_file=~/.ssh/id_rsa
 
 ################################################################################################
 ## Optional Settings
