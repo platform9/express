@@ -16,12 +16,12 @@
   when: ansible_os_family == "RedHat"
 
 - block:
-  - name: install LVM (Debian)
+  - name: install LVM (Ubuntu)
     apt:
       name: lvm2
       state: latest
 
   - name: running vgscan
     shell: vgscan
-  when: ansible_os_family == "Debian"
+  when: ansible_distribution == "Ubuntu"
 
