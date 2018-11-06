@@ -49,8 +49,13 @@
     state: stopped
 
 - name: remove pf9-hostagent
-  yum:
+  package:
     name: pf9-hostagent
+    state: absent
+
+- name: remove pf9-comms
+  package:
+    name: pf9-comms
     state: absent
 
 - name: kill pf9-sidekick
