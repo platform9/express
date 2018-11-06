@@ -1,0 +1,15 @@
+---
+- name: install device-mapper-multipath
+  yum:
+    name: device-mapper-multipath
+    state: present
+
+- name: install sysfsutils
+  yum:
+    name: sysfsutils
+    state: present
+
+- name: install sg3_utils
+  yum:
+    name: sg3_utils
+    state: present
