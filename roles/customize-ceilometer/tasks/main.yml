@@ -1,5 +1,5 @@
 ---
-- name: Check if pf9-ceilometer in installed (Ubuntu))
+- name: Check if pf9-ceilometer in installed (Ubuntu)
   shell: "`which dpkg-query` -s pf9-ceilometer > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
   register: pkg_state_ceilometer_ubuntu
   when:
