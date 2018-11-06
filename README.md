@@ -110,6 +110,10 @@ glance
 cinder
 
 ## global variables defined in group_vars/hypervisors.yml
+## note: if the following variables are not defined, the value of ansible_host will be inherited
+##   - vm_console_ip
+##   - ha_cluster_ip
+##   - tunnel_ip
 [hypervisors]
 hv01 ansible_host=10.0.0.11 vm_console_ip=10.0.0.11 ha_cluster_ip=10.0.1.11 tunnel_ip=10.0.2.11 dhcp=on snat=on
 hv02 ansible_host=10.0.0.12 vm_console_ip=10.0.0.12 tunnel_ip=10.0.2.12 dhcp=on snat=on
@@ -117,16 +121,20 @@ hv03 ansible_host=10.0.0.13 vm_console_ip=10.0.0.13 tunnel_ip=10.0.2.13
 hv04 ansible_host=10.0.0.14 
 
 ## global variables defined in group_vars/glance.yml
+## note: if the following variables are not defined, the value of ansible_host will be inherited
+##   - glance_ip
 [glance]
 hv01 glance_ip=10.0.3.11 glance_public_endpoint=True
 hv02 glance_ip=10.0.3.12
 
 ## global variables defined in group_vars/cinder.yml
+## note: if the following variables are not defined, the value of ansible_host will be inherited
+##   - cinder_ip
 [cinder]
 hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 
-## This role must be enabled by Platform9 Customer Success / Support first
 ## global variables defined in group_vars/designate.yml
+## note: this role must be enabled by Platform9 Customer Success before using
 [designate]
 #hv01
 
@@ -138,6 +146,8 @@ k8s-master
 k8s-worker
 
 ## global variables defined in group_vars/containervisors.yml
+## note: if the following variables are not defined, their tasks will be skipped
+##   - cluster_uuid
 [k8s-master]
 cv01 ansible_host=10.0.0.15
 cv02 ansible_host=10.0.0.16
