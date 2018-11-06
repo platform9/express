@@ -15,7 +15,7 @@
   when: ansible_os_family == "RedHat"
 
 - include: ubuntu.yml
-  when: ansible_distribution == 'Ubuntu'
+  when: ansible_distribution == "Ubuntu"
 
 - name: check if OVS bridge already exists
   shell: "ifconfig -a | grep ^{{neutron_ovs_bridge_name}} > /dev/null 2>&1; if [ $? -eq 0 ]; then echo 'exists'; else echo 'not-exist'; fi"
