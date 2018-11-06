@@ -1,4 +1,10 @@
 ---
+- name: Check if pf9-ostackhost is installed (RedHat)
+  shell: "`which rpm` -qa | grep pf9-ostackhost > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
+  register: pkg_state_ostackhost_redhat
+  when:
+    - ansible_pkg_mgr == "yum"
+
 - name: install device-mapper-multipath
   yum:
     name: device-mapper-multipath
