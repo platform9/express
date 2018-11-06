@@ -45,6 +45,11 @@ hv02 glance_ip=10.0.3.12
 [cinder]
 hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 
+## This role must be enabled by Platform9 Customer Success / Support first
+## global variables defined in group_vars/designate.yml
+[designate]
+#hv01
+
 ################################################################################################
 ## Kubernetes Groups
 ################################################################################################
