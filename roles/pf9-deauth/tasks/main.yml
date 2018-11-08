@@ -65,6 +65,12 @@
 - name: cleanup /opt/pf9
   shell: rm -rf /opt/pf9
 
+- name: cleanup /etc/pf9
+  shell: rm -rf /etc/pf9
+
 - name: cleanup /var/log/pf9
   shell: rm -rf /var/log/pf9
+
+- name: cleanup /var/opt/pf9
+  shell: rm -rf /var/opt/pf9
 
