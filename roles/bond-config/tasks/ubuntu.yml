@@ -5,7 +5,7 @@
 - name: "Ubuntu - define physical interface"
   template:
     src: ubuntu-ifcfg-phy-interface.j2
-    dest: "/etc/network/interfaces.d/ifcfg-{{bond_members}}.cfg"
+    dest: "/etc/network/interfaces.d/ifcfg-{{item}}.cfg"
     mode: 0644
   with_items: "{{bond_members}}"
   when: bond_members is defined
