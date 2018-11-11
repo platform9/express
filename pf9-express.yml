@@ -11,6 +11,12 @@
     - name: install python2 on Ubuntu to enable running Ansible on Ubuntu hosts
       raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
 
+# Configure the bond
+- hosts: bond-config
+  become: true
+  roles:
+    - { role: "bond-config", when: manage_network == True }
+
 # Run pre_flight_checks
 - hosts:
     - hypervisors
@@ -28,12 +34,6 @@
   become: true
   roles:
     - pre-hook
-
-# Configure the bond
-- hosts: bond-config
-  become: true
-  roles:
-    - { role: "bond-config", when: manage_network == True }
 
 # OpenStack Hypervisor Nodes
 - hosts: hypervisors
