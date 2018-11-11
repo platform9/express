@@ -5,7 +5,7 @@
 - block:
   - name: "RedHat - attach physical interfaces to the bond"
     template:
-      src: ifcfg-interface.j2
+      src: rhel-ifcfg-interface.j2
       dest: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
       mode: 0644
     with_items: "{{bond_members}}"
@@ -14,7 +14,7 @@
 - block:
   - name: "RedHat - attach physical interfaces to the bond"
     template:
-      src: ifcfg-sub-interface.j2
+      src: rhel-ifcfg-sub-interface.j2
       dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}.{{item['vlanid']}}"
       mode: 0644
     with_items: "{{bond_sub_interfaces|list}}"
