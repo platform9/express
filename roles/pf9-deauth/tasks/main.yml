@@ -52,6 +52,16 @@
   shell: "kill -9 `ps -ef | grep sidekick-stdout.log | grep -v grep | awk -F ' ' '{print $2}'` > /dev/null 2>&1"
   ignore_errors: true
 
+- name: remove pf9-hostagent
+  package:
+    name: pf9-hostagent
+    state: absent
+
+- name: remove pf9-comms
+  package:
+    name: pf9-comms
+    state: absent
+
 - name: cleanup /opt/pf9
   shell: rm -rf /opt/pf9
 
@@ -63,14 +73,4 @@
 
 - name: cleanup /var/opt/pf9
   shell: rm -rf /var/opt/pf9
-
-- name: remove pf9-hostagent
-  package:
-    name: pf9-hostagent
-    state: absent
-
-- name: remove pf9-comms
-  package:
-    name: pf9-comms
-    state: absent
 
