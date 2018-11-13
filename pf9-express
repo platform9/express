@@ -32,12 +32,14 @@ flag_dbinit=0
 flag_skip_prereqs=0
 flag_awx_restart=0
 flag_autoregister=0
+flag_csvImport=0
 flag_deauth=0
 extra_vars=""
 awx_pf9_user="pf9"
 awx_pf9_password="Pl@tform9"
 awx_pf9_email="user@company.com"
 awx_db_export=awx-db-backup-v0.2.sql
+IFS_orig="${IFS}"
 
 # functions
 usage() {
@@ -52,12 +54,128 @@ usage() {
   echo "-b|--bypassPrereqs         : bypass pre-requisites"
   echo "-d|--deauth                : de-authorize host"
   echo "-v|--inventory <file>      : use alternate inventory file for Ansible"
+  echo "-f|--csvFile <file>        : import CSV file"
   echo -e "-h|--help                  : display this message\n"
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
     :
   else
     exit 1
   fi
+}
+
+csv_import() {
+  if [ ! -f ${csv_file} ]; then assert "CSV file not found"; fi
+  
+  # Define templates
+  tmp_inventory=/tmp/pf9-hosts.tmp
+  tpl_global=${basedir}/lib/pf9-builder/template/hosts-global.tpl
+  tpl_hypervisors=${basedir}/lib/pf9-builder/template/hosts-hypervisors.tpl
+  tpl_glance=${basedir}/lib/pf9-builder/template/hosts-glance.tpl
+  tpl_cinder=${basedir}/lib/pf9-builder/template/hosts-cinder.tpl
+  tpl_bond_config=${basedir}/lib/pf9-builder/template/hosts-bond-config.tpl
+
+  # Initialize Inventory (from template)
+  if [ -r ${tmp_inventory} ]; then rm -f ${tmp_inventory}; fi
+  cat ${tpl_global} > ${tmp_inventory}
+  cat ${tpl_hypervisors} >> ${tmp_inventory}
+
+  # build hypervisors stanza
+  cnt=0; IFS=","
+  while read line; do
+    if [ ${cnt} -eq 0 ]; then ((cnt++)); continue; fi
+
+    lineArgs=(${line})
+    inv_entry="${lineArgs[0]} ansible_host=${lineArgs[3]} ansible_user=${lineArgs[1]} ansible_ssh_private_key_file=${lineArgs[2]}"
+    
+    # check for dhcp
+    if [ "${lineArgs[4]}" == "TRUE" ]; then
+      inv_entry="${inv_entry} dhcp=on"
+    fi
+
+    # check for snat
+    if [ "${lineArgs[5]}" == "TRUE" ]; then
+      inv_entry="${inv_entry} snat=on"
+    fi
+
+    # update hypervisor inventory entry
+    echo ${inv_entry} >> ${tmp_inventory}
+    ((cnt++))
+  done < ${csv_file}
+
+  # build glance stanza
+  cat ${tpl_glance} >> ${tmp_inventory}
+  cnt=0; IFS=","
+  while read line; do
+    if [ ${cnt} -eq 0 ]; then ((cnt++)); continue; fi
+
+    # add glance stanza
+    lineArgs=(${line})
+    if [ "${lineArgs[6]}" == "TRUE" ]; then
+      inv_entry="${lineArgs[0]}"
+      if [ "${lineArgs[7]}" == "TRUE" ]; then
+        inv_entry="${inv_entry} glance_public_endpoint=True"
+      fi
+      echo ${inv_entry} >> ${tmp_inventory}
+    fi
+
+    ((cnt++))
+  done < ${csv_file}
+
+  # build cinder stanza
+  cat ${tpl_cinder} >> ${tmp_inventory}
+
+  # build bond-config stanza
+  cat ${tpl_bond_config} >> ${tmp_inventory}
+  cnt=0; IFS=","
+  while read line; do
+    if [ ${cnt} -eq 0 ]; then ((cnt++)); continue; fi
+
+    # add glance stanza
+    lineArgs=(${line})
+    interfaces=""
+    IFS="${IFS_orig}"
+    if [ -n "${lineArgs[8]}" ]; then
+      if [ -z "${interfaces}" ]; then
+        interfaces="\"${lineArgs[8]}\""
+      else
+        interfaces="${interfaces},\"${lineArgs[9]}\""
+      fi
+    fi
+    if [ -n "${lineArgs[9]}" ]; then
+      if [ -z "${interfaces}" ]; then
+        interfaces="\"${lineArgs[9]}\""
+      else
+        interfaces="${interfaces},\"${lineArgs[9]}\""
+      fi
+    fi
+    inv_entry="${lineArgs[0]} bond_members='[${interfaces}]'"
+
+    # add sub-interfaces
+    sub_interfaces=""
+    if [ -n "${lineArgs[10]}" ]; then
+      if [ -z "${sub_interfaces}" ]; then
+        sub_interfaces="{\"vlanid\":\"${lineArgs[10]}\",\"ip\":\"${lineArgs[11]}\",\"mask\":\"${lineArgs[12]}\"}"
+      else
+        sub_interfaces="${sub_interfaces},{\"vlanid\":\"${lineArgs[10]}\",\"ip\":\"${lineArgs[11]}\",\"mask\":\"${lineArgs[12]}\"}"
+      fi
+      inv_entry="${inv_entry} bond_sub_interfaces='[${sub_interfaces}]'"
+    fi
+    
+    echo ${inv_entry} >> ${tmp_inventory}
+
+    IFS=","
+    ((cnt++))
+  done < ${csv_file}
+
+  # backup existing inventory file (if exists)
+  if [ -r ${pf9_config} ]; then
+    ts=$(date +%s)
+    cp -f ${inventory} /tmp/hosts.${ts}
+  fi
+
+  # replace inventory file
+  cp -f ${tmp_inventory} ${inventory}
+  echo "Import Complete"
 }
 
 validate_platform() {
@@ -377,6 +495,12 @@ while [ $# -gt 0 ]; do
   -d|--deauth)
     flag_deauth=1
     ;;
+  -f|--csvFile)
+    if [ $# -lt 2 ]; then usage; fi
+    flag_csvImport=1
+    csv_file=${2}
+    shift
+    ;;
   -c|--config)
     if [ $# -lt 2 ]; then usage; fi
     pf9_custom_configFile=${2}
@@ -425,6 +549,11 @@ fi
 if [ ! -r ${pf9_config} ]; then
   init_config
   run_setup
+fi
+
+## import CSV-based inventory file
+if [ ${flag_csvImport} -eq 1 ]; then
+   csv_import ${csv_file}
 fi
 
 ## build group_vars/all.yml
