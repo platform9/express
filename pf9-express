@@ -506,6 +506,14 @@ while [ $# -gt 0 ]; do
   -t|--tag)
     if [ $# -lt 2 ]; then usage; fi
     tags=${2}
+    for tag in $(echo ${tags} | sed -e 's/,/ /g'); do
+      case ${tag} in
+      live-migration|image-import)
+        ;;
+      *)
+        assert "invalid tag : '${tag}'"
+      esac
+    done
     shift
     ;;
   -c|--config)
