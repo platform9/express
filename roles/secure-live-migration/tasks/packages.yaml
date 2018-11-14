@@ -3,3 +3,5 @@
   package:
     name: sysfsutils
     state: present
+  tags: 
+    - live-migration

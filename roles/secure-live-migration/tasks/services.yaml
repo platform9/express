@@ -3,9 +3,13 @@
   service:
     name: "{{ libvirtd_service_name }}"
     enabled: yes
+  tags: 
+    - live-migration
 
 - name: Enable & start SSH
   service:
     name: "{{ sshd_service_name }}"
     state: started
     enabled: yes
+  tags: 
+    - live-migration

@@ -4,6 +4,8 @@
     path: "/opt/pf9/home/.ssh/known_hosts"
     name: "{{ hostvars[host]['ansible_fqdn'] }}"
     key: "{{ hostvars[host]['ansible_fqdn'] }} {{ item.type }} {{ hostvars[host][item.name] }}"
+  tags: 
+    - live-migration
   with_items:
     - name: ansible_ssh_host_key_rsa_public
       type: ssh-rsa
@@ -15,6 +17,8 @@
     path: "/opt/pf9/home/.ssh/known_hosts"
     name: "{{ hostvars[host]['ansible_default_ipv4']['address'] }}"
     key: "{{ hostvars[host]['ansible_default_ipv4']['address'] }} {{ item.type }} {{ hostvars[host][item.name] }}"
+  tags: 
+    - live-migration
   with_items:
     - name: ansible_ssh_host_key_rsa_public
       type: ssh-rsa
