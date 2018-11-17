@@ -48,6 +48,7 @@
     - qemu-kvm-ev
     - neutron-prerequisites
     - { role: "network-hook", when: manage_network == True }
+    - { role: "ovs-config", when: manage_ovs == True }
     - { role: "map-role", rolename: "pf9-ostackhost-neutron", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-ceilometer", when: autoreg == "on" and ceilometer == "on" }
