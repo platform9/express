@@ -10,6 +10,8 @@ ansible_sudo_pass=winterwonderland
 ## Optional Settings
 ################################################################################################
 manage_network=True
+manage_ovs=True
+multipath=False
 bond_ifname=bond0
 bond_mode=1
 bond_mtu=9000
