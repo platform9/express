@@ -55,7 +55,7 @@ if len(sys.argv) == 2:
 
 # get list of server IDs
 json_results_file = "/tmp/pf9-hostmon-servers.tmp.json"
-os.system("openstack server list -f json > {}".format(json_results_file))
+os.system("openstack server list --all-projects -f json > {}".format(json_results_file))
 
 # validate json_results_file
 if not os.path.isfile(json_results_file):
