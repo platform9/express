@@ -20,7 +20,7 @@ def lassert(m):
 def sigint_handler(signum, frame):
     None
 
-def write_instance_metrics_to_db(last_timestamp,instance_id,instance_name,instance_flavor,instance_db):
+def write_instance_metrics_to_db(last_timestamp,instance_id,instance_name,instance_flavor,project_id,instance_db):
     json_results_file = "/tmp/pf9-hostmon-gnocchi.tmp.json"
     os.system("gnocchi measures show -f json --resource-id {} cpu_util > {}".format(instance_id,json_results_file))
 
@@ -50,7 +50,33 @@ def write_instance_metrics_to_db(last_timestamp,instance_id,instance_name,instan
                     current_ts = dp.parse(metric_data['timestamp'])
                     current_epoch = current_ts.strftime('%s')
                     if current_epoch > last_epoch:
-                        instance_db.write("{},{},{},{}\r\n".format(metric_data['timestamp'],instance_name,instance_flavor,metric_data['value']))
+                        instance_db.write("{},{},{},{},{}\r\n".format(metric_data['timestamp'],instance_name,instance_flavor,metric_data['value'],project_id))
+
+def get_project_id(instance_id):
+    json_results_file = "/tmp/pf9-hostmon-server.tmp.json"
+    os.system("openstack server show -f json -c project_id {} > {}".format(instance_id,json_results_file))
+
+    # validate json_results_file
+    if not os.path.isfile(json_results_file):
+        lassert("failed to open <json_results_file>: {}".format(json_results_file))
+
+    # get project id
+    server_id = ""
+    try:
+        json_data=open(json_results_file)
+        server_data = json.load(json_data)
+        json_data.close()
+    except:
+        lassert("failed to process <json_results_file>")
+    else:
+        for server in server_data:
+            try:
+                server['project_id']
+            except:
+                continue
+            else:
+                server_id = server['project_id']
+    return server_id
 
 # print usage
 if len(sys.argv) == 2 and sys.argv[1] == "-h":
@@ -62,7 +88,7 @@ if len(sys.argv) == 2:
 
 # get list of server IDs
 json_results_file = "/tmp/pf9-hostmon-servers.tmp.json"
-os.system("openstack server list -f json > {}".format(json_results_file))
+os.system("openstack server list --all-projects -f json > {}".format(json_results_file))
 
 # validate json_results_file
 if not os.path.isfile(json_results_file):
@@ -88,12 +114,13 @@ else:
             else:
                 instance_db_fh = open(instance_db_file, "a+")
 
+            project_id = get_project_id(instance_data['ID'])
             metric_lines = instance_db_fh.readlines()
             if len(metric_lines) > 0:
                 last_timestamp = metric_lines[len(metric_lines)-1].split(',')[0]
             else:
                 last_timestamp = 0
-            write_instance_metrics_to_db(last_timestamp,instance_data['ID'],instance_data['Name'],instance_data['Flavor'],instance_db_fh)
+            write_instance_metrics_to_db(last_timestamp,instance_data['ID'],instance_data['Name'],instance_data['Flavor'],project_id,instance_db_fh)
 
 # exit
 sys.exit(0)
