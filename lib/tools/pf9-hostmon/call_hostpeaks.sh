@@ -4,13 +4,14 @@ basedir=$(dirname $0)
 email_list=${basedir}/email_distr.dat
 
 usage () {
-  echo "Usage: `basename $0` <openstack-rc>"
+  echo "Usage: `basename $0` <openstack-rc> <env>"
   exit 1
 }
 
 # validate command line
-if [ $# -ne 1 ]; then usage; fi
+if [ $# -ne 2 ]; then usage; fi
 osrc=${1}
+environment=${2}
 if [ ! -r ${osrc} ]; then echo "ERROR: failed to open <openstack-rc>"; exit 1; fi
 
 # source <openstack-rc>
@@ -29,7 +30,7 @@ yesterday=$(expr $(date +%d) - 1)
 target_date="$(date +%Y-%m)-${yesterday}"
 
 # call pf9-hostpeaks
-tmpfile=${basedir}/peak_data/instance-peaks.${target_date}.csv
+tmpfile=${basedir}/peak_data/instance-peaks.${environment}.${target_date}.csv
 echo "executing: ${basedir}/pf9-hostpeaks.py ${target_date} > ${tmpfile}"
 ${basedir}/pf9-hostpeaks.py ${target_date} > ${tmpfile}
 
