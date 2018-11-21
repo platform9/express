@@ -4,8 +4,9 @@ import sys
 import os.path
 import json
 import signal
-from datetime import datetime
-import calendar
+#from datetime import datetime
+#import calendar
+import dateutil.parser as dp
 
 def usage():
     print "usage: {} [<hostname_filter>]".format(sys.argv[0]) 
@@ -44,9 +45,11 @@ def write_instance_metrics_to_db(last_timestamp,instance_id,instance_name,instan
                 if last_timestamp == 0:
                     instance_db.write("{},{},{},{}\r\n".format(metric_data['timestamp'],instance_name,instance_flavor,metric_data['value']))
                 else:
-                    last_ts = calendar.timegm(datetime.strptime(last_timestamp, "%Y-%m-%dT%H:%M:%S.%f").timetuple())
-                    currnt_ts = calendar.timegm(datetime.strptime(metric_data['timestamp'], "%Y-%m-%dT%H:%M:%S.%f").timetuple())
-                    if current_ts > last_ts:
+                    last_ts = dp.parse(last_timestamp)
+                    last_epoch = last_ts.strftime('%s')
+                    current_ts = dp.parse(metric_data['timestamp'])
+                    current_epoch = current_ts.strftime('%s')
+                    if current_epoch > last_epoch:
                         instance_db.write("{},{},{},{}\r\n".format(metric_data['timestamp'],instance_name,instance_flavor,metric_data['value']))
 
 # print usage
@@ -79,13 +82,17 @@ else:
         except:
             continue
         else:
-            instance_db_fh = open("instance_data/{}".format(instance_data['Name']), "w+")
+            instance_db_file = "instance_data/{}".format(instance_data['Name'])
+            if not os.path.isfile(instance_db_file):
+                instance_db_fh = open(instance_db_file, "w+")
+            else:
+                instance_db_fh = open(instance_db_file, "a+")
+
             metric_lines = instance_db_fh.readlines()
             if len(metric_lines) > 0:
-                last_timestamp = metric_lines[len(metric_lines)-1]
+                last_timestamp = metric_lines[len(metric_lines)-1].split(',')[0]
             else:
                 last_timestamp = 0
-
             write_instance_metrics_to_db(last_timestamp,instance_data['ID'],instance_data['Name'],instance_data['Flavor'],instance_db_fh)
 
 # exit
