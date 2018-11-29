@@ -18,8 +18,8 @@ def sigint_handler(signum, frame):
     None
 
 def get_peak_cpu(instance_id, target_data):
-    json_results_file = "/tmp/pf9-hostmon-gnocchi.tmp.json"
-    os.system("gnocchi measures show -f json --resource-id {} cpu_util > {}".format(instance_id,json_results_file))
+    json_results_file = "/tmp/pf9-hostmon-gnocchi.{}.tmp.json".format(os.getppid())
+    os.system("gnocchi measures show -f json --resource-id {} cpu_util 2>/dev/null > {}".format(instance_id,json_results_file))
 
     # validate json_results_file
     if os.path.isfile(json_results_file):
@@ -45,7 +45,7 @@ def get_peak_cpu(instance_id, target_data):
     return -1, -1
 
 def get_project_id(instance_id):
-    json_results_file = "/tmp/pf9-hostmon-server.tmp.json"
+    json_results_file = "/tmp/pf9-hostmon-server.{}.tmp.json".format(os.getppid())
     os.system("openstack server show -f json -c project_id {} > {}".format(instance_id,json_results_file))
 
     # validate json_results_file
@@ -70,7 +70,7 @@ if len(sys.argv) != 2:
 target_date = sys.argv[1]
 
 # get list of server IDs
-json_results_file = "/tmp/pf9-hostmon-servers.tmp.json"
+json_results_file = "/tmp/pf9-hostmon-servers.{}.tmp.json".format(os.getppid())
 os.system("openstack server list --all-projects -f json > {}".format(json_results_file))
 
 # validate json_results_file

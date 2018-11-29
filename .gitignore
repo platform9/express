@@ -13,5 +13,7 @@ roles/post-hook
 *.swp
 *.retry
 *.log
+lib/tools/pf9-hostmon/instance_data/*
+lib/tools/pf9-hostmon/peak_data/*
 *.tmp
 .DS_Store

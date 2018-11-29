@@ -30,14 +30,24 @@ yesterday=$(expr $(date +%d) - 1)
 target_date="$(date +%Y-%m)-${yesterday}"
 
 # call pf9-hostpeaks
-tmpfile=${basedir}/peak_data/instance-peaks.${environment}.${target_date}.csv
-echo "executing: ${basedir}/pf9-hostpeaks.py ${target_date} > ${tmpfile}"
+tmpfile=${basedir}/peak_data/instance-metrics.${environment}.${target_date}.csv
+echo "$(date -u) >>> [${environment}] pf9-hostpeaks.py ${target_date}"
 ${basedir}/pf9-hostpeaks.py ${target_date} > ${tmpfile}
+
+# configure email
+email_from=dan.wright@platform9.com
+email_subj="${environment} : Instance Metrics ${target_date}"
+email_body="CSV file attached"
+email_attachment=${tmpfile}
 
 # send email
 for email_addr in `cat ${email_list}`; do
   if [ "${email_addr:0:1}" == "#" -o -z "${email_addr}" ]; then continue; fi
-  echo "--> emailing ${email_addr}"
-  echo "CSV file attached" | mail -a "${tmpfile}" -r "donotreply@platform9.net" -s "Instance Metrics for ${target_date}" "${email_addr}"
-done
 
+  email_to="${email_addr}"
+  echo "$(date -u) >>> mail -a $(basename ${email_attachment}) ${email_to}"
+  echo "${email_body}" | mail -a ${email_attachment} -r ${email_from} -s "${email_subj}" ${email_to}
+done
+echo "$(date -u) >>> complete"
+
+exit 0
