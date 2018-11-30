@@ -4,8 +4,6 @@ import sys
 import os.path
 import json
 import signal
-#from datetime import datetime
-#import calendar
 import dateutil.parser as dp
 
 def usage():
