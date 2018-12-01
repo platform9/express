@@ -1,18 +1,19 @@
 #!/usr/bin/python
 
-# To-Do's:
-# 1. Add Column: Project-Name
-# 2. Add Memory_Util
-# 3. Sort by CPU_UTIL
-
 import sys
 import os.path
 import json
 import signal
 import dateutil.parser as dp
+import plotly.graph_objs as go
+import plotly
+import plotly.plotly as py
+
+metrics_timeseries_base = "du_metrics"
+metrics_peak_pase = "du_peakdata"
 
 def usage():
-    print "usage: {} <yyyy-mm-dd> <du>".format(sys.argv[0])
+    print "Usage: {} <yyyy-mm-dd> <du> [<limit>]".format(sys.argv[0])
     sys.exit(1)
 
 def lassert(m):
@@ -67,6 +68,20 @@ def get_peak_cpu(json_data,target_date):
                 return max_cpu, max_ts
     return -1, -1
 
+def populate_plot_data(json_data):
+    data_x = []
+    data_y = []
+    for sample_data in json_data:
+        try:
+            sample_data['value']
+        except:
+            continue
+        else:
+            data_x.append(sample_data['timestamp'])
+            data_y.append(round(sample_data['value'],2))
+
+    return data_x, data_y
+
 def get_flavor_metadata(instance_flavor):
     # lookup flavor metadata
     instance_flavor_name = instance_flavor.split(' ')[0]
@@ -106,37 +121,66 @@ def get_project_name(project_id):
         else:
             return server_data['name']
 
-def write_instance_metrics_to_db(last_timestamp,instance_id,instance_name,instance_flavor,project_id,instance_db):
-    json_results_file = "/tmp/pf9-hostmon-gnocchi.tmp.json"
-    os.system("gnocchi measures show -f json --resource-id {} cpu_util > {}".format(instance_id,json_results_file))
-
-    # validate json_results_file
-    if not os.path.isfile(json_results_file):
-        lassert("failed to open <json_results_file>: {}".format(json_results_file))
-
-    # process ceilometer metric: cpu_util
-    try:
-        json_data=open(json_results_file)
-        metrics = json.load(json_data)
-        json_data.close()
-    except:
-        lassert("failed to process <json_results_file>")
-    else:
-        for metric_data in metrics:
-            try:
-                metric_data['value']
-            except:
-                continue
+def write_instance_metrics_to_db(metrics_db,json_data,last_timestamp,instance_id,instance_name,instance_flavor,project_id,instance_db):
+    for metric_data in json_data:
+        try:
+            metric_data['value']
+        except:
+            continue
+        else:
+            if last_timestamp == 0:
+                instance_db.write("{},{},{},{}\r\n".format(metric_data['timestamp'],instance_name,instance_flavor,metric_data['value']))
             else:
-                if last_timestamp == 0:
-                    instance_db.write("{},{},{},{}\r\n".format(metric_data['timestamp'],instance_name,instance_flavor,metric_data['value']))
-                else:
-                    last_ts = dp.parse(last_timestamp)
-                    last_epoch = last_ts.strftime('%s')
-                    current_ts = dp.parse(metric_data['timestamp'])
-                    current_epoch = current_ts.strftime('%s')
-                    if current_epoch > last_epoch:
-                        instance_db.write("{},{},{},{},{}\r\n".format(metric_data['timestamp'],instance_name,instance_flavor,metric_data['value'],project_id))
+                last_ts = dp.parse(last_timestamp)
+                last_epoch = last_ts.strftime('%s')
+                current_ts = dp.parse(metric_data['timestamp'])
+                current_epoch = current_ts.strftime('%s')
+                if current_epoch > last_epoch:
+                    metrics_db.write("{},{},{},{},{}\r\n".format(metric_data['timestamp'],instance_name,instance_flavor,metric_data['value'],project_id))
+
+def init_metrics_db(du_name,target_date,instance_name):
+    # create directory for du
+    metrics_dir = "{}/{}/{}".format(metrics_timeseries_base,du_name,target_date)
+    try:
+        os.stat("{}/{}".format(metrics_timeseries_base,du_name))
+    except:
+        os.mkdir("{}/{}".format(metrics_timeseries_base,du_name))  
+
+    # create directory for du/date
+    try:
+        os.stat("{}/{}/{}".format(metrics_timeseries_base,du_name,target_date))
+    except:
+        os.mkdir("{}/{}/{}".format(metrics_timeseries_base,du_name,target_date))  
+
+    # create file for du/date/instance
+    metrics_db_file = "{}/{}".format(metrics_dir,instance_data['Name'])
+    if not os.path.isfile(metrics_db_file):
+        instance_db_fh = open(metrics_db_file, "w+")
+    else:
+        instance_db_fh = open(metrics_db_file, "a+")
+
+    return metrics_dir, instance_db_fh
+
+def init_peak_db(du_name,target_date):
+    # create directory for du
+    try:
+        os.stat("{}/{}".format(metrics_peak_pase,du_name))
+    except:
+        os.mkdir("{}/{}".format(metrics_peak_pase,du_name))  
+
+    # create directory for du/date
+    try:
+        os.stat("{}/{}/{}".format(metrics_peak_pase,du_name,target_date))
+    except:
+        os.mkdir("{}/{}/{}".format(metrics_peak_pase,du_name,target_date))  
+
+    # create file for du/date/peaks
+    peak_db_file = "{}/{}/{}/instance-metrics.{}.{}.csv".format(metrics_peak_pase,du_name,target_date,du_name,target_date)
+    if os.path.isfile(peak_db_file):
+      os.remove(peak_db_file)
+    peak_db_fh = open(peak_db_file, "w+")
+
+    return peak_db_fh
 
 # print usage
 if len(sys.argv) < 3:
@@ -159,9 +203,6 @@ os.system("openstack server list --all-projects -f json > {}".format(json_result
 if not os.path.isfile(json_results_file):
     lassert("failed to open <json_results_file>: {}".format(json_results_file))
 
-# print csv header
-print "INSTANCE-NAME,MAX-CPU-%,CPU,RAM,FLAVOR,MAX-CPU-TIMESTAMP,PROJECT"
-
 # process server IDs (get ceilometer stats and process)
 try:
     json_data=open(json_results_file)
@@ -171,48 +212,82 @@ except:
     lassert("failed to process <json_results_file>")
 else:
     cnt = 0
+    plot_data= []
+
+    # initialize peak database
+    peak_db_fh = init_peak_db(du_name,target_date)
+
     for instance_data in data:
         try:
             instance_data['Name']
         except:
             continue
         else:
+            # initialize instance-specific timeseries database
+            metrics_dir, instance_db_fh = init_metrics_db(du_name,target_date,instance_data['Name'])
+
             # get instance metrics
             instance_metrics_cpu = get_cpu_metrics(instance_data['ID'])
-
             if instance_metrics_cpu == None:
                continue
 
-            # create metrics directory for du
-            metrics_dir = "instance_data/{}/{}".format(du_name,target_date)
-            try:
-                os.stat("instance_data/{}".format(du_name))
-            except:
-                os.mkdir("instance_data/{}".format(du_name))  
+            # lookup instance metadata
+            instance_metadata = get_instance_info(instance_data['ID'])
 
-            # create metrics directory for du
-            try:
-                os.stat("instance_data/{}/{}".format(du_name,target_date))
-            except:
-                os.mkdir("instance_data/{}/{}".format(du_name,target_date))  
+            # initialize instance-plot data
+            instance_plot_data_x, instance_plot_data_y = populate_plot_data(instance_metrics_cpu)
+            trace_instance = go.Scatter(
+                x = instance_plot_data_x,
+                y = instance_plot_data_y,
+                name = instance_metadata['name'],
+            )
+            plot_data.append(trace_instance)
 
-            # update host metrics
-            metrics_db_file = "instance_data/{}".format(instance_data['Name'])
-            if not os.path.isfile(metrics_db_file):
-                instance_db_fh = open(metrics_db_file, "w+")
+            # write metrics to timeseries database
+            metric_lines = instance_db_fh.readlines()
+            if len(metric_lines) > 0:
+                last_timestamp = metric_lines[len(metric_lines)-1].split(',')[0]
             else:
-                instance_db_fh = open(metrics_db_file, "a+")
+                last_timestamp = 0
+            write_instance_metrics_to_db(instance_db_fh,instance_metrics_cpu,last_timestamp,instance_data['ID'],instance_data['Name'],instance_data['Flavor'],instance_metadata['project_id'],instance_db_fh)
 
-            # update host peaks
-            if (limit == 0) or (cnt < limit):
-                instance_metadata = get_instance_info(instance_data['ID'])
-                project_name = get_project_name(instance_metadata['project_id'])
-                instance_ram, instance_cpu = get_flavor_metadata(instance_metadata['flavor'])
-                max_cpu, max_ts = get_peak_cpu(instance_metrics_cpu,target_date)
-                if max_cpu != -1:
-                    print "{},{},{},{},{},{},{}".format(instance_data['Name'],max_cpu,instance_cpu,instance_ram,instance_data['Flavor'],project_name,max_ts)
-                cnt += 1
-            else:
+            # update metric databases
+            if cnt == 0:
+                peak_db_fh.write("INSTANCE-NAME,MAX-CPU-%,CPU,RAM,FLAVOR,PROJECT,TIMESTAMP-MAX_CPU\n")
+
+            project_name = get_project_name(instance_metadata['project_id'])
+            instance_ram, instance_cpu = get_flavor_metadata(instance_metadata['flavor'])
+            max_cpu, max_ts = get_peak_cpu(instance_metrics_cpu,target_date)
+            if max_cpu != -1:
+                peak_db_fh.write("{},{},{},{},{},{},{}\n".format(instance_data['Name'],max_cpu,instance_cpu,instance_ram,instance_data['Flavor'],project_name,max_ts))
+
+            # implement limit
+            cnt += 1
+            if (limit != 0) and (cnt >= limit):
                 break
+
+    # configure graph
+    graph_storage = "online"
+    layout = dict(
+        title = "{} : Instance Utilization Trend".format(du_name),
+        xaxis = dict(title = 'Date'),
+        yaxis = dict(title = 'CPU Utilization (%)'),
+    )
+    fig = dict(data=plot_data, layout=layout)
+
+    # build graph (online mode)
+    if graph_storage == "online":
+        plotly.tools.set_credentials_file(username='dwrightco1', api_key='D0CdsmAnWdkeS4nWrNFw')
+        graph_url = py.plot(fig)
+        link_db = "{}/{}/{}/link_to_graph_cpu.dat".format(metrics_timeseries_base,du_name,target_date)
+        if os.path.isfile(link_db):
+            os.remove(link_db)
+        link_db_fh = open(link_db, "w+")
+        link_db_fh.write(graph_url)
+
+    # build graph (offline mode)
+    if graph_storage == "offline":
+        plotly.offline.plot(fig, filename = "{}/du-cpu-util.html".format(metrics_dir))
+
 # exit
 sys.exit(0)

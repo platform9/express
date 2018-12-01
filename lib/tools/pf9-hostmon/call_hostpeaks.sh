@@ -20,33 +20,33 @@ source ${osrc}
 # validate email distros
 if [ ! -r ${email_list} ]; then exit 1; fi
 
-# get day-of-month for today
-today=$(date +%d)
-
-# get day-of-month for yesterday
-yesterday=$(expr $(date +%d) - 1)
-
 # set target date for metrics analysis
-target_date="$(date +%Y-%m)-${yesterday}"
+target_date=$(date -d "1 day ago" '+%Y-%m-%d')
 
 # call pf9-hostpeaks
-tmpfile=${basedir}/peak_data/instance-metrics.${environment}.${target_date}.csv
+peak_report=${basedir}/du_peakdata/${environment}/${target_date}/instance-metrics.${environment}.${target_date}.csv
 echo "$(date -u) >>> [${environment}] pf9-hostpeaks.py ${target_date}"
-${basedir}/pf9-hostpeaks.py ${target_date} > ${tmpfile}
+${basedir}/pf9-hostpeaks.py ${target_date} ${environment}
 
 # configure email
+graph_link=$(cat ${basedir}/du_metrics/${environment}/${target_date}/link_to_graph_cpu.dat)
 email_from=dan.wright@platform9.com
 email_subj="${environment} : Instance Metrics ${target_date}"
-email_body="CSV file attached"
-email_attachment=${tmpfile}
+email_body="--- CSV file attached ---"
+email_attachment1=${peak_report}
 
 # send email
 for email_addr in `cat ${email_list}`; do
   if [ "${email_addr:0:1}" == "#" -o -z "${email_addr}" ]; then continue; fi
+  echo "$(date -u) >>> mail -a $(basename ${email_attachment1}) ${email_addr}"
 
-  email_to="${email_addr}"
-  echo "$(date -u) >>> mail -a $(basename ${email_attachment}) ${email_to}"
-  echo "${email_body}" | mail -a ${email_attachment} -r ${email_from} -s "${email_subj}" ${email_to}
+  # build mail contents
+  tmpfile=/tmp/mail.$$.tmp
+  echo "To: ${email_addr}" > ${tmpfile}
+  echo -e "\n[Region CPU Trend : Instances]\n${graph_link}" >> ${tmpfile}
+  echo -e "\n[Region CPU Peaks : Instances]\n${email_body}" >> ${tmpfile}
+
+  mail -a ${email_attachment1} -s "${email_subj}" ${email_addr} < ${tmpfile}
 done
 echo "$(date -u) >>> complete"
 
