@@ -23,8 +23,12 @@ if [ ! -r ${email_list} ]; then exit 1; fi
 # set target date for metrics analysis
 target_date=$(date -d "1 day ago" '+%Y-%m-%d')
 
-# call pf9-hostpeaks
+# sort csv file
 peak_report=${basedir}/du_peakdata/${environment}/${target_date}/instance-metrics.${environment}.${target_date}.csv
+peak_report_sorted=/tmp/instance-metrics.${environment}.${target_date}.csv
+$(sort ${peak_report} -r -t , -k2 > ${peak_report_sorted})
+
+# call pf9-hostpeaks
 echo "$(date -u) >>> [${environment}] pf9-hostpeaks.py ${target_date}"
 ${basedir}/pf9-hostpeaks.py ${target_date} ${environment}
 
@@ -33,7 +37,7 @@ graph_link=$(cat ${basedir}/du_metrics/${environment}/${target_date}/link_to_gra
 email_from=dan.wright@platform9.com
 email_subj="${environment} : Instance Metrics ${target_date}"
 email_body="--- CSV file attached ---"
-email_attachment1=${peak_report}
+email_attachment1=${peak_report_sorted}
 
 # send email
 for email_addr in `cat ${email_list}`; do
@@ -49,5 +53,8 @@ for email_addr in `cat ${email_list}`; do
   mail -a ${email_attachment1} -s "${email_subj}" ${email_addr} < ${tmpfile}
 done
 echo "$(date -u) >>> complete"
+
+rm -f ${peak_report_sorted}
+rm -f ${tmpfile}
 
 exit 0

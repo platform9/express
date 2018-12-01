@@ -9,6 +9,7 @@ import plotly.graph_objs as go
 import plotly
 import plotly.plotly as py
 
+# global vars
 metrics_timeseries_base = "du_metrics"
 metrics_peak_pase = "du_peakdata"
 
@@ -26,12 +27,13 @@ def sigint_handler(signum, frame):
 
 def get_instance_info(instance_id):
     json_results_file = "/tmp/pf9-hostmon-server.{}.tmp.json".format(os.getppid())
-    os.system("openstack server show -f json {} > {}".format(instance_id,json_results_file))
+    os.system("openstack server show -f json {} 2>/dev/null > {}".format(instance_id,json_results_file))
 
     # validate json_results_file
     if os.path.isfile(json_results_file):
         try:
             json_data=open(json_results_file)
+            os.remove(json_results_file)
             server_data = json.load(json_data)
             json_data.close()
         except:
@@ -39,14 +41,19 @@ def get_instance_info(instance_id):
         else:
             return server_data
 
-def get_cpu_metrics(instance_id):
+def get_cpu_metrics(instance_id,target_date):
+    # configure search filter
+    start_date = "{}T00:00:00+00:00".format(target_date)
+    end_date = "{}T23:59:59+00:00".format(target_date)
+
     json_results_file = "/tmp/pf9-hostmon-gnocchi.{}.tmp.json".format(os.getppid())
-    os.system("gnocchi measures show -f json --resource-id {} cpu_util 2>/dev/null > {}".format(instance_id,json_results_file))
+    os.system("gnocchi measures show -f json --start {} --stop {} --resource-id {} cpu_util 2>/dev/null > {}".format(start_date,end_date,instance_id,json_results_file))
 
     # validate json_results_file
     if os.path.isfile(json_results_file):
         try:
             json_data=open(json_results_file)
+            os.remove(json_results_file)
             data = json.load(json_data)
             json_data.close()
         except:
@@ -86,7 +93,7 @@ def get_flavor_metadata(instance_flavor):
     # lookup flavor metadata
     instance_flavor_name = instance_flavor.split(' ')[0]
     json_results_file = "/tmp/pf9-hostmon-flavor.{}.tmp.json".format(os.getppid())
-    os.system("openstack flavor show -f json {} > {}".format(instance_flavor_name,json_results_file))
+    os.system("openstack flavor show -f json {} 2>/dev/null > {}".format(instance_flavor_name,json_results_file))
 
     # validate json_results_file
     instance_ram = instance_cpu = ""
@@ -94,6 +101,7 @@ def get_flavor_metadata(instance_flavor):
         # get flavor
         try:
             json_data=open(json_results_file)
+            os.remove(json_results_file)
             server_data = json.load(json_data)
             json_data.close()
         except:
@@ -107,13 +115,14 @@ def get_flavor_metadata(instance_flavor):
 def get_project_name(project_id):
     # lookup project name
     json_results_file = "/tmp/pf9-hostmon-project.{}.tmp.json".format(os.getppid())
-    os.system("openstack project show -f json {} > {}".format(project_id,json_results_file))
+    os.system("openstack project show -f json {} 2>/dev/null > {}".format(project_id,json_results_file))
 
     # validate json_results_file
     if os.path.isfile(json_results_file):
         # get flavor
         try:
             json_data=open(json_results_file)
+            os.remove(json_results_file)
             server_data = json.load(json_data)
             json_data.close()
         except:
@@ -197,7 +206,7 @@ if len(sys.argv) == 4:
 
 # get list of server IDs
 json_results_file = "/tmp/pf9-hostmon-servers.{}.tmp.json".format(os.getppid())
-os.system("openstack server list --all-projects -f json > {}".format(json_results_file))
+os.system("openstack server list --all-projects -f json 2>/dev/null > {}".format(json_results_file))
 
 # validate json_results_file
 if not os.path.isfile(json_results_file):
@@ -206,6 +215,7 @@ if not os.path.isfile(json_results_file):
 # process server IDs (get ceilometer stats and process)
 try:
     json_data=open(json_results_file)
+    os.remove(json_results_file)
     data = json.load(json_data)
     json_data.close()
 except:
@@ -227,7 +237,7 @@ else:
             metrics_dir, instance_db_fh = init_metrics_db(du_name,target_date,instance_data['Name'])
 
             # get instance metrics
-            instance_metrics_cpu = get_cpu_metrics(instance_data['ID'])
+            instance_metrics_cpu = get_cpu_metrics(instance_data['ID'],target_date)
             if instance_metrics_cpu == None:
                continue
 
@@ -287,7 +297,7 @@ else:
 
     # build graph (offline mode)
     if graph_storage == "offline":
-        plotly.offline.plot(fig, filename = "{}/du-cpu-util.html".format(metrics_dir))
+        plotly.offline.plot(fig, filename = "{}/graph-cpu.html".format(metrics_dir))
 
 # exit
 sys.exit(0)
