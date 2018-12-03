@@ -13,7 +13,7 @@ import plotly.plotly as py
 
 from plotly.offline import iplot
 import plotly.io as pio
-import numpy as np
+#import numpy as np
 
 # global vars
 metrics_timeseries_base = "du_metrics"
