@@ -2,6 +2,8 @@
 
 import sys
 import os.path
+import argparse
+import csv
 import json
 import signal
 import dateutil.parser as dp
@@ -9,13 +11,23 @@ import plotly.graph_objs as go
 import plotly
 import plotly.plotly as py
 
+from plotly.offline import iplot
+import plotly.io as pio
+import numpy as np
+
 # global vars
 metrics_timeseries_base = "du_metrics"
 metrics_peak_pase = "du_peakdata"
+instance_map = {}
 
-def usage():
-    print "Usage: {} <yyyy-mm-dd> <du> [<limit>]".format(sys.argv[0])
-    sys.exit(1)
+def _parse_args():
+    ap = argparse.ArgumentParser(sys.argv[0],formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ap.add_argument('target_date', help='target date for metrics analysis, format = YYYY-MM-DD')
+    ap.add_argument('du_name', help='name of the DU (just a string for reporting purposes)')
+    ap.add_argument('-l', required=False, type=int, dest='limit', default=0, help='limit the number of systems processed')
+    ap.add_argument('-g', default=False, action='store_true', dest='flag_graph_only',
+                    help='skip metrics collection and build graphs from previously-collected metrics')
+    return ap.parse_args()
 
 def lassert(m):
     if m != None:
@@ -41,25 +53,50 @@ def get_instance_info(instance_id):
         else:
             return server_data
 
-def get_cpu_metrics(instance_id,target_date):
+def read_metrics_file(instance_id,du_name,target_date,metrics_dir):
+    # initialize json return data
+    json_data = []
+
+    # open CSV-based metrics db file
+    csv_db_file = "{}/{}".format(metrics_dir,instance_map[instance_id])
+    if os.path.isfile(csv_db_file):
+        try:
+            csvfile = open(csv_db_file, 'r')
+        except:
+            print "failed to open: {}".format(csv_db_file)
+            return None
+        else:
+            print "reading CSV: {}".format(csv_db_file)
+            fieldnames = ("timestamp","hostname","flavor","value")
+            reader = csv.DictReader( csvfile.readlines(), fieldnames)
+            for row in reader:
+                json_row = {'timestamp': row['timestamp'], 'value': float(row['value'])}
+                json_data.append(json_row)
+            return json_data
+
+def get_cpu_metrics(instance_id,du_name,target_date,flag_graph_only,metrics_dir):
     # configure search filter
     start_date = "{}T00:00:00+00:00".format(target_date)
     end_date = "{}T23:59:59+00:00".format(target_date)
 
-    json_results_file = "/tmp/pf9-hostmon-gnocchi.{}.tmp.json".format(os.getppid())
-    os.system("gnocchi measures show -f json --start {} --stop {} --resource-id {} cpu_util 2>/dev/null > {}".format(start_date,end_date,instance_id,json_results_file))
-
-    # validate json_results_file
-    if os.path.isfile(json_results_file):
-        try:
-            json_data=open(json_results_file)
-            os.remove(json_results_file)
-            data = json.load(json_data)
-            json_data.close()
-        except:
-            return None
-        else:
-            return data
+    # get instance metrics (from OpenStack or local file, based on flag_graph_only flag)
+    if not flag_graph_only:
+        json_results_file = "/tmp/pf9-hostmon-gnocchi.{}.tmp.json".format(os.getppid())
+        os.system("gnocchi measures show -f json --start {} --stop {} --resource-id {} cpu_util 2>/dev/null > {}".format(start_date,end_date,instance_id,json_results_file))
+    
+        # validate json_results_file
+        if os.path.isfile(json_results_file):
+            try:
+                json_data=open(json_results_file)
+                os.remove(json_results_file)
+                data = json.load(json_data)
+                json_data.close()
+            except:
+                return None
+    else:
+        data = read_metrics_file(instance_id,du_name,target_date,metrics_dir)
+    
+    return data
 
 def get_peak_cpu(json_data,target_date):
     max_cpu = max_ts = 0
@@ -191,18 +228,11 @@ def init_peak_db(du_name,target_date):
 
     return peak_db_fh
 
-# print usage
-if len(sys.argv) < 3:
-    usage()
-
-# get target date
-target_date = sys.argv[1]
-du_name = sys.argv[2]
-
-# initialize limit
-limit = 0
-if len(sys.argv) == 4:
-    limit = int(sys.argv[3])
+################################################################################
+## main()
+################################################################################
+# parse arguments
+args = _parse_args()
 
 # get list of server IDs
 json_results_file = "/tmp/pf9-hostmon-servers.{}.tmp.json".format(os.getppid())
@@ -225,7 +255,7 @@ else:
     plot_data= []
 
     # initialize peak database
-    peak_db_fh = init_peak_db(du_name,target_date)
+    peak_db_fh = init_peak_db(args.du_name,args.target_date)
 
     for instance_data in data:
         try:
@@ -233,16 +263,22 @@ else:
         except:
             continue
         else:
-            # initialize instance-specific timeseries database
-            metrics_dir, instance_db_fh = init_metrics_db(du_name,target_date,instance_data['Name'])
+            # implement limit
+            cnt += 1
+            if (args.limit != 0) and (cnt > args.limit):
+                break
 
-            # get instance metrics
-            instance_metrics_cpu = get_cpu_metrics(instance_data['ID'],target_date)
-            if instance_metrics_cpu == None:
-               continue
+            # initialize instance-specific timeseries database
+            metrics_dir, instance_db_fh = init_metrics_db(args.du_name,args.target_date,instance_data['Name'])
 
             # lookup instance metadata
             instance_metadata = get_instance_info(instance_data['ID'])
+            instance_map[instance_data['ID']] = instance_metadata['name']
+
+            # get instance metrics
+            instance_metrics_cpu = get_cpu_metrics(instance_data['ID'],args.du_name,args.target_date,args.flag_graph_only,metrics_dir)
+            if instance_metrics_cpu == None:
+               continue
 
             # initialize instance-plot data
             instance_plot_data_x, instance_plot_data_y = populate_plot_data(instance_metrics_cpu)
@@ -259,7 +295,10 @@ else:
                 last_timestamp = metric_lines[len(metric_lines)-1].split(',')[0]
             else:
                 last_timestamp = 0
-            write_instance_metrics_to_db(instance_db_fh,instance_metrics_cpu,last_timestamp,instance_data['ID'],instance_data['Name'],instance_data['Flavor'],instance_metadata['project_id'],instance_db_fh)
+
+            write_instance_metrics_to_db(instance_db_fh,instance_metrics_cpu,last_timestamp,
+                instance_data['ID'],instance_data['Name'],instance_data['Flavor'],
+                instance_metadata['project_id'],instance_db_fh)
 
             # update metric databases
             if cnt == 0:
@@ -267,37 +306,43 @@ else:
 
             project_name = get_project_name(instance_metadata['project_id'])
             instance_ram, instance_cpu = get_flavor_metadata(instance_metadata['flavor'])
-            max_cpu, max_ts = get_peak_cpu(instance_metrics_cpu,target_date)
+            max_cpu, max_ts = get_peak_cpu(instance_metrics_cpu,args.target_date)
             if max_cpu != -1:
                 peak_db_fh.write("{},{},{},{},{},{},{}\n".format(instance_data['Name'],max_cpu,instance_cpu,instance_ram,instance_data['Flavor'],project_name,max_ts))
 
-            # implement limit
-            cnt += 1
-            if (limit != 0) and (cnt >= limit):
-                break
-
     # configure graph
-    graph_storage = "online"
-    layout = dict(
-        title = "{} : Instance Utilization Trend".format(du_name),
-        xaxis = dict(title = 'Date'),
-        yaxis = dict(title = 'CPU Utilization (%)'),
-    )
-    fig = dict(data=plot_data, layout=layout)
+    if len(plot_data) == 0:
+        print "INFO: no data collected - nothing to plot"
+    else:
+        graph_storage = "offline-png"
+        layout = dict(
+            title = "{} : Instance Utilization Trend".format(args.du_name),
+            xaxis = dict(title = 'Date'),
+            yaxis = dict(title = 'CPU Utilization (%)'),
+        )
+        fig = dict(data=plot_data, layout=layout)
 
-    # build graph (online mode)
-    if graph_storage == "online":
-        plotly.tools.set_credentials_file(username='dwrightco1', api_key='D0CdsmAnWdkeS4nWrNFw')
-        graph_url = py.plot(fig)
-        link_db = "{}/{}/{}/link_to_graph_cpu.dat".format(metrics_timeseries_base,du_name,target_date)
-        if os.path.isfile(link_db):
-            os.remove(link_db)
-        link_db_fh = open(link_db, "w+")
-        link_db_fh.write(graph_url)
+        # build graph (online mode)
+        if graph_storage == "online":
+            plotly.tools.set_credentials_file(username='dwrightco1', api_key='D0CdsmAnWdkeS4nWrNFw')
+            graph_url = py.plot(fig)
+            link_db = "{}/{}/{}/link_to_graph_cpu.dat".format(metrics_timeseries_base,args.du_name,args.target_date)
+            if os.path.isfile(link_db):
+                os.remove(link_db)
+            link_db_fh = open(link_db, "w+")
+            link_db_fh.write(graph_url)
+            print "graph: {}".format(graph_url)
 
-    # build graph (offline mode)
-    if graph_storage == "offline":
-        plotly.offline.plot(fig, filename = "{}/graph-cpu.html".format(metrics_dir))
+        # build graph (offline mode)
+        if graph_storage == "offline":
+            plotly.offline.plot(fig, filename = "{}/graph-cpu.html".format(metrics_dir))
+            print "graph: {}".format("{}/graph-cpu.html".format(metrics_dir))
+
+        # build graph (offline-png mode)
+        if graph_storage == "offline-png":
+            plotly.offline.plot(fig, filename = "{}/graph-cpu.html".format(metrics_dir))
+            pio.write_image(fig, "{}/graph-cpu.png".format(metrics_dir))
+            print "graph: {}".format("{}/graph-cpu.png".format(metrics_dir))
 
 # exit
 sys.exit(0)

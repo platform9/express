@@ -2,17 +2,25 @@
 
 basedir=$(dirname $0)
 email_list=${basedir}/email_distr.dat
+target_date=""
 
 usage () {
-  echo "Usage: `basename $0` <openstack-rc> <env>"
+  echo "Usage: `basename $0` <openstack-rc> <env> [<yyyy-mm-dd>]"
   exit 1
 }
 
 # validate command line
-if [ $# -ne 2 ]; then usage; fi
+if [ $# -lt 2 ]; then usage; fi
 osrc=${1}
 environment=${2}
 if [ ! -r ${osrc} ]; then echo "ERROR: failed to open <openstack-rc>"; exit 1; fi
+
+# process optional args
+if [ $# -eq 3 ]; then
+  target_date=${3}
+else
+  target_date=$(date -d "1 day ago" '+%Y-%m-%d')
+fi
 
 # source <openstack-rc>
 source ${osrc}
@@ -20,17 +28,14 @@ source ${osrc}
 # validate email distros
 if [ ! -r ${email_list} ]; then exit 1; fi
 
-# set target date for metrics analysis
-target_date=$(date -d "1 day ago" '+%Y-%m-%d')
+# call pf9-hostpeaks
+echo "$(date -u) >>> [${environment}] pf9-hostpeaks.py ${target_date} ${environment}"
+${basedir}/pf9-hostpeaks.py ${target_date} ${environment}
 
 # sort csv file
 peak_report=${basedir}/du_peakdata/${environment}/${target_date}/instance-metrics.${environment}.${target_date}.csv
 peak_report_sorted=/tmp/instance-metrics.${environment}.${target_date}.csv
 $(sort ${peak_report} -r -t , -k2 > ${peak_report_sorted})
-
-# call pf9-hostpeaks
-echo "$(date -u) >>> [${environment}] pf9-hostpeaks.py ${target_date}"
-${basedir}/pf9-hostpeaks.py ${target_date} ${environment}
 
 # configure email
 graph_link=$(cat ${basedir}/du_metrics/${environment}/${target_date}/link_to_graph_cpu.dat)
