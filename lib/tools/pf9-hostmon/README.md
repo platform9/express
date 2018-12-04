@@ -1,6 +1,27 @@
 A script to monitor cpu utilization accross instances using Gnocchi metrics.
 
-# Installation Instructions
+# Installation Instructions (Ubuntu 16.04)
+* apt-get install python-dev python-pip
+* pip install --upgrade pip
+* pip install python-openstackclient
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+
+# Installation Instructions (CentOS-7)
 * yum install -y epel-release gcc gcc openssl-devel python-devel python-pip
 * yum install -y python-pip
 * yum install -y npm
