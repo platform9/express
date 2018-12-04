@@ -1,15 +1,17 @@
 A script to monitor cpu utilization accross instances using Gnocchi metrics.
 
 # Installation Instructions (Ubuntu 16.04)
+* apt-get update
 * apt-get install python-dev python-pip
-* pip install --upgrade pip
 * pip install python-openstackclient
-* 
-* 
-* 
-* 
-* 
-* 
+* pip install gnocchiclient
+* pip install plotly
+* pip install psutil
+* apt-get install npm
+* curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
+* apt-get install nodejs
+* npm install -g electron@1.8.4 orca
+* apt-get install xvfb
 * 
 * 
 * 
