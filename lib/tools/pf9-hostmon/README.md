@@ -12,16 +12,6 @@ A script to monitor cpu utilization accross instances using Gnocchi metrics.
 * apt-get install nodejs
 * npm install -g electron@1.8.4 orca
 * apt-get install xvfb
-* 
-* 
-* 
-* 
-* 
-* 
-* 
-* 
-* 
-* 
 
 # Installation Instructions (CentOS-7)
 * yum install -y epel-release gcc gcc openssl-devel python-devel python-pip
