@@ -7,17 +7,13 @@ import csv
 import json
 import signal
 import dateutil.parser as dp
-import plotly.graph_objs as go
-import plotly
-import plotly.plotly as py
-
-from plotly.offline import iplot
-import plotly.io as pio
+from pygooglechart import SimpleLineChart
+from pygooglechart import Axis
 
 # global vars
 metrics_timeseries_base = "du_metrics"
 metrics_peak_pase = "du_peakdata"
-graph_storage = "disabled"
+graph_storage = "online"
 instance_map = {}
 
 def _parse_args():
@@ -322,11 +318,7 @@ else:
             # initialize instance-plot data
             if graph_storage != "disabled":
                 instance_plot_data_x, instance_plot_data_y = populate_plot_data(instance_metrics_cpu)
-                trace_instance = go.Scatter(
-                    x = instance_plot_data_x,
-                    y = instance_plot_data_y,
-                    name = instance_metadata['name'],
-                )
+                trace_instance = {'xdata': instance_plot_data_x, 'ydata':instance_plot_data_y, 'instanceName':instance_metadata['name']}
                 plot_data.append(trace_instance)
 
             # write metrics to timeseries database
@@ -350,36 +342,24 @@ else:
             if max_cpu != -1:
                 peak_db_fh.write("{},{},{},{},{},{},{},{},{}\n".format(instance_data['Name'],instance_cpu,max_cpu,instance_ram,max_mem,instance_data['Flavor'],project_name,max_cpu_ts,max_mem_ts))
 
-    # configure graph
+    # build graph
     if len(plot_data) == 0:
         print "INFO: no data collected - nothing to plot"
     else:
-        layout = dict(
-            title = "{} : Instance Utilization Trend".format(args.du_name),
-            xaxis = dict(title = 'Date'),
-            yaxis = dict(title = 'CPU Utilization (%)'),
-        )
-        fig = dict(data=plot_data, layout=layout)
-
         # build graph
-        if graph_storage == "online":
-            plotly.tools.set_credentials_file(username='dwrightco1', api_key='D0CdsmAnWdkeS4nWrNFw')
-            graph_url = py.plot(fig)
-            link_db = "{}/{}/{}/link_to_graph_cpu.dat".format(metrics_timeseries_base,args.du_name,args.target_date)
-            if os.path.isfile(link_db):
-                os.remove(link_db)
-            link_db_fh = open(link_db, "w+")
-            link_db_fh.write(graph_url)
-            #print "graph: {}".format(graph_url)
-        elif graph_storage == "offline":
-            plotly.offline.plot(fig, filename = "{}/graph-cpu.html".format(metrics_dir))
-            print "graph: {}".format("{}/graph-cpu.html".format(metrics_dir))
-        elif graph_storage == "offline-png":
-            plotly.offline.plot(fig, filename = "{}/graph-cpu.html".format(metrics_dir))
-            pio.write_image(fig, "{}/graph-cpu.png".format(metrics_dir))
-            print "graph: {}".format("{}/graph-cpu.png".format(metrics_dir))
-        else:
-            print "INFO: unknown graph mode, skipping graphs"
+        chart = SimpleLineChart(900,600)
+        chart.set_colours(['333333', '000000', '666666', '999999'])
+        #chart.set_axis_style(0, '202020', font_size=10, alignment=0)
+        #chart.set_axis_positions(index, [50])
+
+        #near_far_axis_index = chart.set_axis_labels(Axis.BOTTOM, ['TIME'])
+        #near_far_axis_index = chart.set_axis_labels(Axis.LEFT, ['CPU Utilization (%)'])
+        trace_names = []
+        for instance_metric in plot_data:
+            trace_names.append(instance_metric['instanceName'])
+            chart.add_data(instance_metric['ydata'])
+        chart.set_legend(trace_names)
+        chart.download('chart.png')
 
 # exit
 sys.exit(0)

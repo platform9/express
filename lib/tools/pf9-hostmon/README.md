@@ -3,7 +3,7 @@ A script to monitor cpu utilization accross instances using Gnocchi metrics.
 # Installation Instructions (Ubuntu 16.04)
 * apt-get update
 * apt-get install python-dev python-pip
-* pip install python-openstackclient
+* pip install python-openstackclient cython pygooglechart
 * pip install gnocchiclient
 * pip install plotly
 * pip install psutil
@@ -15,9 +15,9 @@ A script to monitor cpu utilization accross instances using Gnocchi metrics.
 
 # Installation Instructions (CentOS-7)
 * yum install -y epel-release gcc gcc openssl-devel python-devel python-pip mailx
-* yum install -y python-pip npm
+* yum install -y npm
 * pip install --upgrade pip' command
-* pip install python-openstackclient gnocchiclient plotly psutil conda
+* pip install python-openstackclient gnocchiclient plotly psutil conda cython pygooglechart
 * npm install -g electron@1.8.4 orca
 * yum install -y gtk2 GConf2 libXtst libXScrnSaver alsa-lib pango pango-devel bzip2
 * curl -O https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh
