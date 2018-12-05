@@ -3,9 +3,10 @@
 basedir=$(dirname $0)
 email_list=${basedir}/email_distr.dat
 target_date=""
+flag_mailonly=0
 
 usage () {
-  echo "Usage: `basename $0` <openstack-rc> <env> [<yyyy-mm-dd>]"
+  echo "Usage: `basename $0` <openstack-rc> <env> [-t <yyyy-mm-dd>] [-m]"
   exit 1
 }
 
@@ -16,9 +17,26 @@ environment=${2}
 if [ ! -r ${osrc} ]; then echo "ERROR: failed to open <openstack-rc>"; exit 1; fi
 
 # process optional args
-if [ $# -eq 3 ]; then
-  target_date=${3}
-else
+shift 2
+while [ $# -gt 0 ]; do
+  case ${1} in
+  -t)
+    if [ $# -lt 2 ]; then usage; fi
+    target_date=${2}
+    shift 2
+    ;;
+  -m)
+    flag_mailonly=1
+    shift 
+    ;;
+  *)
+    usage
+    ;;
+  esac
+done
+
+# set target date to yesterday (if not provided on commandline)
+if [ -z "${target_date}" ]; then
   target_date=$(date -d "1 day ago" '+%Y-%m-%d')
 fi
 
@@ -30,15 +48,22 @@ if [ ! -r ${email_list} ]; then exit 1; fi
 
 # call pf9-hostpeaks
 echo "$(date -u) >>> [${environment}] pf9-hostpeaks.py ${target_date} ${environment}"
-${basedir}/pf9-hostpeaks.py ${target_date} ${environment}
+if [ ${flag_mailonly} -eq 0 ]; then
+  ${basedir}/pf9-hostpeaks.py ${target_date} ${environment}
+fi
 
 # sort csv file
 peak_report=${basedir}/du_peakdata/${environment}/${target_date}/instance-metrics.${environment}.${target_date}.csv
 peak_report_sorted=/tmp/instance-metrics.${environment}.${target_date}.csv
 $(sort ${peak_report} -r -t , -k2 > ${peak_report_sorted})
 
+# lookup llink to graph
+graph_link=""
+if [ -r ${basedir}/du_metrics/${environment}/${target_date}/link_to_graph_cpu.dat ]; then
+  graph_link=$(cat ${basedir}/du_metrics/${environment}/${target_date}/link_to_graph_cpu.dat)
+fi
+
 # configure email
-graph_link=$(cat ${basedir}/du_metrics/${environment}/${target_date}/link_to_graph_cpu.dat)
 email_from=dan.wright@platform9.com
 email_subj="${environment} : Instance Metrics ${target_date}"
 email_body="--- CSV file attached ---"
@@ -52,7 +77,9 @@ for email_addr in `cat ${email_list}`; do
   # build mail contents
   tmpfile=/tmp/mail.$$.tmp
   echo "To: ${email_addr}" > ${tmpfile}
-  echo -e "\n[Region CPU Trend : Instances]\n${graph_link}" >> ${tmpfile}
+  if [ -n "${graph_link}" ]; then
+    echo -e "\n[Region CPU Trend : Instances]\n${graph_link}" >> ${tmpfile}
+  fi
   echo -e "\n[Region CPU Peaks : Instances]\n${email_body}" >> ${tmpfile}
 
   mail -a ${email_attachment1} -s "${email_subj}" ${email_addr} < ${tmpfile}

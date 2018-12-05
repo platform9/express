@@ -14,23 +14,12 @@ A script to monitor cpu utilization accross instances using Gnocchi metrics.
 * apt-get install xvfb
 
 # Installation Instructions (CentOS-7)
-* yum install -y epel-release gcc gcc openssl-devel python-devel python-pip
-* yum install -y python-pip
-* yum install -y npm
+* yum install -y epel-release gcc gcc openssl-devel python-devel python-pip mailx
+* yum install -y python-pip npm
 * pip install --upgrade pip' command
-* pip install python-openstackclient
-* pip install gnocchiclient
-* pip install plotly
-* pip install psutil
+* pip install python-openstackclient gnocchiclient plotly psutil conda
 * npm install -g electron@1.8.4 orca
-* yum install -y gtk2
-* yum install -y GConf2
-* yum install -y libXtst
-* yum install -y libXScrnSaver
-* yum install -y alsa-lib
-* yum install -y pango pango-devel
-* pip install conda
-* yum install -y bzip2
+* yum install -y gtk2 GConf2 libXtst libXScrnSaver alsa-lib pango pango-devel bzip2
 * curl -O https://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh
 * bash Miniconda2-latest-Linux-x86_64.sh
 * conda install numpy

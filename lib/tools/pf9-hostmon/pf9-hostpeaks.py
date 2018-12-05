@@ -13,7 +13,6 @@ import plotly.plotly as py
 
 from plotly.offline import iplot
 import plotly.io as pio
-#import numpy as np
 
 # global vars
 metrics_timeseries_base = "du_metrics"
@@ -321,7 +320,7 @@ else:
                continue
 
             # initialize instance-plot data
-            if graph_storage == "disabled":
+            if graph_storage != "disabled":
                 instance_plot_data_x, instance_plot_data_y = populate_plot_data(instance_metrics_cpu)
                 trace_instance = go.Scatter(
                     x = instance_plot_data_x,
@@ -342,14 +341,14 @@ else:
                 instance_metadata['project_id'],instance_db_fh)
 
             # update metric databases
-            if cnt == 0:
-                peak_db_fh.write("INSTANCE-NAME,MAX-CPU-%,MAX-MEMORY-%,CPU,RAM,FLAVOR,PROJECT,TIMESTAMP-MAX-CPU,TIMESTAMP-MAX-MEMORY\n")
+            if cnt == 1:
+                peak_db_fh.write("INSTANCE-NAME,CPU,MAX-CPU-%,RAM-MB,MAX-MEMORY-%,FLAVOR,PROJECT,TIMESTAMP-MAX-CPU,TIMESTAMP-MAX-MEMORY\n")
     
             project_name = get_project_name(instance_metadata['project_id'])
             instance_ram, instance_cpu = get_flavor_metadata(instance_metadata['flavor'])
             max_cpu, max_cpu_ts, max_mem, max_mem_ts = get_peak_cpu(instance_metrics_cpu,instance_metrics_mem,instance_ram,args.target_date)
             if max_cpu != -1:
-                peak_db_fh.write("{},{},{},{},{},{},{},{},{}\n".format(instance_data['Name'],max_cpu,max_mem,instance_cpu,instance_ram,instance_data['Flavor'],project_name,max_cpu_ts,max_mem_ts))
+                peak_db_fh.write("{},{},{},{},{},{},{},{},{}\n".format(instance_data['Name'],instance_cpu,max_cpu,instance_ram,max_mem,instance_data['Flavor'],project_name,max_cpu_ts,max_mem_ts))
 
     # configure graph
     if len(plot_data) == 0:
@@ -371,7 +370,7 @@ else:
                 os.remove(link_db)
             link_db_fh = open(link_db, "w+")
             link_db_fh.write(graph_url)
-            print "graph: {}".format(graph_url)
+            #print "graph: {}".format(graph_url)
         elif graph_storage == "offline":
             plotly.offline.plot(fig, filename = "{}/graph-cpu.html".format(metrics_dir))
             print "graph: {}".format("{}/graph-cpu.html".format(metrics_dir))
