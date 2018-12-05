@@ -25,3 +25,183 @@ A script to monitor cpu utilization accross instances using Gnocchi metrics.
 
 # Sample Cron Entry
 0 6 * * * (/opt/express/lib/tools/pf9-hostmon/call_hostpeaks.sh /root/openstack-ebsco-pdc.rc PDC && /opt/express/lib/tools/pf9-hostmon/call_hostpeaks.sh /root/openstack-ebsco-sdc.rc SDC) >> /var/log/pf9-hostpeaks.log 2>&1
+
+# Sample pipeline.yaml (DU)
+```
+---
+sources:
+    - name: memory_source
+      interval: 600
+      meters:
+          - "memory.usage"
+          - "memory"
+      sinks:
+          - memory_sink
+    - name: memory_store
+      interval: 600
+      meters:
+          - "memory.usage"
+          - "memory"
+      sinks:
+          - meter_sink
+    - name: memory_util_meter
+      interval: 600
+      meters:
+          - "memory_util"
+      sinks:
+          - meter_sink
+    - name: cpu_to_cpu_util_meter
+      interval: 600
+      meters:
+          - "cpu"
+      sinks:
+          - cpu_sink
+    - name: cpu_util_meter
+      interval: 600
+      meters:
+          - "cpu_util"
+      sinks:
+          - meter_sink
+    - name: pf9_service_state_src
+      interval: 600
+      meters:
+          - "pf9.services.bbmaster.status"
+          - "pf9.services.janitor.status"
+          - "pf9.services.nova.api.status"
+          - "pf9.services.nova.conductor.status"
+          - "pf9.services.nova.network.status"
+          - "pf9.services.nova.scheduler.status"
+      sinks:
+          - meter_sink
+    - name: host_cpu_meter
+      interval: 300
+      meters:
+          - "pf9.host.cpu.usage"
+      sinks:
+          - meter_sink
+    - name: host_memory_meter
+      interval: 300
+      meters:
+          - "pf9.host.memory.usage"
+      sinks:
+          - meter_sink
+    - name: host_root_disk_meter
+      interval: 300
+      meters:
+          - "pf9.host.root.disk.usage"
+      sinks:
+          - meter_sink
+    - name: host_instance_disk_meter
+      interval: 300
+      meters:
+          - "pf9.host.instance.disk.usage"
+      sinks:
+          - meter_sink
+sinks:
+    - name: meter_sink
+      transformers:
+      publishers:
+          - direct://?dispatcher=database
+          - direct://?dispatcher=gnocchi
+    - name: memory_sink
+      transformers:
+          - name: "arithmetic"
+            parameters:
+                target:
+                    name: "memory_util"
+                    unit: "%"
+                    type: "gauge"
+                    scale: "100 * $(memory.usage) / $(memory)"
+      publishers:
+          - direct://?dispatcher=database
+          - direct://?dispatcher=gnocchi
+    - name: cpu_sink
+      transformers:
+          - name: "rate_of_change"
+            parameters:
+                target:
+                    name: "cpu_util"
+                    unit: "%"
+                    type: "gauge"
+                    scale: "100.0 / (10**9 * (resource_metadata.cpu_number or 1))"
+      publishers:
+          - direct://?dispatcher=database
+          - direct://?dispatcher=gnocchi
+```
+
+# Sample pipeline.yaml (KVM Host)
+```
+---
+sources:
+    - name: memory_usage_meter
+      interval: 300
+      meters:
+          - "memory.usage"
+      sinks:
+          - meter_sink
+    - name: cpu_to_cpu_util_meter
+      interval: 600
+      meters:
+          - "cpu"
+      sinks:
+          - cpu_sink
+    - name: cpu_util_meter
+      interval: 600
+      meters:
+          - "cpu_util"
+      sinks:
+          - meter_sink
+    - name: pf9_service_state_src
+      interval: 600
+      meters:
+          - "pf9.services.bbmaster.status"
+          - "pf9.services.janitor.status"
+          - "pf9.services.nova.api.status"
+          - "pf9.services.nova.conductor.status"
+          - "pf9.services.nova.network.status"
+          - "pf9.services.nova.scheduler.status"
+      sinks:
+          - meter_sink
+    - name: host_cpu_meter
+      interval: 300
+      meters:
+          - "pf9.host.cpu.usage"
+      sinks:
+          - meter_sink
+    - name: host_memory_meter
+      interval: 300
+      meters:
+          - "pf9.host.memory.usage"
+      sinks:
+          - meter_sink
+    - name: host_root_disk_meter
+      interval: 300
+      meters:
+          - "pf9.host.root.disk.usage"
+      sinks:
+          - meter_sink
+    - name: host_instance_disk_meter
+      interval: 300
+      meters:
+          - "pf9.host.instance.disk.usage"
+      sinks:
+          - meter_sink
+sinks:
+    - name: meter_sink
+      transformers:
+      publishers:
+          - direct://?dispatcher=database
+          - direct://?dispatcher=gnocchi
+    - name: cpu_sink
+      transformers:
+          - name: "rate_of_change"
+            parameters:
+                target:
+                    name: "cpu_util"
+                    unit: "%"
+                    type: "gauge"
+                    scale: "100.0 / (10**9 * (resource_metadata.cpu_number or 1))"
+      publishers:
+          - direct://?dispatcher=database
+          - direct://?dispatcher=gnocchi
+```

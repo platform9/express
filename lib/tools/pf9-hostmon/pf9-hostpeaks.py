@@ -18,6 +18,7 @@ import plotly.io as pio
 # global vars
 metrics_timeseries_base = "du_metrics"
 metrics_peak_pase = "du_peakdata"
+graph_storage = "disabled"
 instance_map = {}
 
 def _parse_args():
@@ -66,7 +67,6 @@ def read_metrics_file(instance_id,du_name,target_date,metrics_dir):
             print "failed to open: {}".format(csv_db_file)
             return None
         else:
-            print "reading CSV: {}".format(csv_db_file)
             fieldnames = ("timestamp","hostname","flavor","value")
             reader = csv.DictReader( csvfile.readlines(), fieldnames)
             for row in reader:
@@ -81,7 +81,7 @@ def get_cpu_metrics(instance_id,du_name,target_date,flag_graph_only,metrics_dir)
 
     # get instance metrics (from OpenStack or local file, based on flag_graph_only flag)
     if not flag_graph_only:
-        json_results_file = "/tmp/pf9-hostmon-gnocchi.{}.tmp.json".format(os.getppid())
+        json_results_file = "/tmp/pf9-hostmon-gnocchi-cpu.{}.tmp.json".format(os.getppid())
         os.system("gnocchi measures show -f json --start {} --stop {} --resource-id {} cpu_util 2>/dev/null > {}".format(start_date,end_date,instance_id,json_results_file))
     
         # validate json_results_file
@@ -98,19 +98,53 @@ def get_cpu_metrics(instance_id,du_name,target_date,flag_graph_only,metrics_dir)
     
     return data
 
-def get_peak_cpu(json_data,target_date):
-    max_cpu = max_ts = 0
-    for sample_data in json_data:
+def get_mem_metrics(instance_id,du_name,target_date,flag_graph_only,metrics_dir):
+    # configure search filter
+    start_date = "{}T00:00:00+00:00".format(target_date)
+    end_date = "{}T23:59:59+00:00".format(target_date)
+
+    # get instance metrics (from OpenStack or local file, based on flag_graph_only flag)
+    if not flag_graph_only:
+        json_results_file = "/tmp/pf9-hostmon-gnocchi-mem.{}.tmp.json".format(os.getppid())
+        os.system("gnocchi measures show -f json --start {} --stop {} --resource-id {} memory.usage 2>/dev/null > {}".format(start_date,end_date,instance_id,json_results_file))
+    
+        # validate json_results_file
+        if os.path.isfile(json_results_file):
+            try:
+                json_data=open(json_results_file)
+                os.remove(json_results_file)
+                data = json.load(json_data)
+                json_data.close()
+            except:
+                return None
+    else:
+        data = read_metrics_file(instance_id,du_name,target_date,metrics_dir)
+    
+    return data
+
+def get_peak_cpu(json_data_cpu,json_data_mem,instance_ram,target_date):
+    max_cpu = max_cpu_ts = max_mem = max_mem_ts = -1
+    for metric_cpu in json_data_cpu:
         try:
-            sample_data['value']
+            metric_cpu['value']
         except:
             continue
         else:
-            if sample_data['timestamp'].split('T')[0] == target_date and sample_data['value'] > max_cpu:
-                max_cpu = round(sample_data['value'],2)
-                max_ts = sample_data['timestamp']
-                return max_cpu, max_ts
-    return -1, -1
+            if metric_cpu['timestamp'].split('T')[0] == target_date and metric_cpu['value'] > max_cpu:
+                max_cpu = round(metric_cpu['value'],2)
+                max_cpu_ts = metric_cpu['timestamp']
+
+    for metric_mem in json_data_mem:
+        try:
+            metric_mem['value']
+        except:
+            continue
+        else:
+            if metric_mem['timestamp'].split('T')[0] == target_date and metric_mem['value'] > max_mem:
+                max_mem = round((metric_mem['value']/instance_ram)*100,2)
+                max_mem_ts = metric_mem['timestamp']
+
+    return max_cpu, max_cpu_ts, max_mem, max_mem_ts
 
 def populate_plot_data(json_data):
     data_x = []
@@ -257,6 +291,7 @@ else:
     # initialize peak database
     peak_db_fh = init_peak_db(args.du_name,args.target_date)
 
+    # process each instance
     for instance_data in data:
         try:
             instance_data['Name']
@@ -280,14 +315,20 @@ else:
             if instance_metrics_cpu == None:
                continue
 
+            # get memory metrics
+            instance_metrics_mem = get_mem_metrics(instance_data['ID'],args.du_name,args.target_date,args.flag_graph_only,metrics_dir)
+            if instance_metrics_mem == None:
+               continue
+
             # initialize instance-plot data
-            instance_plot_data_x, instance_plot_data_y = populate_plot_data(instance_metrics_cpu)
-            trace_instance = go.Scatter(
-                x = instance_plot_data_x,
-                y = instance_plot_data_y,
-                name = instance_metadata['name'],
-            )
-            plot_data.append(trace_instance)
+            if graph_storage == "disabled":
+                instance_plot_data_x, instance_plot_data_y = populate_plot_data(instance_metrics_cpu)
+                trace_instance = go.Scatter(
+                    x = instance_plot_data_x,
+                    y = instance_plot_data_y,
+                    name = instance_metadata['name'],
+                )
+                plot_data.append(trace_instance)
 
             # write metrics to timeseries database
             metric_lines = instance_db_fh.readlines()
@@ -295,26 +336,25 @@ else:
                 last_timestamp = metric_lines[len(metric_lines)-1].split(',')[0]
             else:
                 last_timestamp = 0
-
+    
             write_instance_metrics_to_db(instance_db_fh,instance_metrics_cpu,last_timestamp,
                 instance_data['ID'],instance_data['Name'],instance_data['Flavor'],
                 instance_metadata['project_id'],instance_db_fh)
 
             # update metric databases
             if cnt == 0:
-                peak_db_fh.write("INSTANCE-NAME,MAX-CPU-%,CPU,RAM,FLAVOR,PROJECT,TIMESTAMP-MAX_CPU\n")
-
+                peak_db_fh.write("INSTANCE-NAME,MAX-CPU-%,MAX-MEMORY-%,CPU,RAM,FLAVOR,PROJECT,TIMESTAMP-MAX-CPU,TIMESTAMP-MAX-MEMORY\n")
+    
             project_name = get_project_name(instance_metadata['project_id'])
             instance_ram, instance_cpu = get_flavor_metadata(instance_metadata['flavor'])
-            max_cpu, max_ts = get_peak_cpu(instance_metrics_cpu,args.target_date)
+            max_cpu, max_cpu_ts, max_mem, max_mem_ts = get_peak_cpu(instance_metrics_cpu,instance_metrics_mem,instance_ram,args.target_date)
             if max_cpu != -1:
-                peak_db_fh.write("{},{},{},{},{},{},{}\n".format(instance_data['Name'],max_cpu,instance_cpu,instance_ram,instance_data['Flavor'],project_name,max_ts))
+                peak_db_fh.write("{},{},{},{},{},{},{},{},{}\n".format(instance_data['Name'],max_cpu,max_mem,instance_cpu,instance_ram,instance_data['Flavor'],project_name,max_cpu_ts,max_mem_ts))
 
     # configure graph
     if len(plot_data) == 0:
         print "INFO: no data collected - nothing to plot"
     else:
-        graph_storage = "offline-png"
         layout = dict(
             title = "{} : Instance Utilization Trend".format(args.du_name),
             xaxis = dict(title = 'Date'),
@@ -322,7 +362,7 @@ else:
         )
         fig = dict(data=plot_data, layout=layout)
 
-        # build graph (online mode)
+        # build graph
         if graph_storage == "online":
             plotly.tools.set_credentials_file(username='dwrightco1', api_key='D0CdsmAnWdkeS4nWrNFw')
             graph_url = py.plot(fig)
@@ -332,17 +372,15 @@ else:
             link_db_fh = open(link_db, "w+")
             link_db_fh.write(graph_url)
             print "graph: {}".format(graph_url)
-
-        # build graph (offline mode)
-        if graph_storage == "offline":
+        elif graph_storage == "offline":
             plotly.offline.plot(fig, filename = "{}/graph-cpu.html".format(metrics_dir))
             print "graph: {}".format("{}/graph-cpu.html".format(metrics_dir))
-
-        # build graph (offline-png mode)
-        if graph_storage == "offline-png":
+        elif graph_storage == "offline-png":
             plotly.offline.plot(fig, filename = "{}/graph-cpu.html".format(metrics_dir))
             pio.write_image(fig, "{}/graph-cpu.png".format(metrics_dir))
             print "graph: {}".format("{}/graph-cpu.png".format(metrics_dir))
+        else:
+            print "INFO: unknown graph mode, skipping graphs"
 
 # exit
 sys.exit(0)
