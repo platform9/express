@@ -6,6 +6,8 @@
     line: 'LIBVIRTD_ARGS="--listen"'
     dest: /etc/sysconfig/libvirtd
     regexp: '^#?LIBVIRTD_ARGS.*$'
+  tags: 
+    - live-migration
   when: ansible_os_family == 'RedHat'
   notify: restart libvirtd
 
@@ -16,6 +18,8 @@
     line: 'libvirtd_opts="-d -l"'
     dest: /etc/default/libvirt-bin
     regexp: '^#?libvirtd_opts=*.*$'
+  tags: 
+    - live-migration
   when: ansible_os_family == 'Debian'
   notify: restart libvirtd
 
@@ -26,6 +30,8 @@
     owner: pf9
     group: pf9group
     mode: 0750
+  tags: 
+    - live-migration
 
 - name: "Link PF9 certs into {{ libvirt_pki_path }}"
   file:
@@ -33,6 +39,8 @@
     path: "{{ libvirt_pki_path }}/{{ item.name }}"
     src: "/etc/pf9/certs/{{ item.src }}"
     force: yes
+  tags: 
+    - live-migration
   with_items:
     - name: cacert.pem
       src: ca/cert.pem
@@ -48,6 +56,8 @@
     dest: /etc/libvirt/libvirtd.conf
     line: "{{ item.key }} = {{ item.value }}"
     regexp: "^#?{{ item.key }}.*$"
+  tags: 
+    - live-migration
   with_dict:
     listen_tcp: 0
     listen_tls: 1
@@ -68,6 +78,8 @@
     section: libvirt
     option: "{{ item.option }}"
     value: "{{ item.value }}"
+  tags: 
+    - live-migration
   with_items:
     - option: live_migration_uri
       value: "qemu+tls://%s/system?no_verify=1&pkipath={{ libvirt_pki_path }}"

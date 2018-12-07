@@ -7,5 +7,7 @@
     recurse: yes
     owner: pf9
     group: pf9group
+  tags: 
+    - image-import
 
 - include: os-image-download.yml
