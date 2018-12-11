@@ -1,4 +1,19 @@
 #!/usr/bin/python
+########################################################################################################################
+# Copyright 2018 Platform9 Systems, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy
+# of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+########################################################################################################################
 
 import sys
 import os.path
@@ -13,7 +28,7 @@ from pygooglechart import Axis
 # global vars
 metrics_timeseries_base = "du_metrics"
 metrics_peak_pase = "du_peakdata"
-graph_storage = "online"
+graph_storage = "disabled"
 instance_map = {}
 
 def _parse_args():
@@ -118,7 +133,10 @@ def get_mem_metrics(instance_id,du_name,target_date,flag_graph_only,metrics_dir)
     return data
 
 def get_peak_cpu(json_data_cpu,json_data_mem,instance_ram,target_date):
-    max_cpu = max_cpu_ts = max_mem = max_mem_ts = -1
+    max_cpu = -1
+    max_cpu_ts = -1
+    max_mem = -1
+    max_mem_ts = -1
     for metric_cpu in json_data_cpu:
         try:
             metric_cpu['value']
@@ -298,7 +316,7 @@ else:
             if (args.limit != 0) and (cnt > args.limit):
                 break
 
-            # initialize instance-specific timeseries database
+            # initialize instance-specific timeseries database (flat file on the filesystem)
             metrics_dir, instance_db_fh = init_metrics_db(args.du_name,args.target_date,instance_data['Name'])
 
             # lookup instance metadata
@@ -343,23 +361,23 @@ else:
                 peak_db_fh.write("{},{},{},{},{},{},{},{},{}\n".format(instance_data['Name'],instance_cpu,max_cpu,instance_ram,max_mem,instance_data['Flavor'],project_name,max_cpu_ts,max_mem_ts))
 
     # build graph
-    if len(plot_data) == 0:
-        print "INFO: no data collected - nothing to plot"
-    else:
-        # build graph
-        chart = SimpleLineChart(900,600)
-        chart.set_colours(['333333', '000000', '666666', '999999'])
-        #chart.set_axis_style(0, '202020', font_size=10, alignment=0)
-        #chart.set_axis_positions(index, [50])
+    if graph_storage != "disabled":
+        if len(plot_data) == 0:
+            print "INFO: no data collected - nothing to plot"
+        else:
+            chart = SimpleLineChart(900,600)
+            chart.set_colours(['333333', '000000', '666666', '999999'])
+            #chart.set_axis_style(0, '202020', font_size=10, alignment=0)
+            #chart.set_axis_positions(index, [50])
 
-        #near_far_axis_index = chart.set_axis_labels(Axis.BOTTOM, ['TIME'])
-        #near_far_axis_index = chart.set_axis_labels(Axis.LEFT, ['CPU Utilization (%)'])
-        trace_names = []
-        for instance_metric in plot_data:
-            trace_names.append(instance_metric['instanceName'])
-            chart.add_data(instance_metric['ydata'])
-        chart.set_legend(trace_names)
-        chart.download('chart.png')
+            #near_far_axis_index = chart.set_axis_labels(Axis.BOTTOM, ['TIME'])
+            #near_far_axis_index = chart.set_axis_labels(Axis.LEFT, ['CPU Utilization (%)'])
+            trace_names = []
+            for instance_metric in plot_data:
+                trace_names.append(instance_metric['instanceName'])
+                chart.add_data(instance_metric['ydata'])
+            chart.set_legend(trace_names)
+            chart.download('chart.png')
 
 # exit
 sys.exit(0)

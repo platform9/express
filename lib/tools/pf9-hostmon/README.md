@@ -28,7 +28,23 @@ A script to monitor cpu utilization accross instances using Gnocchi metrics.
 # Sample Cron Entry
 0 6 * * * (/opt/express/lib/tools/pf9-hostmon/call_hostpeaks.sh /root/openstack-ebsco-pdc.rc PDC && /opt/express/lib/tools/pf9-hostmon/call_hostpeaks.sh /root/openstack-ebsco-sdc.rc SDC) >> /var/log/pf9-hostpeaks.log 2>&1
 
+# To Update the DU:
+1. Copy the sample pipeline.yml to /etc/ceilometer
+2. Restart the following services:
+   openstack-ceilometer-agent-notification
+   openstack-ceilometer-api
+   openstack-ceilometer-polling
+   openstack-gnocchi-api
+   openstack-gnocchi-metricd
+
+# To Update the KVM Host:
+1. Copy the sample pipeline.yml to /etc/ceilometer
+2. Restart the following services:
+   pf9-ceilometer
+
+########################################################################################################################
 # Sample pipeline.yaml (DU)
+########################################################################################################################
 ```
 ---
 sources:
@@ -131,7 +147,9 @@ sinks:
           - direct://?dispatcher=gnocchi
 ```
 
+########################################################################################################################
 # Sample pipeline.yaml (KVM Host)
+########################################################################################################################
 ```
 ---
 sources:
