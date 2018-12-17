@@ -1,0 +1,105 @@
+#!/bin/bash
+####################################################################################################
+# Discover/Launch Murano Applications 
+# 
+# Sample Invocations:
+####################################################################################################
+
+config_file=$(dirname $0)/pf9-express.conf
+libdir=$(dirname $0)/lib/murano-deploy
+tokendb=/tmp/token.dat
+flag_update_token=0
+flag_verbose=0
+log_hostagent=/var/log/pf9/hostagent.log
+
+assert() {
+  if [ $# -eq 1 ]; then echo "ASSERT: ${1}"; fi
+  exit 1
+}
+
+usage() {
+  echo -e "Usage: `basename $0` [-d] <Method> [Args]\n"
+  echo "Methods:"
+  echo "  `${libdir}/get-app -h`"
+  echo
+  exit 1
+}
+
+read_config() {
+  if [ ! -r ${config_file} ]; then assert "config file missing: ${config_file}"; fi
+
+  du_url=$(grep ^du_url ${config_file} | cut -d \| -f2)
+  admin_user=$(grep ^os_username ${config_file} | cut -d \| -f2)
+  admin_password=$(grep ^os_password ${config_file} | cut -d \| -f2)
+}
+
+get_token() {
+  # manage token
+  if [ ! -r ${tokendb} ]; then
+    flag_update_token=1
+  else
+    token_ts=$(head -1 ${tokendb})
+    current_time=$(date +%s)
+    token_expire_ts=$((token_ts + 86400))
+    if [ ${current_time} -ge ${token_expire_ts} ]; then flag_update_token=1; fi
+  fi
+
+  if [ ${flag_update_token} -eq 1 ]; then
+    echo "du_url=${du_url}"
+    echo "admin_user=${admin_user}"
+    echo "admin_password=${admin_password}"
+    curl -k -i -H "Content-Type: application/json" ${du_url}/keystone/v3/auth/tokens?nocatalog \
+           -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \
+           \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \
+           \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}"
+    #token=`curl -k -i -H "Content-Type: application/json" ${du_url}/keystone/v3/auth/tokens?nocatalog \
+    #       -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \
+    #       \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \
+    #       \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}" 2>/dev/null \
+    #       | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
+  
+    # update tokendb
+    if [ -z "${token}" ]; then assert "failed to get token"; fi
+    echo "$(date +%s)" > ${tokendb}
+    echo "${token}" >> ${tokendb}
+  else
+    token=$(cat ${tokendb} | tail -1)
+  fi
+}
+
+# validate command-line
+if [ $# -eq 0 ]; then usage; fi
+
+# process optional args
+while [ $# -gt 0 ]; do
+  case ${1} in
+  -d|--debug)
+    flag_verbose=1
+    shift
+    ;;
+  *)
+    break
+    ;;
+  esac
+done
+
+# read config file
+read_config
+
+# get keystone token
+get_token
+
+# execute methods
+op=${1}
+case ${op} in
+get-app)
+  if [ ! -r ${libdir}/${op} ]; then assert "missing library: ${libdir}/${op}"; fi
+  source ${libdir}/${op} $*
+  ;;
+*)
+  usage
+  ;;
+esac
+
+# exit cleanly
+exit 0
