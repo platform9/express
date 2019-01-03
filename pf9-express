@@ -250,18 +250,18 @@ db_init() {
   docker stop awx_task > /dev/null 2>&1
 
   # drop awx database
-  echo "--> importing default database"
-  docker exec postgres bash -c "su - postgres -c 'psql -c \"drop database awx;\"'" > /dev/null 2>&1
+  echo "--> importing default database - monitor log for status: ${log}"
+  docker exec postgres bash -c "su - postgres -c 'psql -c \"drop database awx;\"'" > ${log} 2>&1
 
   # initialize awx database
-  docker exec postgres bash -c "su - postgres -c 'psql -c \"create database awx with template template0;\"'" > /dev/null 2>&1
+  docker exec postgres bash -c "su - postgres -c 'psql -c \"create database awx with template template0;\"'" >> ${log} 2>&1
 
   # import awx database (exported using 'pg_dump awx > db.sql')
-  docker exec postgres bash -c "su - postgres -c 'psql -d awx -f /tmp/${awx_db_export};'" > /dev/null 2>&1
+  docker exec postgres bash -c "su - postgres -c 'psql -d awx -f /tmp/${awx_db_export};'" >> ${log} 2>&1
 
   # start awx
   echo "--> restarting AWX"
-  ${basedir}/pf9-express -u > /dev/null 2>&1
+  ${basedir}/pf9-express -u >> ${log} 2>&1
 }
 
 install_awx() {
