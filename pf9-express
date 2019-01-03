@@ -292,7 +292,7 @@ install_awx() {
   if [ $? -ne 0 ]; then assert "failed to set permissions on /root/.tower_cli.cfg"; fi
 
   # Install AWX (Docker-based)
-  echo "--> installing awx (this will take a while - monitor log for status)"
+  echo "--> installing awx (this will take a while - monitor log for status: ${log})"
   (cd ${awx_repo_dir}/installer && sudo ansible-playbook -i inventory install.yml > ${log} 2>&1)
 
   # Validate Tower CLI (timeout loop)
