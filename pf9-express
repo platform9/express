@@ -35,6 +35,7 @@ flag_autoregister=0
 flag_csvImport=0
 flag_deauth=0
 extra_vars=""
+awx_expose=1
 awx_pf9_user="pf9"
 awx_pf9_password="Pl@tform9"
 awx_pf9_email="user@company.com"
@@ -57,7 +58,15 @@ usage() {
   echo "-v|--inventory <file>      : use alternate inventory file for Ansible"
   echo "-f|--csvFile <file>        : import CSV file"
   echo "-t|--tag <tag[,<tag>]>     : available tags = [live-migration, image-import]"
-  echo -e "-h|--help                  : display this message\n"
+  echo "-h|--help                  : display this message"
+  if [ ${awx_expose} -eq 1 ]; then
+    echo -e "\nAWX-Specific Args:"
+    echo "-u|--ui                    : install web UI (Ansible AWX)"
+    echo "-r|--restartAwx            : restart AWX"
+    echo "-d|--dbinit                : initialize AWX database"
+    echo "-x|--dbExport <exportFile> : use <exportFile> for dbinit"
+  fi
+  echo
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
     :
   else
@@ -487,6 +496,20 @@ while [ $# -gt 0 ]; do
     ;;
   -o|--oscli)
     flag_oscli=1
+    ;;
+  -d|--dbinit)
+    flag_dbinit=1
+    ;;
+  -r|--restartAwx)
+    flag_awx_restart=1
+    ;;
+  -u|--ui)
+    flag_ui=1
+    ;;
+  -x|--dbExport)
+    if [ $# -lt 2 ]; then usage; fi
+    awx_db_export=${2}
+    shift
     ;;
   -a|--autoRegister)
     flag_autoregister=1

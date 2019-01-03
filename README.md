@@ -243,6 +243,18 @@ If you want to override an Ansible variable defined in Inventory or dynamically 
 ```
 NOTE: Variables passed as extra-vars have the highest precedence.
 
+## AWX Installation (Developers Only)
+The Express installer can install Ansible AWX for running Express within AWX.  The installer options for managing AWX are enabled by default, but the usage statement will not include the AWX-specific options unless you set awx_expose=1.
+
+Here is the AWX-specific usage stagement:
+```
+AWX-Specific Args:
+-u|--ui                    : install web UI (Ansible AWX)
+-r|--restartAwx            : restart AWX
+-d|--dbinit                : initialize AWX database
+-x|--dbExport <exportFile> : use <exportFile> for dbinit
+```
+
 ## License
 
 Apache 2.0
