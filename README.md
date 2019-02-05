@@ -158,6 +158,16 @@ cv04 ansible_host=10.0.0.18 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 cv05 ansible_host=10.0.0.19 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 ```
 
+## CSV Import
+Instead of manually configuring the inventory file, you can us the '-f <csvFile>' option to auto-configure it from a CSV definition file.
+
+Here's a sample CSV definition file:
+```
+hostname,username,key,ip,dhcp,snat,glance,glance-public,nic1,nic2,mgmtvlan,mgmtip,mgmtnetmask,Storagevlan,storageip,storagenetmask,tunnelvlan,tunnelip,tunnelnetmask
+fake01,centos,~/.ssh/id_rsa,172.16.7.182,TRUE,TRUE,TRUE,TRUE,ens160,,243,172.16.243.11,255.255.255.0,244,172.16.244.11,255.255.255.0,245,172.16.245.11,255.255.255.0
+fake02,ubuntu,~/.ssh/id_rsa,172.16.7.47,TRUE,FALSE,FALSE,FALSE,ens192,,243,172.16.243.12,255.255.255.0,244,172.16.244.12,255.255.255.0,245,172.16.245.12,255.255.255.0
+```
+
 ## Controlling UID/GID for the Platform9 Host Agent
 If you want to control the UID and GID values for the Platform9 service account (pf9/pf9group), set the following inventory variables:
 * pf9_uid
