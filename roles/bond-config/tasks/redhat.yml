@@ -3,6 +3,11 @@
 - debug: var=bond_sub_interfaces
 
 - block:
+  - name: "RedHat - create the network configuration file for {{bond_ifname}}"
+    template:
+      src: rhel-bond-interface.j2
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}"
+      mode: 0644
   - name: "RedHat - attach physical interfaces to the bond"
     template:
       src: rhel-ifcfg-interface.j2
