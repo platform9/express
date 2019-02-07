@@ -3,7 +3,7 @@
 basedir=$(dirname $0)
 network_args=""
 provider=openstack
-os_cli=~/.virtenvs/os_cli/bin/openstack
+os_cli=openstack
 inventory=${basedir}/hosts
 tpl_global=${basedir}/template/hosts-global.tpl
 tpl_hypervisors=${basedir}/template/hosts-hypervisors.tpl
@@ -373,6 +373,7 @@ if [ "${node_type}" == "openstack" ]; then
     IFS=" "
     for instance in ${instances}; do
       echo -n "."
+      sudo ansible -i ${inventory} -m raw -s -a "if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi" ${instance}
       status=$(ansible -i ${inventory} -m ping ${instance})
       if [ $? -ne 0 ]; then launch_status=0; fi
     done
