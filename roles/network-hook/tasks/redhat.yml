@@ -1,5 +1,3 @@
 ---
-- name: "Create the network configuration file for {{bond_ifname}}"
-  template:
-    src: bond_redhat.j2
-    dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}"
+
+- debug: msg="running network-hook/tasks/redhat.yml"

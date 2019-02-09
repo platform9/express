@@ -1,5 +1,19 @@
 ---
+- name: Check if pf9-ostackhost in installed (Ubuntu)
+  shell: "`which dpkg-query` -s pf9-ostackhost > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
+  register: pkg_state_ostackhost_ubuntu
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_pkg_mgr == "apt"
+
+- name: Check if pf9-ostackhost is installed (RedHat)
+  shell: "`which rpm` -qa | grep pf9-ostackhost > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
+  register: pkg_state_ostackhost_redhat
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_pkg_mgr == "yum"
 
 - name: update Nova to support nested virtualization
   script: files/update-nova.sh
-
+  when: (pkg_state_ostackhost_ubuntu.stdout is defined and pkg_state_ostackhost_ubuntu.stdout.strip() != "not-installed") or
+        (pkg_state_ostackhost_redhat.stdout is defined and pkg_state_ostackhost_redhat.stdout.strip() != "not-installed")

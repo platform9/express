@@ -10,7 +10,7 @@
     line: "{{ item }}"
     dest: /etc/modules
   with_items: "{{ neutron_kernel_modules }}"
-  when: ansible_os_family == "Debian"
+  when: ansible_distribution == "Ubuntu"
 
 - block:
   - name: Persist modules on boot

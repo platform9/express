@@ -1,0 +1,39 @@
+---
+- include: redhat.yml
+  when: ansible_os_family == "RedHat"
+
+- include: ubuntu.yml
+  when: ansible_distribution == "Ubuntu"
+
+- block:
+  - name: ensure nova_override.conf exists
+    copy:
+      content: ''
+      dest: /opt/pf9/etc/nova/conf.d/nova_override.conf
+      force: no
+
+  - name: enable nova volume multipath in nova_override.conf
+    ini_file: dest=/opt/pf9/etc/nova/conf.d/nova_override.conf section=libvirt option=volume_use_multipath value=True backup=yes
+
+  - name: create /etc/multipath.conf
+    copy:
+      src: multipath.conf
+      dest: /etc/multipath.conf
+      backup: yes
+
+  - name: enable multipathd
+    systemd:
+      name: multipathd
+      enabled: yes
+
+  - name: start multipathd
+    systemd:
+      state: started
+      name: multipathd
+
+  - name: restart nova
+    systemd:
+      state: restarted
+      name: pf9-ostackhost
+  when: (pkg_state_ostackhost_ubuntu.stdout is defined and pkg_state_ostackhost_ubuntu.stdout.strip() != "not-installed") or
+        (pkg_state_ostackhost_redhat.stdout is defined and pkg_state_ostackhost_redhat.stdout.strip() != "not-installed")
