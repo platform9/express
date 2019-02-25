@@ -3,7 +3,7 @@
 basedir=$(dirname $0)
 network_args=""
 provider=openstack
-os_cli=openstack
+os_cli=/usr/local/bin/openstack
 inventory=${basedir}/hosts
 tpl_global=${basedir}/template/hosts-global.tpl
 tpl_hypervisors=${basedir}/template/hosts-hypervisors.tpl
@@ -149,6 +149,12 @@ if [ ${flag_launch} -eq 1 ]; then
       fi
       ((n++))
     done
+
+	echo "IMAGE NAME: ${image_name}"
+	echo "flavor: ${lineArgs[2]}"
+	echo "NETWORK ${network_args}"
+	echo "KEY ${lineArgs[5]}"
+	echo "REST ${lineArgs[0]}"
 
     # build instance using Nova
     case ${provider} in
@@ -373,7 +379,7 @@ if [ "${node_type}" == "openstack" ]; then
     IFS=" "
     for instance in ${instances}; do
       echo -n "."
-      sudo ansible -i ${inventory} -m raw -s -a "if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi" ${instance}
+      sudo ansible-playbook -i ${inventory} -l ${instance} -e "skip_prereq=1 autoreg=off du_fqdn=https://cs-luis.platform9.horse ctrl_ip=131.153.255.53 du_username=luis@platform9.com du_password=Pl@tform9$" ${basedir}/ubuntu.yml
       status=$(ansible -i ${inventory} -m ping ${instance})
       if [ $? -ne 0 ]; then launch_status=0; fi
     done
@@ -440,6 +446,7 @@ if [ "${node_type}" == "kubernetes" ]; then
     IFS=" "
     for instance in ${instances_master}; do
       echo -n "."
+      sudo ansible-playbook -i ${inventory} -l ${instance} -e "skip_prereq=1 autoreg=off du_fqdn=https://cs-luis.platform9.horse ctrl_ip=131.153.255.53 du_username=luis@platform9.com du_password=Pl@tform9$" ${basedir}/ubuntu.yml
       status=$(ansible -i ${inventory} -m ping ${instance})
       if [ $? -ne 0 ]; then launch_status=0; fi
     done
@@ -503,6 +510,7 @@ if [ "${node_type}" == "kubernetes" ]; then
     IFS=" "
     for instance in ${instances_worker}; do
       echo -n "."
+      sudo ansible-playbook -i ${inventory} -l ${instance} -e "skip_prereq=1 autoreg=off du_fqdn=https://cs-luis.platform9.horse ctrl_ip=131.153.255.53 du_username=luis@platform9.com du_password=Pl@tform9$" ${basedir}/ubuntu.yml
       status=$(ansible -i ${inventory} -m ping ${instance})
       if [ $? -ne 0 ]; then launch_status=0; fi
     done

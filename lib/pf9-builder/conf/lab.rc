@@ -1,0 +1,7 @@
+export OS_AUTH_URL=https://lab.cs.pf9.io/keystone/v3
+export OS_IDENTITY_API_VERSION=3
+export OS_REGION_NAME="VMware-US-SJC"
+export OS_USERNAME="luis@platform9.com"
+export OS_PASSWORD="H@ckpa55"
+export OS_PROJECT_NAME="Luis"
+export OS_PROJECT_DOMAIN_ID=${OS_PROJECT_DOMAIN_ID:-"default"}
