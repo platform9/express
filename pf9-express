@@ -189,7 +189,7 @@ validate_platform() {
     host_os_info=$(cat /etc/centos-release)
   elif [ -r /etc/lsb-release ]; then
     release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
-    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported Ubuntu release: ${release}"; fi
+    if [[ ! "${release}" == 18.04* ]]; then assert "unsupported Ubuntu release: ${release}"; fi
     platform="ubuntu"
     ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
     host_os_info="${platform} ${ubuntu_release}"
