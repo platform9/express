@@ -150,7 +150,12 @@ then
 
 	for number in $(seq 1 $varname) 
 	do
-		echo "$hostname${number}|$image|$myflavor|$net|bond_members='[\"${int}\"]'|$mykey|$mysec|" >> ${input}/hosts.csv
+		if [ "$number" -eq 1 ]
+		then
+			echo "$hostname${number}|$image|$myflavor|$net|bond_members='[\"${int}\"]'|$mykey|$mysec|dhcp,snat" >> ${input}/hosts.csv
+		else
+			echo "$hostname${number}|$image|$myflavor|$net|bond_members='[\"${int}\"]'|$mykey|$mysec|" >> ${input}/hosts.csv
+		fi
 	done
 
 
