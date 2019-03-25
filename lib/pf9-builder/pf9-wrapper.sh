@@ -5,7 +5,7 @@ conf=${main}/conf
 input=${main}/input
 mkdir -p $input
 
-if [ ! -f "${main}/pf9-express.conf" ]
+if [ ! -f "${main}/../../pf9-express.conf" ]
 then
 	echo "Plese run \"pf9-express -s\" to setup your MGMT plane"
 	exit
