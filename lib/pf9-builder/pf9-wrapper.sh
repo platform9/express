@@ -1,9 +1,21 @@
 #!/bin/bash
 
-main=/opt/pf9-express/lib/pf9-builder
+main="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 conf=${main}/conf
 input=${main}/input
-mkdir -p $conf $input
+mkdir -p $input
+
+if [ ! -f "${main}/pf9-express.conf" ]
+then
+	echo "Plese run \"pf9-express -s\" to setup your MGMT plane"
+	exit
+fi
+
+if grep --quiet "<CHANGEME>" "${conf}/lab.rc"
+then
+	echo "Plese update your credentials in the ${conf}/lab.rc config file"
+	exit
+fi
 
 #source to make openstack work
 source ${conf}/lab.rc
