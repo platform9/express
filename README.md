@@ -88,22 +88,39 @@ ansible_ssh_pass=winterwonderland
 #ansible_ssh_private_key_file=~/.ssh/id_rsa
 
 ################################################################################################
-## Optional Settings
+## Network Settings
 ################################################################################################
 manage_network=True
-bond_ifname=bond0
+ovs_ifname=ens224
+ovs_bond_ifname=bond0
+mgmt_bond_ifname=bond1
 bond_mode=1
-bond_mtu=9000
+if_mtu=9000
 
-## network bond configuration implemented if manage_network=True
-[bond-config]
-## for single interface bond configuration
-hv01 bond_members='eth1' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.11","mask":"255.255.255.0"}]'
+[networking]
+#networking scenario 2 (configure ovs interface without bonding or sub interfaces)
+#kv01
 
-## for multiple interface bond configuration
-hv02 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.12","mask":"255.255.255.0"}]'
-hv03 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.13","mask":"255.255.255.0"}]'
-cv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.15","mask":"255.255.255.0"}]'
+#networking scenario 3 (configure ovs interface without bonding with sub interfaces and IP)
+#kv01 ovs_sub_interfaces='[{"vlanid":"100","ip":"100.0.0.1","mask":"255.255.255.0"}]'
+
+#4) configure ovs interface with bonding but no sub interfaces
+#kv01 ovs_bond_members='["ens224","ens225"]'
+
+#5) configure ovs interface with bonding and sub interfaces and IPs
+#kv01 ovs_bond_members='["ens224","ens225"]' ovs_sub_interfaces='[{"vlanid":"100","ip":"100.0.0.1","mask":"255.255.255.0"}]'
+
+#6) configure mgmt sub interface without bonding
+#kv01 mgmt_sub_interfaces='[{"iface":"ens192","vlanid":"100","ip":"100.0.0.1","mask":"255.255.255.0"}]'
+
+#7) configure mgmt interface without bonding with sub interfaces - THIS DELETES ALL INTERFACES
+#kv01 mgmt_iface='[{"iface":"ens192","ip":"10.1.2.3","mask":"255.255.255.0","gateway":"10.1.2.1","mtu":"1500","dns":"10.1.2.5 10.1.2.6"}]' mgmt_sub_interfaces='[{"iface":"ens192","vlanid":"100","ip":"100.0.0.1","mask":"255.255.255.0"}]'
+
+#8) configure mgmt interface with bonding and sub interfaces and IPs
+#kv01 mgmt_bond_members='["ens192","ens193"]' mgmt_iface='[{"iface":"bond1","ip":"10.1.2.3","mask":"255.255.255.0","gateway":"10.1.2.1","mtu":"1500","dns":"10.1.2.5 10.1.2.6"}]' mgmt_sub_interfaces='[{"iface":"ens192","vlanid":"100","ip":"100.0.0.1","mask":"255.255.255.0"}]'
+
+#9) All Networking Options Enabled
+#kv01 ovs_bond_members='["ens224","ens225"]' ovs_sub_interfaces='[{"vlanid":"100","ip":"100.0.0.1","mask":"255.255.255.0"}]' mgmt_bond_members='["ens192","ens193"]' mgmt_iface='[{"iface":"bond1","ip":"10.1.2.3","mask":"255.255.255.0","gateway":"10.1.2.1","mtu":"1500","dns":"10.1.2.5 10.1.2.6"}]' mgmt_sub_interfaces='[{"iface":"ens192","vlanid":"100","ip":"100.0.0.1","mask":"255.255.255.0"}]'
 
 ################################################################################################
 ## OpenStack Groups
