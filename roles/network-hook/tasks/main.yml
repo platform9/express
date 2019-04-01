@@ -21,9 +21,9 @@
   shell: "ifconfig -a | grep ^{{neutron_ovs_bridge_name}} > /dev/null 2>&1; if [ $? -eq 0 ]; then echo 'exists'; else echo 'not-exist'; fi"
   register: ovs_bridge_check
 
-- name: "Set br-pf9 port as {{bond_ifname}}"
+- name: "Set br-pf9 port as {{ovs_ifname}}"
   openvswitch_port:
     bridge: "{{neutron_ovs_bridge_name}}"
-    port: "{{bond_ifname}}"
+    port: "{{ovs_ifname}}"
     state: present
   when: ovs_bridge_check.stdout.strip() == "exists"

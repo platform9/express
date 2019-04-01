@@ -1,0 +1,8 @@
+auto {{mgmt_bond_ifname}} 
+  iface {{mgmt_bond_ifname}} inet static
+  bond-slaves {{mgmt_bond_members_concat}}
+  address {{item['ip']}}
+  netmask {{item['mask']}}
+  gateway {{item['gateway']}}
+  dns-nameservers {{item['dns']}}
+  mtu {{item['mtu']}}

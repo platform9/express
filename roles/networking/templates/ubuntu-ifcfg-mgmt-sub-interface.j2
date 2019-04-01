@@ -1,0 +1,4 @@
+auto {{item['iface']}}.{{item['vlanid']}}
+iface {{item['iface']}}.{{item['vlanid']}} inet static
+  address {{item['ip']}}
+  netmask {{item['mask']}}

@@ -7,5 +7,8 @@
 - include: redhat.yml
   when: ansible_os_family == "RedHat"
 
-- include: ubuntu.yml
-  when: ansible_distribution == "Ubuntu"
+- include: ubuntu_16.yml
+  when: ansible_distribution == "Ubuntu" and ansible_distribution_release != 'bionic'
+
+- include: ubuntu_18.yml
+  when: ansible_distribution == "Ubuntu" and ansible_distribution_release == 'bionic'

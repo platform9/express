@@ -1,0 +1,4 @@
+auto {{ovs_bond_ifname}}.{{item['vlanid']}}
+iface {{ovs_bond_ifname}}.{{item['vlanid']}} inet static
+  address {{item['ip']}}
+  netmask {{item['mask']}}

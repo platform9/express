@@ -29,11 +29,11 @@
   roles:
     - pre-hook
 
-# Configure the bond
-- hosts: bond-config
+# Configure Networking
+- hosts: networking
   become: true
   roles:
-    - { role: "bond-config", when: manage_network == True }
+    - { role: "networking", when: manage_network == True }
     - { role: "pf9-auth", when: manage_network == True and ansible_distribution == "Ubuntu" }
 
 # OpenStack Hypervisor Nodes

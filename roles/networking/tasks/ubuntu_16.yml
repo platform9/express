@@ -1,0 +1,117 @@
+---
+- name: "Ubuntu - Install network packages"
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - ifenslave
+    - vlan
+
+- name: "Ubuntu - Mgmt Interface - Cleanup"
+  file:
+    state: absent
+    path: "/etc/network/interfaces.d/"
+  when: mgmt_iface is defined or mgmt_bond_members is defined
+
+- name: "Ubuntu - Mgmt Interface - Start over"
+  file:
+    state: directory
+    path: "/etc/network/interfaces.d/"
+  when: mgmt_iface is defined or mgmt_bond is defined
+
+- name: "Ubuntu - Mgmt Interface - No Bonding"
+  template:
+    src: ubuntu-ifcfg-mgmt-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{item['iface']}}.cfg"
+    mode: 0644
+  with_items: "{{mgmt_iface|list}}"
+  when: mgmt_iface is defined and mgmt_bond_members is not defined
+  register: restart_ubuntu_1
+
+- name: "Ubuntu - Mgmt Interface - Sub Interfaces"
+  template:
+    src: ubuntu-ifcfg-mgmt-sub-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{item['iface']}}-{{item['vlanid']}}.cfg"
+    mode: 0644
+  with_items: "{{mgmt_sub_interfaces|list}}"
+  when: mgmt_sub_interfaces is defined
+  register: restart_ubuntu_2
+
+- name: "Ubuntu - Concat Mgmt Interfaces"    
+  set_fact:         
+    mgmt_bond_members_concat: "{{ mgmt_bond_members | join(' ') }}"     
+  when: mgmt_bond_members is defined
+
+- name: "Ubuntu - Mgmt Bond Interface - Configuration"
+  template:
+    src: ubuntu-ifcfg-mgmt-bond-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{mgmt_bond_ifname}}.cfg"
+    mode: 0644
+  with_items: "{{mgmt_iface|list}}"
+  when: mgmt_bond_members is defined
+  register: restart_ubuntu_3
+
+- name: "Ubuntu - Mgmt Interface - Configure Bond Members"
+  template:
+    src: ubuntu-ifcfg-mgmt-phy-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{item}}.cfg"
+    mode: 0644
+  with_items: "{{mgmt_bond_members}}"
+  when: mgmt_bond_members is defined
+  register: restart_ubuntu_4
+
+- name: "Ubuntu - OVS Interface - No Bonding"
+  template:
+    src: ubuntu-ifcfg-ovs-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{item}}.cfg"
+    mode: 0644
+  with_items: "{{ovs_ifname}}"
+  when: ovs_bond_members is not defined
+  register: restart_ubuntu_5 
+
+- name: "Ubuntu - OVS Interface - Configure Bond Members"
+  template:
+    src: ubuntu-ifcfg-phy-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{item}}.cfg"
+    mode: 0644
+  with_items: "{{ovs_bond_members}}"
+  when: ovs_bond_members is defined
+  register: restart_ubuntu_6
+
+- name: "Ubuntu - Concat OVS Interfaces"    
+  set_fact:         
+    ovs_bond_members_concat: "{{ ovs_bond_members | join(' ') }}"     
+  when: ovs_bond_members is defined
+
+- debug: var=ovs_bond_members_concat
+
+- name: "Ubuntu - OVS Bond Interface - Configuration"
+  template:
+    src: ubuntu-ifcfg-ovs-bond-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{ovs_bond_ifname}}.cfg"
+    mode: 0644
+  when: ovs_bond_members is defined
+  register: restart_ubuntu_7
+
+- name: "Ubuntu - OVS Interface - Sub Interfaces"
+  template:
+    src: ubuntu-ifcfg-sub-interface.j2
+    dest: "/etc/network/interfaces.d/ifcfg-{{ovs_ifname}}-{{item['vlanid']}}.cfg"
+    mode: 0644
+  with_items: "{{ovs_sub_interfaces|list}}"
+  when: ovs_sub_interfaces is defined
+  register: restart_ubuntu_8
+
+#- name: "Ubuntu - Reboot if there was a change"
+#  shell: "sleep 5 && reboot"
+#  async: 1
+#  poll: 0
+#  when: restart_ubuntu_1 is changed or restart_ubuntu_2 is changed or restart_ubuntu_3 is changed or restart_ubuntu_4 is changed or restart_ubuntu_5 is changed or restart_ubuntu_6 is changed or restart_ubuntu_7 is changed or restart_ubuntu_8 is changed
+
+#- name: "Ubuntu - Wait for the reboot to complete if there was a change"
+#  wait_for_connection:
+#    connect_timeout: 20
+#    sleep: 5
+#    delay: 5
+#    timeout: 300
+#  when: restart_ubuntu_1 is changed or restart_ubuntu_2 is changed or restart_ubuntu_3 is changed or restart_ubuntu_4 is changed or restart_ubuntu_5 is changed or restart_ubuntu_6 is changed or restart_ubuntu_7 is changed or restart_ubuntu_8 is changed

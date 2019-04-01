@@ -1,0 +1,17 @@
+---
+# Common Roles
+- hosts: hypervisors
+  become: true
+  gather_facts: False
+  pre_tasks:
+    - debug: var=autoreg
+    - name: install python2 on Ubuntu to enable running Ansible on Ubuntu hosts
+      raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt -y update && apt install -y python-minimal); fi
+
+# Configure Networking
+- hosts: networking
+  become: true
+  roles:
+    - { role: "networking", when: manage_network == True }
+    - { role: "pf9-auth", when: manage_network == True and ansible_distribution == "Ubuntu" }
+

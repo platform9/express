@@ -1,0 +1,10 @@
+auto lo
+iface lo inet loopback
+
+auto {{item['iface']}}
+iface {{item['iface']}} inet static
+  address {{item['ip']}}
+  netmask {{item['mask']}}
+  gateway {{item['gateway']}}
+  dns-nameservers {{item['dns']}}
+  mtu {{item['mtu']}}
