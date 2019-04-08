@@ -2,31 +2,93 @@
 - debug: var=bond_members
 - debug: var=bond_sub_interfaces
 
-- block:
-  - name: "RedHat - create the network configuration file for {{bond_ifname}}"
-    template:
-      src: rhel-bond-interface.j2
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}"
-      mode: 0644
-  - name: "RedHat - attach physical interfaces to the bond"
-    template:
-      src: rhel-ifcfg-interface.j2
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
-      mode: 0644
-    with_items: "{{bond_members}}"
-  when: bond_members is defined
+- name: "Redhat - Mgmt Interface - Cleanup Mgmt Iface Name"
+  file:
+    state: absent
+    path: "/etc/sysconfig/network-scripts/ifcfg-{{item['iface']}}"
+  with_items: "{{mgmt_iface|list}}"
+  when: mgmt_iface is defined
 
-- block:
-  - name: "RedHat - attach physical interfaces to the bond"
-    template:
-      src: rhel-ifcfg-sub-interface.j2
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{bond_ifname}}.{{item['vlanid']}}"
-      mode: 0644
-    with_items: "{{bond_sub_interfaces|list}}"
-  when: bond_sub_interfaces is defined
+- name: "Redhat - Mgmt Interface - Cleanup Bond Members Name"
+  file:
+    state: absent
+    path: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
+  with_items: "{{mgmt_bond_members}}"
+  when: mgmt_bond_members is defined
+
+- name: "Redhat - OVS Interface - Cleanup Bond Members Name"
+  file:
+    state: absent
+    path: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
+  with_items: "{{ovs_bond_members}}"
+  when: ovs_bond_members is defined
+
+- name: "Redhat - Mgmt Interface - No Bonding"
+  template:
+    src: rhel-ifcfg-mgmt-interface.j2
+    dest: "/etc/sysconfig/network-scripts/ifcfg-{{item['iface']}}"
+    mode: 0644
+  with_items: "{{mgmt_iface|list}}"
+  when: mgmt_iface is defined and mgmt_bond_members is not defined
+
+- name: "Redhat - Mgmt Interface - Sub Interfaces"
+  template:
+    src: rhel-ifcfg-mgmt-sub-interface.j2
+    dest: "/etc/sysconfig/network-scripts/ifcfg-{{item['iface']}}.{{item['vlanid']}}"
+    mode: 0644
+  with_items: "{{mgmt_sub_interfaces|list}}"
+  when: mgmt_sub_interfaces is defined
+
+- name: "RedHat - Mgmt Bond Interface - Configuration"
+  template:
+    src: rhel-mgmt-bond-interface.j2
+    dest: "/etc/sysconfig/network-scripts/ifcfg-{{mgmt_bond_ifname}}"
+    mode: 0644
+  with_items: "{{mgmt_iface|list}}"
+  when: mgmt_bond_members is defined
+
+- name: "RedHat - Mgmt Bond Interface - Configure Bond Members"
+  template:
+    src: rhel-ifcfg-mgmt-bond-interface.j2
+    dest: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
+    mode: 0644
+  with_items: "{{mgmt_bond_members}}"
+  when: mgmt_bond_members is defined
+
+- name: "Redhat - OVS Interface - No Bonding"
+  template:
+    src: rhel-ifcfg-ovs-interface.j2
+    dest: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
+    mode: 0644
+  with_items: "{{ovs_ifname}}"
+  when: ovs_bond_members is not defined
+  register: ovs_no_bond
+
+- name: "RedHat - OVS Interface - Bond Configuration"
+  template:
+    src: rhel-bond-interface.j2
+    dest: "/etc/sysconfig/network-scripts/ifcfg-{{ovs_bond_ifname}}"
+    mode: 0644
+  when: ovs_bond_members is defined
+
+- name: "RedHat - OVS Inteface - Configure Bond Members"
+  template:
+    src: rhel-ifcfg-interface.j2
+    dest: "/etc/sysconfig/network-scripts/ifcfg-{{item}}"
+    mode: 0644
+  with_items: "{{ovs_bond_members}}"
+  when: ovs_bond_members is defined
+
+- name: "RedHat - OVS Interface - Sub Interfaces"
+  template:
+    src: rhel-ifcfg-sub-interface.j2
+    dest: "/etc/sysconfig/network-scripts/ifcfg-{{ovs_bond_ifname}}.{{item['vlanid']}}"
+    mode: 0644
+  with_items: "{{ovs_sub_interfaces|list}}"
+  when: ovs_sub_interfaces is defined
 
 - name: restart network service
   service:
     name: network
     state: restarted
-  when: bond_members is defined or bond_sub_interfaces is defined
+  when: ovs_no_bond is defined or mgmt_iface is defined or mgmt_bond_members is defined or mgmt_sub_interfaces is defined or ovs_bond_members is defined or bond_sub_interfaces is defined

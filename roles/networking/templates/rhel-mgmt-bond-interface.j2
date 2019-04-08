@@ -1,0 +1,10 @@
+DEVICE={{mgmt_bond_ifname}}
+ONBOOT=yes
+BONDING_MASTER=yes
+BONDING_OPTS="mode={{bond_mode}}"
+BOOTPROTO=none
+MTU={{item['mtu']}}
+DEFROUTE=yes
+GATEWAY={{item['gateway']}}
+IPADDR={{item['ip']}}
+NETMASK={{item['mask']}}
