@@ -73,9 +73,10 @@ To install prerequisite packages on the Platform9 Express control host, run the 
 ## Configuration Inventory (CLI Only)
 Platform9 Express uses Ansible to execute commands on the hosts to be taken under management.  In order to configure Ansible to run remote commands on the managed hosts, the Ansible Inventory file must be configured.  This file is located in /opt/pf9-express/inventory/hosts.
 
-NOTE: A sample template is installed in the previous command ("./pf9-express -s").
+NOTE: A sample template is installed in the previous command ("./pf9-express -s"). Breaking down the Inventory File to separate Openstack and Kubernetes below:
 
-## Sample Inventory File
+## Sample Inventory File Part 1 - Authentication Portion
+## This is where you enter the credentials for your control host to log into the target VM hosts to be managed by the Platform9 control plane (through either a password or SSH key, comment out any password lines if using SSH authentication and vice versa as needed)
 ```
 ##
 ## Ansible Inventory
@@ -83,10 +84,14 @@ NOTE: A sample template is installed in the previous command ("./pf9-express -s"
 [all]
 [all:vars]
 ansible_user=ubuntu
-ansible_sudo_pass=winterwonderland
-ansible_ssh_pass=winterwonderland
-#ansible_ssh_private_key_file=~/.ssh/id_rsa
+#ansible_sudo_pass=password01
+#ansible_ssh_pass=password02
+ansible_ssh_private_key_file=~/.ssh/id_rsa
+```
 
+## Sample Inventory File Part 2 - Openstack Portion
+## This is where you can configure optional network settings to create a bond with single or multiple interfaces. Below this section, you can configure the Openstack hosts and their pertinent roles (Image Host, Storage Host, DNS Host)
+```
 ################################################################################################
 ## Optional Settings
 ################################################################################################
@@ -141,7 +146,10 @@ hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 ## note: this role must be enabled by Platform9 Customer Success before using
 [designate]
 #hv01
-
+```
+## Sample Inventory File Part 3 - Kubernetes Portion
+## This is where you can configure your Kubernetes cluster members under their own roles (either master or worker)
+```
 ################################################################################################
 ## Kubernetes Groups
 ################################################################################################
@@ -153,17 +161,17 @@ k8s-worker
 ## note: if the following variables are not defined, their tasks will be skipped
 ##   - cluster_uuid
 [k8s-master]
-cv01 ansible_host=10.0.0.15
-cv02 ansible_host=10.0.0.16
-cv03 ansible_host=10.0.0.17
+hostname01 ansible_host=10.0.0.15
+hostname02 ansible_host=10.0.0.16
+hostname03 ansible_host=10.0.0.17
 
 [k8s-worker]
-cv04 ansible_host=10.0.0.18 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
-cv05 ansible_host=10.0.0.19 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
+hostname04 ansible_host=10.0.0.18 
+hostname05 ansible_host=10.0.0.19
 ```
 
 ## CSV Import
-Instead of manually configuring the inventory file, you can us the '-f <csvFile>' option to auto-configure it from a CSV definition file.
+Instead of manually configuring the inventory file, you can use the '-f <csvFile>' option to auto-configure it from a CSV definition file.
 
 Here's a sample CSV definition file:
 ```
@@ -184,7 +192,7 @@ NOTE: This feature is not idempotent.  If the 'pf9' user had not been created ye
 ## Running Platform9 Express
 The basic syntax for starting Platform9 Express includes a target (host group, individual host, comma-delimited list of hosts, or "all" to run all groups) and an optional flag ('-a') that instructs it to perform role deployment.
 
-Here's an example of invoking Platform9 Express against a number of hosts:
+Here's an example of invoking Platform9 Express against a number of hosts without registering them automatically to the control plane:
 ```
 # ./pf9-express hv01,hv02,hv03
 ################################################################
@@ -200,9 +208,9 @@ Here's an example of invoking Platform9 Express against a number of hosts:
 .
 .
 ```
-Here's an example of invoking Platform9 Express a single host groups and performing role deployments (based on metadata defined in /opt/pf9-express/inventory/hosts):
+Here's an example of invoking Platform9 Express a single host groups (host groups are either "pmo" for Openstack and "pmk" for Kubernetes) and performing role deployments (based on metadata defined in /opt/pf9-express/inventory/hosts) or registering them automatically to the control plane (based on metadata defined in /opt/pf9-express/inventory/hosts):
 ```
-# ./pf9-express -a hypervisors
+# ./pf9-express -a pmk
 ################################################################
 # Platform9 Express Utility
 ################################################################
