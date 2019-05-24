@@ -112,7 +112,7 @@ cv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"
 ```
 
 ## Sample Inventory File Part 3 - OpenStack Portion
-You can configure the OpenStack hosts and their pertinent roles (Image Host, Storage Host, DNS Host)
+You can configure the OpenStack hosts and their pertinent roles (Hypervisor, Image Host, Storage Host, DNS Host)
 ```
 ################################################################################################
 ## OpenStack Groups
@@ -213,7 +213,7 @@ Here's an example of invoking Platform9 Express against a number of hosts withou
 .
 .
 ```
-Here's an example of invoking Platform9 Express a single host group (host groups are either "pmo" for OpenStack and "pmk" for Kubernetes), performing role deployments (based on metadata defined in /opt/pf9-express/inventory/hosts) and registering them automatically to the management plane
+Here's an example of invoking Platform9 Express against a single host group (host groups are either "pmo" for OpenStack and "pmk" for Kubernetes), performing role deployments (based on metadata defined in /opt/pf9-express/inventory/hosts), and registering them automatically to the management plane
 ```
 # ./pf9-express -a pmk
 ################################################################
