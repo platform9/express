@@ -1,8 +1,8 @@
 # Platform9 Express
-Platform9 Express (pf9-express) is a Customer Success developed tool for bringing bare-metal hosts under management by a Platform9 management plane.  It can bring a host to the point where it shows up in the Clarity UI as a host waiting to be authorized, or it can (optionally) perform Platform9 role deployments for both OpenStack and Kubernetes.  Platform9 Express includes a CLI and Web UI and can be installed on a CentOS or Ubuntu control host.
+Platform9 Express (pf9-express) is a Customer Success developed tool for bringing hosts under management by a Platform9 management plane.  It can bring a host to the point where it shows up in the Clarity UI as a host waiting to be authorized, or it can (optionally) perform Platform9 role deployments for both OpenStack and Kubernetes.  Platform9 Express includes a CLI and can be installed on a CentOS or Ubuntu control host.
 
 ## Prerequisites
-Platform9 Express must be installed on a control host with IP connectivity to the hosts to be brought under management.  CentOS 7.4 or Ubuntu 16.04 are supported on the control host.  Before installing Platform9 Express, you'll need administrator credentials for the Platform9 management plane.  If a proxy is required for HTTP/HTTPS traffic, you'll need the URL for the proxy.
+Platform9 Express must be installed on a control host with IP connectivity to the hosts to be brought under management. CentOS 7.4+ or Ubuntu 16.04 are supported on the control host.  Before installing Platform9 Express, you'll need administrator credentials for the Platform9 management plane.  If a proxy is required for HTTP/HTTPS traffic, you'll need the URL for the proxy.
 
 ## Installation
 Perform the following steps to install Platform9 Express:
@@ -73,9 +73,10 @@ To install prerequisite packages on the Platform9 Express control host, run the 
 ## Configuration Inventory (CLI Only)
 Platform9 Express uses Ansible to execute commands on the hosts to be taken under management.  In order to configure Ansible to run remote commands on the managed hosts, the Ansible Inventory file must be configured.  This file is located in /opt/pf9-express/inventory/hosts.
 
-NOTE: A sample template is installed in the previous command ("./pf9-express -s").
+NOTE: A sample template is installed in the previous command ("./pf9-express -s"). A breakdown of the Inventory File is below:
 
-## Sample Inventory File
+## Sample Inventory File Part 1 - Authentication Portion
+This is where you enter the credentials for your control host to log into the target VM hosts to be managed by the Platform9 management plane (through either a password or SSH key, comment out any password lines if using SSH authentication and vice versa as needed)
 ```
 ##
 ## Ansible Inventory
@@ -86,7 +87,11 @@ ansible_user=ubuntu
 ansible_sudo_pass=winterwonderland
 ansible_ssh_pass=winterwonderland
 #ansible_ssh_private_key_file=~/.ssh/id_rsa
+```
 
+## Sample Inventory File Part 2 - Network Portion
+This is where you can configure optional network settings to create a bond with single or multiple interfaces. 
+```
 ################################################################################################
 ## Optional Settings
 ################################################################################################
@@ -104,7 +109,11 @@ hv01 bond_members='eth1' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.11",
 hv02 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.12","mask":"255.255.255.0"}]'
 hv03 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.13","mask":"255.255.255.0"}]'
 cv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.15","mask":"255.255.255.0"}]'
+```
 
+## Sample Inventory File Part 3 - OpenStack Portion
+You can configure the OpenStack hosts and their pertinent roles (Hypervisor, Image Host, Storage Host, DNS Host)
+```
 ################################################################################################
 ## OpenStack Groups
 ################################################################################################
@@ -141,7 +150,11 @@ hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 ## note: this role must be enabled by Platform9 Customer Success before using
 [designate]
 #hv01
+```
 
+## Sample Inventory File Part 4 - Kubernetes Portion
+This is where you can configure your Kubernetes cluster members under their own roles (either master or worker). For a worker, you can optionally add it into a running cluster using the "cluster_uuid" variable. For any new workers, you can omit this variable assignment.
+```
 ################################################################################################
 ## Kubernetes Groups
 ################################################################################################
@@ -163,7 +176,7 @@ cv05 ansible_host=10.0.0.19 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 ```
 
 ## CSV Import
-Instead of manually configuring the inventory file, you can us the '-f <csvFile>' option to auto-configure it from a CSV definition file.
+Instead of manually configuring the inventory file, you can use the '-f <csvFile>' option to auto-configure it from a CSV definition file.
 
 Here's a sample CSV definition file:
 ```
@@ -184,7 +197,7 @@ NOTE: This feature is not idempotent.  If the 'pf9' user had not been created ye
 ## Running Platform9 Express
 The basic syntax for starting Platform9 Express includes a target (host group, individual host, comma-delimited list of hosts, or "all" to run all groups) and an optional flag ('-a') that instructs it to perform role deployment.
 
-Here's an example of invoking Platform9 Express against a number of hosts:
+Here's an example of invoking Platform9 Express against a number of hosts without registering them automatically to the management plane:
 ```
 # ./pf9-express hv01,hv02,hv03
 ################################################################
@@ -200,9 +213,9 @@ Here's an example of invoking Platform9 Express against a number of hosts:
 .
 .
 ```
-Here's an example of invoking Platform9 Express a single host groups and performing role deployments (based on metadata defined in /opt/pf9-express/inventory/hosts):
+Here's an example of invoking Platform9 Express against a single host group (host groups are either "pmo" for OpenStack and "pmk" for Kubernetes), performing role deployments (based on metadata defined in /opt/pf9-express/inventory/hosts), and registering them automatically to the management plane
 ```
-# ./pf9-express -a hypervisors
+# ./pf9-express -a pmk
 ################################################################
 # Platform9 Express Utility
 ################################################################
