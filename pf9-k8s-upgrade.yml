@@ -12,9 +12,9 @@
 - hosts:
     - k8s-worker
   become: true
-  serial: 10
+  serial: 15
   roles:
     - pf9-auth
     - k8s-node-drain
-#    - { role: "map-role", rolename: "pf9-kube" }
-#    - { role: "wait-for-convergence" }
+    - { role: "map-role", rolename: "pf9-kube" }
+    - { role: "wait-for-convergence" }
