@@ -15,7 +15,7 @@
   lineinfile:
     state: present
     create: True
-    line: 'libvirtd_opts="-d -l"'
+    line: 'libvirtd_opts="-l"'
     dest: /etc/default/libvirt-bin
     regexp: '^#?libvirtd_opts=*.*$'
   tags: 

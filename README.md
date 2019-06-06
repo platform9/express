@@ -13,7 +13,7 @@ Perform the following steps to install Platform9 Express:
 ```
 yum install git # CentOS
 
-apt-get update && apt-get install git # Ubuntu
+apt update && apt install git # Ubuntu
 ```
 
 3. Clone the Platform9 Express repository. 
