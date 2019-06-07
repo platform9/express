@@ -2,6 +2,24 @@
 
 - debug: msg="running OpenStack pre_flight_checks():"
 
+##########################################
+## Step 0 - Bail if KVM is not supported
+##########################################
+
+- name: Check for /dev/kvm
+  stat:
+    path: /dev/kvm
+  register: kvm_result
+  when:
+    - inventory_hostname in groups['hypervisors']
+
+- name: Bail if /dev/kvm does not exist
+  fail:
+    msg: "ALERT - KVM is not supported! Kernel modules and/or virtualization support (BIOS) may need to be enabled."
+  when:
+    - kvm_result is defined and kvm_result.stat.exists == False
+    - inventory_hostname in groups['hypervisors']
+
 ###########################################################################################
 ## Verify DVR is on, step 1 in the UI is complete, import vars, and test credentials
 ###########################################################################################
