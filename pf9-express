@@ -181,7 +181,7 @@ csv_import() {
 }
 
 validate_platform() {
-  # check if running CentOS 7 or Ubuntu 16.04
+  # check if running CentOS 7, Ubuntu 16.04, or Ubuntu 18.04
   if [ -r /etc/centos-release ]; then
     release=$(cat /etc/centos-release | cut -d ' ' -f 4)
     if [[ ! "${release}" == 7.* ]]; then assert "unsupported CentOS release: ${release}"; fi
@@ -189,7 +189,7 @@ validate_platform() {
     host_os_info=$(cat /etc/centos-release)
   elif [ -r /etc/lsb-release ]; then
     release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
-    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported Ubuntu release: ${release}"; fi
+    if [[ ! "${release}" == 16.04* ]] && [[ ! "${release}" == 18.04* ]]; then assert "unsupported Ubuntu release: ${release}"; fi
     platform="ubuntu"
     ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
     host_os_info="${platform} ${ubuntu_release}"
@@ -539,7 +539,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# validate platform (CentOS 7.4 or Ubuntu 16.04)
+# validate platform (CentOS 7.4, Ubuntu 16.04, or Ubuntu 18.04)
 validate_platform
 
 ## validate sudo priviledges
