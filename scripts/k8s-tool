@@ -48,7 +48,7 @@ validate_platform() {
     platform="centos"
   elif [ -r /etc/lsb-release ]; then
     release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
-    if [[ ! "${release}" == 16.04* ]]; then assert "unsupported Ubuntu release: ${release}"; fi
+    if [[ ! "${release}" == 16.04* ]] && [[ ! "${release}" == 18.04* ]]; then assert "unsupported Ubuntu release: ${release}"; fi
     platform="ubuntu"
   else
     assert "unsupported platform"
@@ -120,7 +120,7 @@ esac
 uid=$(id -u)
 if [ ${uid} -ne 0 ]; then assert "this operation must be run as root"; fi
 
-# validate platform (CentOS 7.4 or Ubuntu 16.04)
+# validate platform (CentOS 7.4, Ubuntu 16.04, or Ubuntu 18.04)
 validate_platform
 
 # validate config file
