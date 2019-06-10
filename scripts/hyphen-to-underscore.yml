@@ -1,0 +1,36 @@
+##
+## This playbook updates the local Ansible inventory and replaces
+## hyphens with underscores in group names and references to group
+## names for better compatibility with Ansible 2.8+ (See #210).
+##
+## Requires:
+## extra_var -> inventory_file
+## Example:
+## ansible-playbook hyphen-to-underscore.yml -e inventory_file=/opt/pf9-express/inventory/hosts
+---
+- name: Update hyphens to underscores in group names
+  hosts: localhost
+  tasks:
+
+  - name: Make a backup of the inventory file
+    copy:
+      src: "{{ inventory_file }}"
+      dest: "{{ inventory_file }}.{{ ansible_date_time.iso8601 }}.bak"
+
+  - name: Grab all group names containing hyphens
+    shell: grep -E -o '\[.*?-.*?\]' {{ inventory_file }} | sed 's/[][]//g'
+    register: groups_list
+    failed_when: "groups_list.rc == 2"
+    changed_when: false
+
+  - name: Print offending group names. These will be modified!
+    debug:
+      msg: "{{ item }}"
+    with_items: "{{ groups_list.stdout_lines }}"
+
+  - name: Replace hyphens with underscores in inventory group names
+    replace:
+      path: "{{ inventory_file }}"
+      regexp: "{{ item }}"
+      replace: "{{ item | regex_replace('-','_') }}"
+    with_items: "{{ groups_list.stdout_lines }}"
