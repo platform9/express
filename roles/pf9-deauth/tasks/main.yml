@@ -29,7 +29,7 @@
 - debug: var=uri_result
 
 - name: wait for deauthorization to complete
-  script: "files/wait_for_agent_deauth.sh {{ctrl_ip}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}}"
+  script: "files/wait_for_agent_deauth.sh {{ctrl_ip}} {{host_id.stdout.strip()}} {{du_username}} \'{{du_password}}\'"
   register: waitfor_agent
 - debug: var=waitfor_agent
 
