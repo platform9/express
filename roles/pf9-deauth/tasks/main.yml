@@ -53,14 +53,17 @@
   ignore_errors: true
 
 - name: remove pf9-hostagent
-  package:
+  yum:
     name: pf9-hostagent
     state: absent
+  when: ansible_os_family == "RedHat"
 
-- name: remove pf9-comms
-  package:
-    name: pf9-comms
+- name: remove pf9-hostagent
+  apt:
+    name: pf9-hostagent
     state: absent
+    purge: yes
+  when: ansible_distribution == "Ubuntu"
 
 - name: cleanup /opt/pf9
   shell: rm -rf /opt/pf9
