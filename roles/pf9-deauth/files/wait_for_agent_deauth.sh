@@ -46,6 +46,7 @@ while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
   if [ -n "${role_status}" ]; then
     role_status=$(echo ${role_status} | cut -d : -f2 | sed -e 's/\"//g' | sed -e 's/,//g' | sed -e 's/ //g')
   fi
+
   if [ -z "${role_status}" ]; then break; fi
 
   # update elapsed time
