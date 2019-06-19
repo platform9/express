@@ -13,3 +13,8 @@
   apt:
     name: software-properties-common
     state: present
+
+- name: Install logrotate
+  apt:
+    name: logrotate
+    state: present
