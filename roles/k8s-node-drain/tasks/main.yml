@@ -29,4 +29,4 @@
   register: k8s_node_name
 
 - name: drain K8s node
-  shell: /opt/pf9/pf9-kube/bin/kubectl --kubeconfig /etc/pf9/kube.d/kubeconfigs/admin.yaml drain {{k8s_node_name.stdout.strip()}} --ignore-daemonsets --delete-local-data --force --grace-period=300
+  shell: /opt/pf9/pf9-kube/bin/kubectl --kubeconfig /etc/pf9/kube.d/kubeconfigs/admin.yaml drain {{k8s_node_name.stdout.strip()}} --ignore-daemonsets --delete-local-data --force --grace-period={{k8s_node_drain_interval}}
