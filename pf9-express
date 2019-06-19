@@ -56,7 +56,7 @@ usage() {
   echo "-e|--extra-vars <string>   : ansible extra-vars <name=val,...>"
   echo "-b|--bypassPrereqs         : bypass pre-requisites"
   echo "-d|--deauth                : de-authorize host"
-  echo "-u|--upgradeK8s            : upgrade Kubernetes nodes (EXPERIMENTAL)"
+  echo "-u|--upgradeK8s            : upgrade Kubernetes nodes"
   echo "-v|--inventory <file>      : use alternate inventory file for Ansible"
   echo "-f|--csvFile <file>        : import CSV file"
   echo "-t|--tag <tag[,<tag>]>     : available tags = [live-migration, image-import]"
