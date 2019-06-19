@@ -41,10 +41,18 @@ echo "--> TIMEOUT = ${TIMEOUT} seconds"
 start_time=`date +%s`
 elapsedTime=0
 while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
-  role_status=$(curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-      https://${ctrl_ip}/resmgr/v1/hosts/${host_id} 2>/dev/null | python -m json.tool | grep role_status)
+  http_status=$(curl --write-out %{http_code} --output /dev/null --silent -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+      https://${ctrl_ip}/resmgr/v1/hosts/${host_id})
 
-  if [ -z "${role_status}" ]; then break; fi
+  if [ ${http_status} -eq 200 ]; then
+    role_status=$(curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+        https://${ctrl_ip}/resmgr/v1/hosts/${host_id} 2>/dev/null | python -m json.tool | grep role_status)
+    if [ -n "${role_status}" ]; then
+      role_status=$(echo ${role_status} | cut -d : -f2 | sed -e 's/\"//g' | sed -e 's/,//g' | sed -e 's/ //g')
+    fi
+  fi
+
+  if [ -z "${role_status}" -a ${http_status} -eq 200 ]; then break; fi
 
   # update elapsed time
   current_t=`date +%s`; elapsedTime=$((current_t - start_time))
