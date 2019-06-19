@@ -1,7 +1,7 @@
 ---
 # Common Roles
 - hosts:
-    - hypervisors
+    - pmo:children
     - k8s-master
     - k8s-worker
   become: true
@@ -13,7 +13,7 @@
 
 # Run pre_flight_checks
 - hosts:
-    - hypervisors
+    - pmo:children
     - k8s-master
     - k8s-worker
   become: true
@@ -22,7 +22,7 @@
 
 # Run pre_hook
 - hosts:
-    - hypervisors
+    - pmo:children
     - k8s-master
     - k8s-worker
   become: true
@@ -36,14 +36,19 @@
     - { role: "bond-config", when: manage_network == True }
     - { role: "pf9-auth", when: manage_network == True and ansible_distribution == "Ubuntu" }
 
-# OpenStack Hypervisor Nodes
-- hosts: hypervisors
+# OpenStack Common
+- hosts: pmo:children
   become: true
   roles:
     - pre-flight-checks-openstack
     - common
     - ntp
     - pf9-hostagent
+
+# OpenStack Hypervisor Nodes
+- hosts: hypervisors
+  become: true
+  roles:
     - qemu-kvm-ev
     - neutron-prerequisites
     - { role: "network-hook", when: manage_network == True }
