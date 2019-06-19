@@ -1,4 +1,4 @@
 ---
 # Global Variables for 'pmk' Inventory Group
 
-k8s_node_drain_interval: 600
+k8s_node_drain_interval: 180
