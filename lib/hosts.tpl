@@ -1,5 +1,7 @@
 ##
 ## Ansible Inventory
+## 
+## NOTE: As of Ansible 2.8+, inventory names should not contain hyphens.
 ##
 [all]
 [all:vars]
@@ -67,17 +69,17 @@ hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
 ## Kubernetes Groups
 ################################################################################################
 [pmk:children]
-k8s-master
-k8s-worker
+k8s_master
+k8s_worker
 
 ## global variables defined in group_vars/containervisors.yml
 ## note: if the following variables are not defined, their tasks will be skipped
 ##   - cluster_uuid
-[k8s-master]
+[k8s_master]
 cv01 ansible_host=10.0.0.15
 cv02 ansible_host=10.0.0.16
 cv03 ansible_host=10.0.0.17
 
-[k8s-worker]
+[k8s_worker]
 cv04 ansible_host=10.0.0.18 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 cv05 ansible_host=10.0.0.19 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
