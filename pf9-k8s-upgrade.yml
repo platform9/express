@@ -1,0 +1,20 @@
+---
+- hosts:
+    - k8s-master
+  become: true
+  serial: 1
+  roles:
+    - pf9-auth
+    - k8s-node-drain
+    - { role: "map-role", rolename: "pf9-kube" }
+    - { role: "wait-for-convergence" }
+
+- hosts:
+    - k8s-worker
+  become: true
+  serial: 15
+  roles:
+    - pf9-auth
+    - k8s-node-drain
+    - { role: "map-role", rolename: "pf9-kube" }
+    - { role: "wait-for-convergence" }

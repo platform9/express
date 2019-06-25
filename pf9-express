@@ -12,6 +12,7 @@ oscli_rc_file=${basedir}/pf9-openstack.rc
 inventory=${basedir}/inventory/hosts
 express_script=${basedir}/pf9-express.yml
 deauth_script=${basedir}/pf9-deauth.yml
+k8s_upgrade_script=${basedir}/pf9-k8s-upgrade.yml
 platform=""
 target=""
 log=/tmp/pf9-express.log
@@ -34,6 +35,7 @@ flag_awx_restart=0
 flag_autoregister=0
 flag_csvImport=0
 flag_deauth=0
+flag_k8s_upgrade=0
 extra_vars=""
 awx_pf9_user="pf9"
 awx_pf9_password="Pl@tform9"
@@ -54,6 +56,7 @@ usage() {
   echo "-e|--extra-vars <string>   : ansible extra-vars <name=val,...>"
   echo "-b|--bypassPrereqs         : bypass pre-requisites"
   echo "-d|--deauth                : de-authorize host"
+  echo "-u|--upgradeK8s            : upgrade Kubernetes nodes"
   echo "-v|--inventory <file>      : use alternate inventory file for Ansible"
   echo "-f|--csvFile <file>        : import CSV file"
   echo "-t|--tag <tag[,<tag>]>     : available tags = [live-migration, image-import]"
@@ -497,6 +500,9 @@ while [ $# -gt 0 ]; do
   -d|--deauth)
     flag_deauth=1
     ;;
+  -u|--upgradeK8s)
+    flag_k8s_upgrade=1
+    ;;
   -f|--csvFile)
     if [ $# -lt 2 ]; then usage; fi
     flag_csvImport=1
@@ -655,6 +661,14 @@ if [ ${flag_deauth} -eq 1 ]; then
     sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${deauth_script} 2>&1 | tee ${install_log}
     echo -e "Log: ${install_log}\n"
   fi
+  exit 0
+fi
+
+## upgrade K8s nodes
+if [ ${flag_k8s_upgrade} -eq 1 ]; then
+  extra_vars="${extra_vars} flag_k8s_upgrade=1"
+  sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${k8s_upgrade_script} 2>&1 | tee ${install_log}
+  echo -e "Log: ${install_log}\n"
   exit 0
 fi
 

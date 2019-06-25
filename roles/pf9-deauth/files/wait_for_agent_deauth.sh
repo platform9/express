@@ -4,7 +4,7 @@
 ####################################################################################################
 
 basedir=$(dirname $0)
-TIMEOUT=600
+TIMEOUT=900
 
 usage() {
   echo -e "usage: `basename $0` <ctrl_ip> <host_id> <admin_user> <admin_password>"
@@ -37,19 +37,22 @@ token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?no
 ####################################################################################################
 
 echo "[ waiting for de-authorization to complete ]"
+echo "--> TIMEOUT = ${TIMEOUT} seconds"
 start_time=`date +%s`
 elapsedTime=0
-flag_converging=0
 while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
-  role_status=$(curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-      https://${ctrl_ip}/resmgr/v1/hosts/${host_id} 2>/dev/null | python -m json.tool | grep role_status)
-  if [ -n "${role_status}" ]; then
-    role_status=$(echo ${role_status} | cut -d : -f2 | sed -e 's/\"//g' | sed -e 's/,//g' | sed -e 's/ //g')
-    if [ "${role_status}" == "converging" ]; then
-      flag_converging=1
+  http_status=$(curl --write-out %{http_code} --output /dev/null --silent -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+      https://${ctrl_ip}/resmgr/v1/hosts/${host_id})
+
+  if [ ${http_status} -eq 200 ]; then
+    role_status=$(curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+        https://${ctrl_ip}/resmgr/v1/hosts/${host_id} 2>/dev/null | python -m json.tool | grep role_status)
+    if [ -n "${role_status}" ]; then
+      role_status=$(echo ${role_status} | cut -d : -f2 | sed -e 's/\"//g' | sed -e 's/,//g' | sed -e 's/ //g')
     fi
   fi
-  if [ -z "${role_status}" -a ${flag_converging} -eq 1 ]; then break; fi
+
+  if [ -z "${role_status}" -a ${http_status} -eq 200 ]; then break; fi
 
   # update elapsed time
   current_t=`date +%s`; elapsedTime=$((current_t - start_time))
@@ -61,5 +64,5 @@ if [ ${elapsedTime} -ge ${TIMEOUT} ]; then
   assert "*** TIMEOUT EXCEEDED ***"
 fi
 
-echo "--> convergence complete"
+echo "de-authorization complete"
 exit 0
