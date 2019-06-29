@@ -18,6 +18,7 @@
     - k8s-worker
   become: true
   roles:
+    - selinuxoff
     - pf9-auth
 
 # Run pre_hook

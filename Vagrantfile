@@ -16,8 +16,9 @@ Vagrant.configure("2") do |config|
             "hypervisors" => []
         }
         ansible.extra_vars = {
-          selinuxoff: true,
-          autoreg: false,
+          selinuxoff: "true",
+          autoreg: "false",
+          du_url: "127.0.0.1"
         }
       end
     end
