@@ -82,7 +82,7 @@ This is where you enter the credentials for your control host to log into the ta
 ## Ansible Inventory
 ##
 [all]
-[all:vars].0..
+[all:vars]
 ansible_user=ubuntu
 ansible_sudo_pass=winterwonderland
 ansible_ssh_pass=winterwonderland
