@@ -1,0 +1,3 @@
+---
+- name: selinuxoff
+  command: echo SELINUX\=disabled >> /etc/selinux/configg
