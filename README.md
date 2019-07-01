@@ -101,7 +101,7 @@ bond_mode=1
 bond_mtu=9000
 
 ## network bond configuration implemented if manage_network=True
-[bond-config]
+[bond_config]
 ## for single interface bond configuration
 hv01 bond_members='eth1' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.11","mask":"255.255.255.0"}]'
 
@@ -159,18 +159,18 @@ This is where you can configure your Kubernetes cluster members under their own 
 ## Kubernetes Groups
 ################################################################################################
 [pmk:children]
-k8s-master
-k8s-worker
+k8s_master
+k8s_worker
 
 ## global variables defined in group_vars/containervisors.yml
 ## note: if the following variables are not defined, their tasks will be skipped
 ##   - cluster_uuid
-[k8s-master]
+[k8s_master]
 cv01 ansible_host=10.0.0.15
 cv02 ansible_host=10.0.0.16
 cv03 ansible_host=10.0.0.17
 
-[k8s-worker]
+[k8s_worker]
 cv04 ansible_host=10.0.0.18 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 cv05 ansible_host=10.0.0.19 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 ```
