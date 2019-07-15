@@ -1,0 +1,12 @@
+- copy:
+    src: "{{ role_path }}/files/pf9.te"
+    dest: /tmp/pf9.te
+- name: pmk-selinux
+  shell: |
+      # these are needed for checkmodule, semodule_package, respectively
+      pushd /tmp/
+      ls
+      yum install -y policycoreutils checkpolicy policycoreutils-python
+      checkmodule -M -m -o pf9.mod pf9.te
+      semodule_package -o pf9.pp -m pf9.mod
+      semodule -i pf9.pp

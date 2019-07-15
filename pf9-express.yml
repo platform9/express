@@ -168,3 +168,8 @@
   become: true
   roles:
     - post-hook
+
+- hosts: apply_selinux_policies
+  become: true
+  roles:
+    - pmk-selinux
