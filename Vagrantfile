@@ -1,27 +1,35 @@
 Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu/xenial64"
+  config.vm.box = "centos/7"
 
   def create(config, hostname, ip)
     config.vm.define hostname do |host|
       host.vm.hostname = hostname
       host.vm.network "private_network", ip: ip
-      host.vm.provision "shell", inline: "echo ubuntu:ubuntu | chpasswd"
-      host.vm.provision "shell", inline: "apt-get update && apt-get install -y python-minimal"
+ #     host.vm.provision "shell", inline: "echo ubuntu:ubuntu | chpasswd"
+ #     host.vm.provision "shell", inline: "apt-get update && apt-get install -y python-minimal"
+ #     host.vm.provision "shell", inline: "yum update -y"
       config.vm.provision "ansible" do |ansible|
         ansible.verbose = "v"
-        ansible.playbook = "pf9-express.yml"
+        ansible.playbook = "pf9-express-contrib.yml"
+
+	# Example of how to test selinux...
+        # ansible.groups = {
+        #    "apply_selinux_policies" => ["machine1", "machine2"],
+        #    "hypervisors" => []
+        # }
         ansible.groups = {
-            "k8s-master" => ["vm1"],
-            "k8s-worker"  => ["vm2"],
-            "hypervisors" => []
-        }
+		"k8s_master" => ["machine1"],
+		"k8s_worker" => ["machine2"],
+		"hypervisors" => []
+	}
         ansible.extra_vars = {
           autoreg: "false",
-          du_url: "127.0.0.1"
+          du_url: "127.0.0.1",
+          du_fqdn: "localhost"
         }
       end
     end
   end
-  create(config, "vm1", "192.168.99.101")
-  create(config, "vm2", "192.168.99.102")
+  create(config, "machine1", "192.168.99.101")
+  create(config, "machine2", "192.168.99.102")
 end
