@@ -1,0 +1,15 @@
+# This ansible file includes tasks which will eventually be included into the pf9-express mainline yml,
+# These can be run as is and have been tested.
+
+# Use this role specifically to apply selinux_policies to all nodes.  For a comprehensive list
+# of potentially useful policies, you can look at https://github.com/platform9/selinuxmodules.
+# To add a policy here, see the README in the pmk-selinux directory.
+- hosts: apply_selinux_policies
+  become: true
+  roles:
+    - pmk-selinux
+
+- hosts: run_preflight_checks
+  become: true
+  roles:
+    - pmk-syscheck
