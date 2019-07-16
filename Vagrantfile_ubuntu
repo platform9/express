@@ -7,22 +7,19 @@ Vagrant.configure("2") do |config|
       host.vm.network "private_network", ip: ip
       host.vm.provision "shell", inline: "echo ubuntu:ubuntu | chpasswd"
       host.vm.provision "shell", inline: "apt-get update && apt-get install -y python-minimal"
-      host.vm.provision "shell", inline: "yum update -y"
       config.vm.provision "ansible" do |ansible|
         ansible.verbose = "v"
         ansible.playbook = "pf9-express-contrib.yml" # change to pf9-express.yml to test mainline.
-
       ansible.groups = {
-		"k8s_master" => ["machine1"],
-		"k8s_worker" => ["machine2"],
-		"hypervisors" => []
-	  }
+        "k8s_master" => ["machine1"],
+        "k8s_worker" => ["machine2"],
+        "hypervisors" => []
+  	  }
       ansible.extra_vars = {
         autoreg: "false",
         du_url: "127.0.0.1",
         du_fqdn: "localhost"
       }
-      end
     end
   end
   create(config, "machine1", "192.168.99.101")
