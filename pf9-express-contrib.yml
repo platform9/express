@@ -1,0 +1,8 @@
+
+# Use this role specifically to apply selinux_policies to all nodes.  For a comprehensive list
+# of potentially useful policies, you can look at https://github.com/platform9/selinuxmodules.
+# To add a policy here, see the README in the pmk-selinux directory.
+- hosts: apply_selinux_policies
+  become: true
+  roles:
+    - pmk-selinux

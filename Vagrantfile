@@ -10,7 +10,7 @@ Vagrant.configure("2") do |config|
  #     host.vm.provision "shell", inline: "yum update -y"
       config.vm.provision "ansible" do |ansible|
         ansible.verbose = "v"
-        ansible.playbook = "pf9-express.yml"
+        ansible.playbook = "pf9-express-contrib.yml"
 
 	# Example of how to test selinux...
         # ansible.groups = {
