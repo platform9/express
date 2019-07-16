@@ -8,7 +8,7 @@ Vagrant.configure("2") do |config|
       host.vm.network "private_network", ip: ip
       config.vm.provision "ansible" do |ansible|
         ansible.verbose = "v"
-        ansible.playbook = "pf9-express.yml"
+        ansible.playbook = "pf9-express-contrib.yml" # change to pf9-express.yml to test mainline
 
 	# Example of how to test selinux, preflight checks, etc...
         #  ansible.groups = {
