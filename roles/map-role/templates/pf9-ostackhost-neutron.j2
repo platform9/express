@@ -1,5 +1,8 @@
 {
     "cluster_ip": "{{ha_cluster_ip}}",
     "instances_path": "{{nova_instances_path}}",
-    "novncproxy_base_url": "{{neutron_novncproxy_base_url}}"
+    "novncproxy_base_url": "{{neutron_novncproxy_base_url}}",
+{% if sriov == "on" %}
+    "pci_passthrough_whitelist": "[{% for physical_device_mapping in physical_device_mappings %}{% set provider,devname = physical_device_mapping.split(':') %}{\"physical_network\":\"{{ provider }}\", \"devname\":\"{{ devname }}\"}{% if not loop.last %},{% endif %}{% endfor %}]"
+{% endif %}
 }

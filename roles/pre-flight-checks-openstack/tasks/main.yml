@@ -20,6 +20,15 @@
     - kvm_result is defined and kvm_result.stat.exists == False
     - inventory_hostname in groups['hypervisors']
 
+##################################################
+## Include tasks that verify individual components
+##################################################
+
+- include_tasks: prerequisites-sriov.yml
+  when:
+    - sriov == "on"
+    - ansible_virtualization_role == "host"
+
 ###########################################################################################
 ## Verify DVR is on, step 1 in the UI is complete, import vars, and test credentials
 ###########################################################################################

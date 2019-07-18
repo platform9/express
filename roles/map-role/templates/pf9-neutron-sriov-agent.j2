@@ -1,0 +1,5 @@
+{
+{% if sriov == "on" %}
+    "physical_device_mappings": "{% for mapping in physical_device_mappings %}{{ mapping }}{% if not loop.last %},{% endif %}{% endfor %}"
+{% endif %}
+}
