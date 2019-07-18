@@ -1,0 +1,3 @@
+---
+physical_device_mappings:
+  - sriov:ens1
