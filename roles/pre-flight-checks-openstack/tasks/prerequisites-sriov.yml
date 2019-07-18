@@ -1,0 +1,35 @@
+---
+- name: Fail on incompatible CPU architecture
+  fail:
+    msg: "Detected {{ cpu_vendor }} CPU not supported! Must be {{ supported_cpus }}."
+  when:
+    - cpu_vendor not in supported_cpus
+
+- name: Register IOMMU DMARs
+  find: paths=/sys/class/iommu file_type=directory patterns="*"
+  register: iommus
+  
+# We need to
+# - Check to see if IOMMU is already enabled. If not, let's check grub (and break out iommu/pt)
+# - Check for SRIOV compatibility (via NIC)
+# - Update grub and reboot if necessary. Wait for reboot.
+
+- name: Check GRUB defaults and enable IOMMU if necessary
+  lineinfile:
+    path: /etc/default/grub
+    backrefs: true
+    regexp: '^GRUB_CMDLINE_LINUX="((?!.*{{ iommu_kernel_cmds }}).*)"$'
+    line: 'GRUB_CMDLINE_LINUX="\1 {{ iommu_kernel_cmds }}"'
+    backup: yes
+  register: grub
+
+- name: Update GRUB config
+  command: update-grub
+
+- name: Fail if IOMMU is not enabled
+  fail:
+    msg: |
+      IOMMU is not currently enabled in the kernel but has been configured.
+      Please reboot the host and rerun Express.
+      Refer to https://platform9.com/knowledge/KB12345
+  when: iommus.examined < 1

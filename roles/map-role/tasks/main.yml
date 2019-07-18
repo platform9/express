@@ -132,6 +132,15 @@
   shell: "cat /tmp/keystone-token.txt"
   register: api_token
 
+# JD DEBUG
+- name: print out role json for debugging
+  debug:
+    msg: "{{ role_json }}"
+
+#- name: fail!
+#  fail:
+#    when: 1==1
+
 - name: "Assigning Role - {{rolename}}"
   uri:
     url: "https://{{ctrl_ip}}/resmgr/v1/hosts/{{host_id.stdout.strip()}}/roles/{{rolename}}"
