@@ -43,11 +43,15 @@
 - set_fact:
     dvr_status: "{{du_result.json.neutron.DEFAULT.router_distributed}}"
 
+# JD: This is not available in 3.5.5
 - set_fact:
-    neutron_dns_domain: "{{du_result.json.neutron.DEFAULT.dns_domain}}"
+#    neutron_dns_domain: "{{du_result.json.neutron.DEFAULT.dns_domain}}"
+    neutron_dns_domain: "{{du_result.json.neutron.DEFAULT.dns_domain | default('openstacklocal') }}"
 
+# JD: This is not available in 3.5.5
 - set_fact:
-    neutron_dnsmasq_dns_servers: "{{du_result.json.extra.dnsmasq_dns_servers}}"
+#    neutron_dnsmasq_dns_servers: "{{du_result.json.extra.dnsmasq_dns_servers}}"
+    neutron_dnsmasq_dns_servers: "{{du_result.json.extra.dnsmasq_dns_servers | default() }}"
 
 - set_fact:
     du_neutron_type_drivers: "{{du_result.json.ml2.ml2.type_drivers}}"

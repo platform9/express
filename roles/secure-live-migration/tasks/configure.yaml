@@ -11,7 +11,7 @@
   when: ansible_os_family == "RedHat"
   notify: restart libvirtd
 
-- name: Tell libvirt to listen on startup - Ubuntu
+- name: Tell libvirt to listen on startup - Ubuntu 16.04
   lineinfile:
     state: present
     create: True
@@ -20,7 +20,24 @@
     regexp: '^#?libvirtd_opts=*.*$'
   tags: 
     - live-migration
-  when: ansible_distribution == "Ubuntu"
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "16.04"
+  notify: restart libvirtd
+
+# (jamesdenton) This task is here only for 14.04 upgrade testing
+- name: Tell libvirt to listen on startup - Ubuntu 14.04 (Deprecated)
+  lineinfile:
+    state: present
+    create: True
+    line: 'libvirtd_opts="-l -d"'
+    dest: /etc/default/libvirt-bin
+    regexp: '^#?libvirtd_opts=*.*$'
+  tags:
+    - live-migration
+  when:
+    - ansible_distribution == "Ubuntu"
+    - ansible_distribution_version == "14.04"
   notify: restart libvirtd
 
 - name: "Create {{ libvirt_pki_path }}"
