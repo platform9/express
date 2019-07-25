@@ -2,3 +2,6 @@
 physical_device_mappings:
   - sriov:ens1f0
   - sriov:ens1f1
+sriov_numvfs:
+  - ens1f0:8
+  - ens1f1:8

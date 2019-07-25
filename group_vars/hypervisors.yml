@@ -11,8 +11,8 @@ glance: "off"
 multipath: False
 nova_instances_path: /opt/pf9/data/instances/
 neutron_ovs_allow_dhcp_vms: "False"
-neutron_ovs_bridge_name: "br-pf9, br-sriov"
-neutron_ovs_bridge_mappings: "external:br-pf9, sriov:br-sriov"
+#neutron_ovs_bridge_name: "br-pf9,br-sriov"
+neutron_ovs_bridge_mappings: "external:br-pf9"
 ceilometer_customize: False
 ceilometer_cpu_interval: 600
 

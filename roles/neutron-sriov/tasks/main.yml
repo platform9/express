@@ -1,0 +1,50 @@
+---
+# SR-IOV virtual functions get reset at boot unless commands exist in
+# rc.local (deprecated), a systemctl unit file, or sysfs.conf. We set it
+# up in sysfs.
+
+# Get current VF count in running sysfs
+- name: Get current VF count for interface
+  slurp:
+    path: "/sys/class/net/{{ item.split(':')[0] }}/device/sriov_numvfs"
+  register: slurp_vfs
+  with_items: "{{ sriov_numvfs }}"
+
+- set_fact:
+    current_vfs: "{{ current_vfs|default({}) | combine({item.item.split(':')[0]:item.content | b64decode | replace('\n', '')}) }}"
+  with_items: "{{ slurp_vfs.results }}"
+
+# Remove entries in sysfs when count changed. This WILL break connectivity
+# for instances using VFs on the interface until the instance is shutoff
+# or hard rebooted!
+- name: Remove existing entries for interface from sysfs
+  lineinfile:
+    path: /etc/sysfs.conf
+    state: absent
+    regexp: "^class\\/net\\/{{ item.split(':')[0] }}\\/device\\/sriov_numvfs = .*"
+  with_items: "{{ sriov_numvfs }}"
+  when: current_vfs[item.split(':')[0]] != item.split(':')[1]
+
+- name: Set VFs to 0 to work around I/O error when count is changed
+  lineinfile:
+    path: /etc/sysfs.conf
+    line: "class/net/{{ item.split(':')[0] }}/device/sriov_numvfs = 0"
+    create: yes
+  with_items: "{{ sriov_numvfs }}"
+
+- name: Add VFs to sysfs.conf
+  lineinfile:
+    path: /etc/sysfs.conf
+    insertafter: "^class\\/net\\/{{ item.split(':')[0] }}\\/device\\/sriov_numvfs = 0"
+    line: "class/net/{{ item.split(':')[0] }}/device/sriov_numvfs = {{ item.split(':')[1] }}"
+    create: yes  
+  with_items: "{{ sriov_numvfs }}"
+  register: sysfs_vfs
+  notify: 
+    - restart_sysfsutils
+    - restart_ostackhost
+    - restart_neutronsriovagent
+
+- debug:
+    msg: "ALERT - VFs on {{ ansible_hostname }} changed. Instances using SR-IOV ports must be shutdown or hard rebooted for interfaces to be reconnected."
+  when: sysfs_vfs.changed
