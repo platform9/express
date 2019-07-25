@@ -1,4 +1,8 @@
 ---
+# There are prerequisites for SR-IOV support, including IOMMU enabled,
+# passthrough, and driver support. Many drivers support SR-IOV, but some
+# require out-of-kernel drivers (ie. Mellanox) and some don't support sysfs.
+
 - name: Fail on incompatible CPU architecture
   fail:
     msg: "Detected {{ cpu_vendor }} CPU not supported! Must be {{ supported_cpus }}."
@@ -11,8 +15,6 @@
   
 # We need to
 # - Check to see if IOMMU is already enabled. If not, let's check grub (and break out iommu/pt)
-# - Check for SRIOV compatibility (via NIC)
-# - Update grub and reboot if necessary. Wait for reboot.
 
 - name: Check GRUB defaults and enable IOMMU if necessary
   lineinfile:
@@ -28,8 +30,23 @@
 
 - name: Fail if IOMMU is not enabled
   fail:
-    msg: |
-      IOMMU is not currently enabled in the kernel but has been configured.
-      Please reboot the host and rerun Express.
-      Refer to https://platform9.com/knowledge/KB12345
+    msg:
+      - "IOMMU is not currently enabled in the kernel but has been configured. Please reboot the host and rerun Express. Refer to https://platform9.com/knowledge/KB12345 for assistance."
   when: iommus.examined < 1
+
+# Warn if NIC driver is not supported
+- name: Determine driver bound to NICs
+  find:
+    paths: "/sys/class/net/{{ item.split(':')[1] }}/device/driver/module/drivers"
+    file_type: link
+  register: find_result
+  with_items: "{{ physical_device_mappings }}"
+
+- set_fact:
+    nic_driver: "{{ (item.path | basename).split(':')[1] }}"
+  with_items: "{{ find_result.results[0].files }}"
+
+- debug:
+    msg:
+      - "The {{ nic_driver }} NIC driver is not currently supported by Platform9. Refer to https://platform9.com/knowledge/KB12345 for assistance."
+  when: nic_driver not in supported_nic_drivers

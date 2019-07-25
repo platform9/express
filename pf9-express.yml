@@ -175,3 +175,16 @@
   become: true
   roles:
     - post-hook
+
+# Run SR-IOV role
+- hosts:
+    - hypervisors
+  become: true
+  tasks:
+  - import_role:
+      name: neutron-sriov
+    when:
+      - sriov == "on"
+      - ansible_virtualization_role == "host"
+  tags:
+    - refresh-sriov

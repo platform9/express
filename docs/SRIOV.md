@@ -4,13 +4,20 @@ In PMO version 3.11.x, support for SR-IOV has been introduced. SR-IOV provides i
 
 SR-IOV is supported by multiple network interface cards (NICs) provided by many networking vendors, including Intel, Cisco, Mellanox, Broadcom, QLogic, and others.
 
-The following NICs have been tested with the Platform9 PMO 3.11 release:
+The following NICs have been tested with the Platform9 PMO 3.11.3 release:
 
 * Mellanox ConnectX-4 Lx EN
 * Mellanox ConnectX-5 EN
 * Intel X520
 * Intel X540-T2
 * Broadcom NetXtreme II (BCM57810 / HP 533FLR-T)
+
+The following drivers are considered supported:
+
+* ixgbe
+* bnx2x
+
+> Mellanox cards require additional configuration that is outside the scope of this guide and Platform9 Express.
 
 ## Limitations
 
@@ -92,10 +99,12 @@ Compute node-specific configurations can be implemented using what is known as h
 * Network interface name
 * Quantity of network interfaces used for SRIOV
 * Provider network mappings
-* 
+* Number of VFs per interface
+ 
 Using **host_vars**, the following are some variables that can be modified:
 
 * physical_device_mappings (required)
+* sriov_numvfs (required)
 * neutron_ovs_bridge_mappings (optional)
 
 In this example, two hosts have different NICs installed that report different names to the operating system.
@@ -148,13 +157,15 @@ supports-register-dump: yes
 supports-priv-flags: yes
 ```
 
-The **host_vars** for each host can be implemented in a file that corresponds to the host's short name located at **/opt/pf9-express/host_vars/<shortname>.yml**. In the following example, **compute01** uses a single network interface for SR-IOV, while **compute02** uses two. SR-IOV networks will leverage a new provider label named **sriov**, as shown here:
+The **host_vars** for each host can be implemented in a file that corresponds to the host's short name located at **/opt/pf9-express/host_vars/<shortname>.yml**. In the following example, **compute01** uses a single network interface for SR-IOV, while **compute02** uses two. SR-IOV networks will leverage a new provider label named **sriov** and 8 VFs per interface, as shown here:
 
 ```
 ---
 # compute01.yml
 physical_device_mappings:
   - sriov:ens1
+sriov_numvfs:
+  - ens1:8
 ```
 
 ```
@@ -163,6 +174,9 @@ physical_device_mappings:
 physical_device_mappings:
   - sriov:ens1f0
   - sriov:ens1f1
+sriov_numvfs:
+  - ens1f0:8
+  - ens1f1:8
 ```
 
 > SR-IOV supports VLAN networks only. Flat and overlay networks are not supported.
@@ -172,12 +186,13 @@ physical_device_mappings:
 Group-wide configurations can be implemented using what is known as **group_vars**. Configurations that may be consistent between groups include:
 
 * Network interface name
-* Quantity of network interfaces used for SRIOV
+* Number of VFs per interface
 * Provider network mappings
 
 Using **group_vars**, the following are some variables that can be modified:
 
 * neutron_ovs_bridge_mappings
+* sriov_numvfs
 * physical_device_mappings
 
 The **group_vars** for the **hypervisors** group can be implemented in a file that corresponds to the group's name located at **/opt/pf9-express/group_vars/<groupname>.yml**. In the following example, every host in the **hypervisors** group has the same NIC installed in the same slot, so the naming convention is consistent across all hosts. A second provider bridge mapping has been established that will allow non-SR-IOV capable ports, such as DHCP, to connect to a vSwitch and communicate with SR-IOV ports:
@@ -190,6 +205,9 @@ neutron_ovs_bridge_mappings: "external:br-pf9, sriov:br-sriov"
 physical_device_mappings:
   - sriov:ens1f0
   - sriov:ens1f1
+sriov_numvfs:
+  - ens1f0:8
+  - ens1f1:8
 ...
 ```
 
@@ -222,7 +240,7 @@ Lastly, SR-IOV can be enabled via the respective **host_vars** file, as shown he
 
 ```
 ---
-# compute01.yml### 
+# compute01.yml 
 sriov: "on"
 physical_device_mappings:
   - sriov:ens1
@@ -233,4 +251,10 @@ Once the respective configuration is in place, install PMO with Express using so
 
 ```
 # ./pf9-express -a pmo
+```
+
+To refresh VFs, run **pf9-express** with the **refresh-sriov** tag:
+
+```
+# ./pf9-express -t refresh-sriov hypervisors
 ```

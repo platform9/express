@@ -5,3 +5,6 @@ iommu_kernel_cmds: '{{ cpu_vendor }}_iommu=on iommu=pt'
 supported_cpus:
   - intel
   - amd
+supported_nic_drivers:
+  - ixgbe
+  - bnx2x
