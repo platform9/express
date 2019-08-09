@@ -13,21 +13,14 @@ elif sys.version_info.major == 3:
     from urllib import parse as urlparse
 
 
-def do_request(action, host, relative_url, headers, body, proxy=""):
-    if proxy != "":
-       proxyData = proxy.split(":")
-       if len(proxyData) < 3:
-           proxyHost = proxyData[0]
-           proxyPort = proxyData[1]
-       elif len(proxyData) > 2:
-           proxyHost = proxyData[1]
-           proxyPort = proxyData[2]
-       else:
-           print "Error inccorect proxy configuration"
-       conn = httplib.HTTPSConnection(proxyHost, proxyPort)
-       conn.set_tunnel(host, 443)
+def do_request(action, host, relative_url, headers, body, proxyHost="", proxyPort=""):
+    if proxyHost != "" and proxyPort != "":
+        conn = httplib.HTTPSConnection(proxyHost, proxyPort)
+        conn.set_tunnel(host, 443)
+
     else:
         conn = httplib.HTTPSConnection(host)
+    
     body_json = json.JSONEncoder().encode(body)
     conn.request(action, relative_url, body_json, headers)
     response = conn.getresponse()
@@ -44,12 +37,12 @@ def download_report(bytes_so_far, total_size, installer_name):
         sys.stdout.write('\n')
 
 
-def download_installer(url, token, cookie, installer_name, proxy=""):
+def download_installer(url, token, cookie, installer_name, proxyHost="", proxyPort=""):
     headers = {"X-Auth-Token": token, "cookie": cookie}
     body = ""
 
     _, net_location, path, _, _ = urlparse.urlsplit(url)
-    conn, response = do_request("GET", net_location, path, headers, body, proxy)
+    conn, response = do_request("GET", net_location, path, headers, body, proxyHost, proxyPort)
 
     if response.status != 200:
         print("{0}: {1}".format(response.status, response.reason))
@@ -75,7 +68,7 @@ def download_installer(url, token, cookie, installer_name, proxy=""):
     conn.close()
 
 
-def get_token_v3(host, username, password, tenant, proxy=""):
+def get_token_v3(host, username, password, tenant, proxyHost="", proxyPort=""):
     headers = {"Content-Type": "application/json"}
     body = {
         "auth": {
@@ -99,7 +92,7 @@ def get_token_v3(host, username, password, tenant, proxy=""):
     }
     conn, response = do_request("POST", host,
                                 "/keystone/v3/auth/tokens?nocatalog",
-                                headers, body, proxy)
+                                headers, body, proxyHost, proxyPort)
 
     if response.status not in (200, 201):
         print("{0}: {1}".format(response.status, response.reason))
@@ -110,7 +103,7 @@ def get_token_v3(host, username, password, tenant, proxy=""):
     return token
 
 
-def get_package_info_from_token(host, token, region, proxy=""):
+def get_package_info_from_token(host, token, region, proxyHost="", proxyPort=""):
 
     out = {}
 
@@ -121,7 +114,7 @@ def get_package_info_from_token(host, token, region, proxy=""):
 
     conn, response = do_request("GET", host,
                                 "/keystone/v3/services?type=regionInfo",
-                                headers, {}, proxy)
+                                headers, {}, proxyHost, proxyPort)
     if response.status not in (200, 201):
         print("{0}: {1}".format(response.status, response.reason))
         exit(1)
@@ -134,7 +127,7 @@ def get_package_info_from_token(host, token, region, proxy=""):
     conn, response = do_request(
         "GET", host,
         "/keystone/v3/endpoints?service_id={0}".format(service_id), headers,
-        {}, proxy)
+        {}, proxyHost, proxyPort)
     if response.status not in (200, 201):
         print("{0}: {1}".format(response.status, response.reason))
         exit(1)
@@ -150,7 +143,7 @@ def get_package_info_from_token(host, token, region, proxy=""):
     conn.close()
 
     _, net_location, path, _, _ = urlparse.urlsplit(public_url)
-    conn, response = do_request("GET", net_location, path, headers, {}, proxy)
+    conn, response = do_request("GET", net_location, path, headers, {}, proxyHost, proxyPort)
     if response.status not in (200, 201):
         print("{0}: {1}".format(response.status, response.reason))
         exit(1)
@@ -161,7 +154,7 @@ def get_package_info_from_token(host, token, region, proxy=""):
     conn.close()
 
     _, net_location, path, _, _ = urlparse.urlsplit(cookie_url)
-    conn, response = do_request("GET", net_location, path, headers, {}, proxy)
+    conn, response = do_request("GET", net_location, path, headers, {}, proxyHost, proxyPort)
     if response.status not in (200, 201, 204):
         print("{0}: {1}".format(response.status, response.reason))
         exit(1)
@@ -171,7 +164,7 @@ def get_package_info_from_token(host, token, region, proxy=""):
 
     headers['cookie'] = cookie
     _, net_location, path, _, _ = urlparse.urlsplit(internal_url)
-    conn, response = do_request("GET", net_location, path, headers, {}, proxy)
+    conn, response = do_request("GET", net_location, path, headers, {}, proxyHost, proxyPort)
     if response.status not in (200, 201):
         print("{0}: {1}".format(response.status, response.reason))
         exit(1)
@@ -193,9 +186,9 @@ def get_package_info_from_token(host, token, region, proxy=""):
     return out
 
 
-def get_installer(options):
+def get_installer(options, proxyHost="", proxyPort=""):
     token = get_token_v3(options.endpoint, options.user,
-                         options.pw, options.tenant, options.proxy)
+                         options.pw, options.tenant, proxyHost, proxyPort)
 
     info = get_package_info_from_token(options.endpoint, token, options.region)
     if options.platform == 'debian':
@@ -204,7 +197,7 @@ def get_installer(options):
         package_url = info['rpm_installer']
 
     installer_name = package_url.rsplit('/', 1)[1]
-    download_installer(package_url, 'token', info['cookie'], installer_name, options.proxy)
+    download_installer(package_url, 'token', info['cookie'], installer_name, proxyHost, proxyPort)
 
 
 def validate_password(options):
@@ -216,7 +209,7 @@ def main():
     parser = optparse.OptionParser(
         usage="%prog --account_endpoint <endpoint> "
         "--region <region> --user <user> [--password <password>]"
-        " [--tenant <tenant>] --platform <redhat|debian> --proxy <proxy>")
+        " [--tenant <tenant>] --platform <redhat|debian> [--proxy <proxy>]")
     parser.add_option(
         '--account_endpoint',
         dest="endpoint",
@@ -255,7 +248,7 @@ def main():
         '--proxy',
         dest="proxy",
         action="store",
-        default="", help="Proxy to reach internet")
+        default="", help="Proxy to reach internet. Example: http://proxy.company.com:80")
 
     options, _ = parser.parse_args()
     if not (options.endpoint and options.region and
@@ -264,9 +257,34 @@ def main():
         parser.print_usage()
         sys.exit(1)
 
+    if options.proxy != "":
+        proxyData = urlparse.urlsplit(options.proxy)
+        if proxyData[1] != "":
+            proxySplit = proxyData[1].split(":")
+            if len(proxySplit) < 2 and proxyData[0] == "http":
+                proxyPort = "80"
+                proxyHost = proxySplit[0]
+            elif len(proxySplit) < 2 and proxyData[0] == "https":
+                proxyPort = "443"
+                proxyHost = proxySplit[0]
+            elif len(proxySplit) > 3:
+                print ("ERROR: Inccorect proxy configuration")
+                parser.print_usage()
+                sys.exit(1)
+            else:
+                proxyPort = proxySplit[1]
+                proxyHost = proxySplit[0]
+        else:
+            print "ERROR: Inccorect proxy configuration"
+            parser.print_usage()
+            sys.exit(1)
+    else:
+        proxyHost = ""
+        proxyPort = ""
+
     validate_password(options)
 
-    get_installer(options)
+    get_installer(options, proxyHost, proxyPort)
 
 
 if __name__ == "__main__":
