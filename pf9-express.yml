@@ -79,7 +79,7 @@
     - pre-hook
 
 # Configure the bond
-- hosts: bond-config
+- hosts: bond_config
   become: true
   roles:
     - { role: "bond-config", when: manage_network == True }
