@@ -16,12 +16,18 @@ elif sys.version_info.major == 3:
 def do_request(action, host, relative_url, headers, body, proxy=""):
     if proxy != "":
        proxyData = proxy.split(":")
-       proxyHost = proxyData[0]
-       proxyPort = proxyData[1]
+       if len(proxyData) < 3:
+           proxyHost = proxyData[0]
+           proxyPort = proxyData[1]
+       elif len(proxyData) > 2:
+           proxyHost = proxyData[1]
+           proxyPort = proxyData[2]
+       else:
+           print "Error inccorect proxy configuration"
        conn = httplib.HTTPSConnection(proxyHost, proxyPort)
        conn.set_tunnel(host, 443)
     else:
-       conn = httplib.HTTPSConnection(host)
+        conn = httplib.HTTPSConnection(host)
     body_json = json.JSONEncoder().encode(body)
     conn.request(action, relative_url, body_json, headers)
     response = conn.getresponse()
@@ -39,7 +45,6 @@ def download_report(bytes_so_far, total_size, installer_name):
 
 
 def download_installer(url, token, cookie, installer_name, proxy=""):
-    print "we are here, we are really here"
     headers = {"X-Auth-Token": token, "cookie": cookie}
     body = ""
 
