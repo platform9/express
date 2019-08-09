@@ -66,3 +66,8 @@
     name: openvswitch
     state: started
     enabled: yes
+
+- name: Install Router Advertisement Daemon
+  yum:
+    name: radvd
+    state: present
