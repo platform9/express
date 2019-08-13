@@ -19,7 +19,7 @@ bond_mode=1
 bond_mtu=9000
 
 ## network bond configuration implemented if manage_network=True
-[bond-config]
+[bond_config]
 ## for single interface bond configuration
 hv01 bond_members='eth1' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.11","mask":"255.255.255.0"}]'
 
