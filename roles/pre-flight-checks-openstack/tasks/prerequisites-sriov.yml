@@ -25,8 +25,15 @@
     backup: yes
   register: grub
 
-- name: Update GRUB config
+- name: Update GRUB config (Ubuntu)
   command: update-grub
+  when:
+    - ansible_distribution == 'Ubuntu'
+
+- name: Update GRUB config (CentOS)
+  command: grub2-mkconfig -o /boot/grub2/grub.cfg
+  when:
+    - ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
 - name: Fail if IOMMU is not enabled
   fail:
