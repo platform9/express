@@ -1,7 +1,7 @@
 ---
 # SR-IOV virtual functions get reset at boot unless commands exist in
 # rc.local (deprecated), a systemctl unit file, or sysfs.conf. We set up
-# up a custome systemctl unit/service.
+# up a custom systemctl unit/service.
 
 - name: Drop-in SR-IOV VF Manager Systemd Unit
   template:
@@ -31,5 +31,3 @@
     - restart_vf_manager
     - restart_ostackhost
     - restart_neutronsriovagent
-
-
