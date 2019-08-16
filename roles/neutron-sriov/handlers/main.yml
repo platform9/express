@@ -1,9 +1,9 @@
 ---
-- name: Restart sysfsutils
+- name: Reload Platform9 VF Manager
   systemd:
-    name: sysfsutils.service
-    state: restarted
-  listen: restart_sysfsutils
+    name: pf9-sriov-vf-manager.service
+    state: reloaded
+  listen: restart_vf_manager
 
 - name: Restart pf9-ostackhost
   systemd:
