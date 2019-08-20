@@ -1,10 +1,10 @@
 # Using SR-IOV with Platform9 Express
 
-In PMO version 3.11.x, support for SR-IOV has been introduced. SR-IOV provides increased network performance including higher throughput, lower latency, and lower jitter when compared to virtual switching technologies such as Open vSwitch.
+In PMO version 3.11, support for SR-IOV has been introduced. SR-IOV provides increased network performance including higher throughput, lower latency, and lower jitter when compared to virtual switching technologies, such as Open vSwitch.
 
 SR-IOV is supported by multiple network interface cards (NICs) provided by many networking vendors, including Intel, Cisco, Mellanox, Broadcom, QLogic, and others.
 
-The following NICs have been tested with the Platform9 PMO 3.11.3 release:
+The following NICs have been tested with the Platform9 PMO 3.11 release:
 
 * Mellanox ConnectX-4 Lx EN
 * Mellanox ConnectX-5 EN
@@ -23,7 +23,7 @@ The following drivers are considered supported:
 
 The following are a few of the limitations of SR-IOV:
 
-* Bonded NICs at the host-level are not recommended/not supported for use with SR-IOV. While active/passive bonding may work in this configuration, LACP/802.3ad is definitely not a supported configuration.
+* Bonded NICs at the host-level are not recommended/not supported for use with SR-IOV. While active/passive bonding may work in this configuration, LACP/802.3ad is not a supported configuration.
 * Virtual Functions are automatically assigned to Neutron ports and are not customizable. 
 * Instance-level NIC bonding using Virtual Functions is not supported.
 * Port security/security groups are not supported.
@@ -39,6 +39,8 @@ SR-IOV requires the following:
 * Compatible Network Interface Card (NIC)
 
 > When SR-IOV capable NICs are used in conjunction with Open vSwitch bridges, you have the option of using an existing provider label, such as **external**, or using a dedicated provider. When sharing a provider network between SR-IOV and non-SR-IOV ports, communication between the ports on the same network is permitted. Using a dedicated provider will require you to call out a second bridge mapping, such as `sriov:br-sriov`, to allow DHCP ports connected to a vSwitch to communicate with the SR-IOV ports.
+
+While BIOS changes necessary for SR-IOV support must be handled manually, Platform9 Express can and will configure the kernel to enable IOMMU and Passthrough support. The following steps document the manual processes necessary to enable IOMMU and Passthrough support in the kernel.
 
 ### Kernel IOMMU Support
 
@@ -64,7 +66,7 @@ Next, update GRUB:
 update-grub
 ```
 
-> Once the kernel configuration has been modified, you must reboot for the changes to take effect.
+> Once the kernel configuration has been modified, you **must** reboot for the changes to take effect. If these changes are implemented using Platform9 Express, the playbook will not proceed without a reboot.
 
 ### IOMMU Passthrough Support
 
@@ -82,7 +84,7 @@ Then, update GRUB:
 update-grub
 ```
 
-> Once the kernel configuration has been modified, you must reboot for the changes to take effect.
+> Once the kernel configuration has been modified, you **must** reboot for the changes to take effect. If these changes are implemented using Platform9 Express, the playbook will not proceed without a reboot.
 
 ## Deploying PMO with SR-IOV support using Express
 
@@ -110,7 +112,7 @@ Using **host_vars**, the following are some variables that can be modified:
 In this example, two hosts have different NICs installed that report different names to the operating system.
 
 ```
-root@compute01:~# ip link show
+root@hv01:~# ip link show
 ...
 6: ens1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq portid 0002c90300ffe511 state UP mode DEFAULT group default qlen 1000
     link/ether 00:02:c9:ff:e5:10 brd ff:ff:ff:ff:ff:ff
@@ -119,7 +121,7 @@ root@compute01:~# ip link show
 ```
 
 ```
-root@compute02:~# ip link show
+root@hv02:~# ip link show
 ...
 3: ens1f0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
     link/ether 90:e2:ba:a2:1b:88 brd ff:ff:ff:ff:ff:ff
@@ -130,7 +132,7 @@ root@compute02:~# ip link show
 NIC naming can vary based on the kernel version, NIC driver, and the PCI slot where the card is installed. In this example, the NIC installed in each host is from a different manufacturer and uses a different driver:
 
 ```
-root@compute01:~# ethtool -i ens1
+root@hv01:~# ethtool -i ens1
 driver: mlx4_en
 version: 4.0-0
 firmware-version: 2.42.5000
@@ -144,7 +146,7 @@ supports-priv-flags: yes
 ```
 
 ```
-root@compute02:~# ethtool -i ens1f0
+root@hv02:~# ethtool -i ens1f0
 driver: ixgbe
 version: 5.1.0-k
 firmware-version: 0x61bd0001
@@ -157,11 +159,11 @@ supports-register-dump: yes
 supports-priv-flags: yes
 ```
 
-The **host_vars** for each host can be implemented in a file that corresponds to the host's short name located at **/opt/pf9-express/host_vars/<shortname>.yml**. In the following example, **compute01** uses a single network interface for SR-IOV, while **compute02** uses two. SR-IOV networks will leverage a new provider label named **sriov** and 8 VFs per interface, as shown here:
+The **host_vars** for each host can be implemented in a file that corresponds to the host's short name located at **/opt/pf9-express/host_vars/<shortname>.yml**. In the following example, **hv01** uses a single network interface for SR-IOV, while **hv02** uses two. SR-IOV networks will leverage a new provider label named **sriov** and 8 VFs per interface, as shown here:
 
 ```
 ---
-# compute01.yml
+# hv01.yml
 physical_device_mappings:
   - sriov:ens1
 sriov_numvfs:
@@ -170,7 +172,7 @@ sriov_numvfs:
 
 ```
 ---
-# compute02.yml
+# hv02.yml
 physical_device_mappings:
   - sriov:ens1f0
   - sriov:ens1f1
@@ -219,8 +221,8 @@ To enable support for SR-IOV on a host, the inventory must be modified according
 
 ```
 [hypervisors]
-compute01 ansible_host=10.50.0.197 vm_console_ip=10.50.0.197 ha_cluster_ip=10.50.0.197 tunnel_ip=10.50.0.197 dhcp=on snat=on sriov=on
-compute02 ansible_host=10.50.0.196 vm_console_ip=10.50.0.196 tunnel_ip=10.50.0.196 dhcp=on snat=on sriov=on
+hv01 ansible_host=10.50.0.197 vm_console_ip=10.50.0.197 ha_cluster_ip=10.50.0.197 tunnel_ip=10.50.0.197 dhcp=on snat=on sriov=on
+hv02 ansible_host=10.50.0.196 vm_console_ip=10.50.0.196 tunnel_ip=10.50.0.196 dhcp=on snat=on sriov=on
 ```
 
 SR-IOV can be enabled group-wide by modifying the respective **group_vars** file, as shown here:
@@ -240,7 +242,7 @@ Lastly, SR-IOV can be enabled via the respective **host_vars** file, as shown he
 
 ```
 ---
-# compute01.yml 
+# hv01.yml 
 sriov: "on"
 physical_device_mappings:
   - sriov:ens1

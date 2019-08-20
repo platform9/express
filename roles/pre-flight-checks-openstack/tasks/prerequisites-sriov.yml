@@ -33,12 +33,12 @@
 - name: Update GRUB config (CentOS)
   command: grub2-mkconfig -o /boot/grub2/grub.cfg
   when:
-    - ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+    - ansible_os_family == "RedHat"
 
 - name: Fail if IOMMU is not enabled
   fail:
     msg:
-      - "IOMMU is not currently enabled in the kernel but has been configured. Please reboot the host and rerun Express. Refer to https://platform9.com/knowledge/KB12345 for assistance."
+      - "IOMMU is not currently enabled in the kernel but has been configured. Please reboot the host and rerun Express."
   when: iommus.examined < 1
 
 # Warn if NIC driver is not supported
@@ -55,5 +55,5 @@
 
 - debug:
     msg:
-      - "The {{ nic_driver }} NIC driver is not currently supported by Platform9. Refer to https://platform9.com/knowledge/KB12345 for assistance."
+      - "The {{ nic_driver }} NIC driver is not currently supported by Platform9."
   when: nic_driver not in supported_nic_drivers

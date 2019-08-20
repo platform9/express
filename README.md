@@ -118,7 +118,7 @@ A sample template is installed in the setup command (**./pf9-express -s**). A br
 
 This is where you enter the credentials for your control host to log into the target hosts to be managed by the Platform9 management plane.
 
-> When using password authentication, comment out `ansible_ssh_private_key_file`. When using a private key, comment out `ansible_sudo_pass`.
+> When using password authentication, comment out `ansible_ssh_private_key_file`. When using a private key, comment out `ansible_ssh_pass`.
 
 ```
 ##

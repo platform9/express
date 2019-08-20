@@ -23,5 +23,4 @@
     fail_mode: secure
     state: present
   with_items: "{{ neutron_ovs_bridge_mappings.split(',') }}"
-#  with_items: "{{ neutron_ovs_bridge_name.split(',') }}"
 
