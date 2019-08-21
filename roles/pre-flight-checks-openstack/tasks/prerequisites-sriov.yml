@@ -35,11 +35,45 @@
   when:
     - ansible_os_family == "RedHat"
 
+# If grub_reboot is not enabled, user will be prompted to reboot the host(s) manually
 - name: Fail if IOMMU is not enabled
   fail:
     msg:
+      - "IOMMU is not currently enabled in the kernel but has been configured. Please reboot the host manually and rerun Express."
+  when: 
+    - iommus.examined < 1
+    - not grub_reboot
+
+# If grub_reboot is enabled, Express will reboot the host(s) and wait for their return
+- name: Reboot to enable IOMMU
+  reboot:
+    msg: "Platform9 - Host is being rebooted!"
+    reboot_timeout: "{{ reboot_wait }}"
+    post_reboot_delay: 30
+    test_command: uname
+  when:
+    - iommus.examined < 1
+    - grub_reboot
+  register: reboot_results
+
+- debug:
+    msg: "Reboot results: {{ reboot_results | default('N/A') }}"
+
+- set_fact:
+    rebooted: "{{ reboot_results.rebooted | default('false') }}"
+ 
+# Recheck IOMMUs
+- name: Register IOMMU DMARs (post-reboot)
+  find: paths=/sys/class/iommu file_type=directory patterns="*"
+  register: iommu_recheck
+
+# If IOMMU is not enabled post-reboot, bail out.
+- name: Fail hard if IOMMU is not enabled
+  fail:
+    msg:
       - "IOMMU is not currently enabled in the kernel but has been configured. Please reboot the host and rerun Express."
-  when: iommus.examined < 1
+  when:
+    - iommu_recheck.examined < 1
 
 # Warn if NIC driver is not supported
 - name: Determine driver bound to NICs

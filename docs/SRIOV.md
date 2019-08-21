@@ -102,12 +102,15 @@ Compute node-specific configurations can be implemented using what is known as *
 * Quantity of network interfaces used for SRIOV
 * Provider network mappings
 * Number of VFs per interface
+* Auto reboot and wait time
  
 Using **host_vars**, the following are some variables that can be modified:
 
 * physical_device_mappings (required)
 * sriov_numvfs (required)
 * neutron_ovs_bridge_mappings (optional)
+* grub_reboot (optional - defaults to true)
+* reboot_wait (optional - defaults to 900 seconds)
 
 In this example, two hosts have different NICs installed that report different names to the operating system.
 
@@ -168,6 +171,7 @@ physical_device_mappings:
   - external:ens1
 sriov_numvfs:
   - ens1:8
+reboot_wait: 1200
 ```
 
 ```
@@ -190,12 +194,15 @@ Group-wide configurations can be implemented using what is known as **group_vars
 * Network interface name
 * Number of VFs per interface
 * Provider network mappings
+* Auto reboot and wait time
 
 Using **group_vars**, the following are some variables that can be modified:
 
 * neutron_ovs_bridge_mappings
 * sriov_numvfs
 * physical_device_mappings
+* grub_reboot (optional - defaults to true)
+* reboot_wait (optional - defaults to 900 seconds)
 
 The **group_vars** for the **hypervisors** group can be implemented in a file that corresponds to the group's name located at **/opt/pf9-express/group_vars/<groupname>.yml**. In the following example, every host in the **hypervisors** group has the same NIC installed in the same slot, so the naming convention is consistent across all hosts. A second provider bridge mapping has been established that will allow non-SR-IOV capable ports, such as DHCP, to connect to a vSwitch and communicate with SR-IOV ports:
 
@@ -203,6 +210,7 @@ The **group_vars** for the **hypervisors** group can be implemented in a file th
 ---
 # hypervisors.yml
 ...
+
 neutron_ovs_bridge_mappings: "external:br-pf9, sriov:br-sriov"
 physical_device_mappings:
   - sriov:ens1f0
