@@ -1,0 +1,15 @@
+[Unit]
+Description=Platform9 SR-IOV Virtual Function Manager
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/pf9/pf9-virtual-functions.sh start
+ExecStop=/opt/pf9/pf9-virtual-functions.sh stop
+ExecReload=/opt/pf9/pf9-virtual-functions.sh reload
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
