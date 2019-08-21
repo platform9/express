@@ -90,13 +90,13 @@ update-grub
 
 Using the Platform9 Express tool, operators can deploy PMO with support for SR-IOV. The Express tool will perform many of the tasks outlined in the previous sections, including enabling IOMMU and passthrough support in the kernel, as well as implementing a unit file for persisting VFs across reboots.
 
-> Given the complexity involved in supporting Mellanox NICs, the Express tool will initially only support Intel NICs using the ixgbe driver. This includes the Intel X520, X540, and X550 families.
+> Given the complexity involved in supporting Mellanox NICs, the Express tool will initially only support Intel NICs using the ixgbe and Broadcom NICs using the bnx2x driver. This includes the Intel X520, X540, and X550 families as well as certain Broadcom/QLogic NetXtreme families.
 
 The necessary configuration details can be implemented globally using **group_vars**, or on an individual host basis using **host_vars**. Each method is described below.
 
 ### Host Variables
 
-Compute node-specific configurations can be implemented using what is known as host_vars. Configurations that may vary between hosts include:
+Compute node-specific configurations can be implemented using what is known as **host_vars**. Configurations that may vary between hosts include:
 
 * Network interface name
 * Quantity of network interfaces used for SRIOV
@@ -159,13 +159,13 @@ supports-register-dump: yes
 supports-priv-flags: yes
 ```
 
-The **host_vars** for each host can be implemented in a file that corresponds to the host's short name located at **/opt/pf9-express/host_vars/<shortname>.yml**. In the following example, **hv01** uses a single network interface for SR-IOV, while **hv02** uses two. SR-IOV networks will leverage a new provider label named **sriov** and 8 VFs per interface, as shown here:
+The **host_vars** for each host can be implemented in a file that corresponds to the host's short name located at **/opt/pf9-express/host_vars/<shortname>.yml**. In the following example, **hv01** uses a single network interface for SR-IOV, while **hv02** uses two. SR-IOV networks will leverage the default provider label named **external** and 8 VFs per interface, as shown here:
 
 ```
 ---
 # hv01.yml
 physical_device_mappings:
-  - sriov:ens1
+  - external:ens1
 sriov_numvfs:
   - ens1:8
 ```
@@ -174,8 +174,8 @@ sriov_numvfs:
 ---
 # hv02.yml
 physical_device_mappings:
-  - sriov:ens1f0
-  - sriov:ens1f1
+  - external:ens1f0
+  - external:ens1f1
 sriov_numvfs:
   - ens1f0:8
   - ens1f1:8
@@ -221,8 +221,8 @@ To enable support for SR-IOV on a host, the inventory must be modified according
 
 ```
 [hypervisors]
-hv01 ansible_host=10.50.0.197 vm_console_ip=10.50.0.197 ha_cluster_ip=10.50.0.197 tunnel_ip=10.50.0.197 dhcp=on snat=on sriov=on
-hv02 ansible_host=10.50.0.196 vm_console_ip=10.50.0.196 tunnel_ip=10.50.0.196 dhcp=on snat=on sriov=on
+hv01 ansible_host=10.0.0.11 vm_console_ip=10.0.0.11 ha_cluster_ip=10.0.1.11 tunnel_ip=10.0.2.11 dhcp=on snat=on sriov=on
+hv02 ansible_host=10.0.0.12 vm_console_ip=10.0.0.12 tunnel_ip=10.0.2.12 dhcp=on snat=on
 ```
 
 SR-IOV can be enabled group-wide by modifying the respective **group_vars** file, as shown here:
@@ -245,18 +245,23 @@ Lastly, SR-IOV can be enabled via the respective **host_vars** file, as shown he
 # hv01.yml 
 sriov: "on"
 physical_device_mappings:
-  - sriov:ens1
+  - external:ens1
+...
 ```
 
 ### Installation
-Once the respective configuration is in place, install PMO with Express using some variation of the following:
+Once the respective configuration is in place, install PMO with Express:
 
 ```
 # ./pf9-express -a pmo
 ```
+
+When changing the number of VFs for a given interfaces, the host operating system must set VFs to 0 before setting the new value. Platform9 Express can refresh the VFs when the **refresh-sriov** tag is used.
 
 To refresh VFs, run **pf9-express** with the **refresh-sriov** tag:
 
 ```
 # ./pf9-express -t refresh-sriov hypervisors
 ```
+
+> When VFs are refreshed, any VM attached to a VF must be shutdown/started or issued a hard reboot to restore network connectivity.
