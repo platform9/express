@@ -33,6 +33,10 @@
 ## Verify DVR is on, step 1 in the UI is complete, import vars, and test credentials
 ###########################################################################################
 
+- name: Re-obtain token (post-reboot)
+  import_role: 
+    name: pf9-auth
+
 - name: read api token
   shell: "cat /tmp/keystone-token.txt"
   register: api_token
