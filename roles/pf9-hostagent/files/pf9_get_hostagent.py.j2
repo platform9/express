@@ -268,14 +268,14 @@ def main():
                 proxyPort = "443"
                 proxyHost = proxySplit[0]
             elif len(proxySplit) > 3:
-                print ("ERROR: Inccorect proxy configuration")
+                print ("ERROR: Incorrect proxy configuration")
                 parser.print_usage()
                 sys.exit(1)
             else:
                 proxyPort = proxySplit[1]
                 proxyHost = proxySplit[0]
         else:
-            print "ERROR: Inccorect proxy configuration"
+            print "ERROR: Incorrect proxy configuration"
             parser.print_usage()
             sys.exit(1)
     else:
