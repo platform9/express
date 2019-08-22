@@ -8,7 +8,7 @@ TIMEOUT=900
 flag_k8s=0
 
 usage() {
-  echo -e "usage: `basename $0` <ctrl_ip> <host_id> <admin_user> <admin_password>"
+  echo -e "usage: `basename $0` <du_fqdn> <ctrl_ip> <host_id> <admin_user> <admin_password>"
   exit 1
 }
 
@@ -18,21 +18,22 @@ assert() {
 }
 
 ## validate commandline
-if [ $# -lt 4 ]; then usage; fi
-ctrl_ip=${1}
-host_id=${2}
-admin_user=${3}
-admin_password=${4}
+if [ $# -lt 5 ]; then usage; fi
+du_fqdn=${1}
+ctrl_ip=${2}
+host_id=${3}
+admin_user=${4}
+admin_password=${5}
 
 # check for flags (optional parameters)
-if [ $# -eq 5 -a "${5}" == "k8s" ]; then
+if [ $# -eq 6 -a "${6}" == "k8s" ]; then
   flag_k8s=1
   sleep 120
   exit 0
 fi
 
 ## set auth url
-auth_url=https://${ctrl_ip}/keystone/v3
+auth_url=https://${du_fqdn}/keystone/v3
 
 ####################################################################################################
 # Get Keystone Token
