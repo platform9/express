@@ -626,7 +626,6 @@ token=`curl -k -i -H "Content-Type: application/json" https://${du_url}/keystone
 
 ## get region info
 service_id=`curl -X GET -H "X-Auth-Token: ${token}" https://${du_url}/keystone/v3/services?type=regionInfo 2>/dev/null | grep -o '"id": "[a-z0-9 ]*' | cut -c 8-40`
-echo "service id = ${service_id}"
 region_url=`curl -X GET -H "X-Auth-Token: ${token}" https://${du_url}/keystone/v3/endpoints?service_id=${service_id} | jq --arg du_region "${du_region}" '.endpoints[] | select(.region_id==$du_region and .interface=="public")' | jq '.url' | awk '{print substr($0,2,length($0)-9)}' | cut -d '/' -f3`
 
 ## assign/validate ctrl_ip from config file and resolve IP for ctrl_hostname
