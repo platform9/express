@@ -77,7 +77,7 @@ csv_import() {
   tpl_hypervisors=${basedir}/lib/pf9-builder/template/hosts-hypervisors.tpl
   tpl_glance=${basedir}/lib/pf9-builder/template/hosts-glance.tpl
   tpl_cinder=${basedir}/lib/pf9-builder/template/hosts-cinder.tpl
-  tpl_bond_config=${basedir}/lib/pf9-builder/template/hosts-bond-config.tpl
+  tpl_bond_config=${basedir}/lib/pf9-builder/template/hosts-bond_config.tpl
 
   # Initialize Inventory (from template)
   if [ -r ${tmp_inventory} ]; then rm -f ${tmp_inventory}; fi

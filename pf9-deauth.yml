@@ -2,8 +2,8 @@
 # Common Roles
 - hosts:
     - hypervisors
-    - k8s-master
-    - k8s-worker
+    - k8s_master
+    - k8s_worker
   become: true
   roles:
     - pf9-auth

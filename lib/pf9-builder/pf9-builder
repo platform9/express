@@ -9,9 +9,9 @@ tpl_global=${basedir}/template/hosts-global.tpl
 tpl_hypervisors=${basedir}/template/hosts-hypervisors.tpl
 tpl_glance=${basedir}/template/hosts-glance.tpl
 tpl_cinder=${basedir}/template/hosts-cinder.tpl
-tpl_bond_config=${basedir}/template/hosts-bond-config.tpl
-tpl_k8s_master=${basedir}/template/hosts-k8s-master.tpl
-tpl_k8s_worker=${basedir}/template/hosts-k8s-worker.tpl
+tpl_bond_config=${basedir}/template/hosts-bond_config.tpl
+tpl_k8s_master=${basedir}/template/hosts-k8s_master.tpl
+tpl_k8s_worker=${basedir}/template/hosts-k8s_worker.tpl
 host_list=""
 flag_launch=1
 flag_express=1
@@ -343,7 +343,7 @@ if [ "${node_type}" == "openstack" ]; then
     fi
   done < ${csv_file}
 
-  echo "[bond-config]"
+  echo "[bond_config]"
   cat ${tpl_bond_config} >> ${inventory}
   while read line; do
     # validate csv
@@ -389,7 +389,7 @@ if [ "${node_type}" == "openstack" ]; then
 fi
 
 if [ "${node_type}" == "kubernetes" ]; then
-  echo "[k8s-master]"
+  echo "[k8s_master]"
   cat ${tpl_k8s_master} >> ${inventory}
   instances_master=""
   instances_worker=""
@@ -454,7 +454,7 @@ if [ "${node_type}" == "kubernetes" ]; then
   echo pf9-express -b -v ${inventory} -a ${instance_list}
   eval ${basedir}/../../pf9-express -b -v ${inventory} -a ${instance_list}
 
-  echo "[k8s-worker]"
+  echo "[k8s_worker]"
   cat ${tpl_k8s_worker} >> ${inventory}
   while read line; do
     # validate csv
