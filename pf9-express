@@ -608,6 +608,9 @@ if [ ${flag_ui} -eq 1 -o ${flag_dbinit} -eq 1 ]; then
   exit 0
 fi
 
+## display banner
+banner
+
 # install prerequisite packages
 if [ ${flag_skip_prereqs} -eq 0 ]; then install_prereqs; fi
 
@@ -641,9 +644,6 @@ if [ ${flag_oscli} -eq 1 ]; then
   install_oscli ${ctrl_hostname} ${du_region} ${du_tenant} ${du_username} ${du_password}
   exit 0
 fi
-
-## display banner
-banner
 
 ## validate minimum Ansible version
 ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
