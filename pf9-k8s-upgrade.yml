@@ -1,6 +1,6 @@
 ---
 - hosts:
-    - k8s-master
+    - k8s_master
   become: true
   serial: 1
   roles:
@@ -10,7 +10,7 @@
     - { role: "wait-for-convergence" }
 
 - hosts:
-    - k8s-worker
+    - k8s_worker
   become: true
   serial: 15
   roles:
