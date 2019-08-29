@@ -374,7 +374,7 @@ install_prereqs() {
   # install Ansible (and dependencies)
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
-    for pkg in epel-release ntp nginx gcc python-devel python2-pip bc; do
+    for pkg in epel-release ntp nginx gcc python-devel python2-pip jq bc; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -426,7 +426,7 @@ install_prereqs() {
       fi
     fi
 
-    for pkg in ansible bc python-pip; do
+    for pkg in ansible jq bc python-pip; do
       echo -n "${pkg} "
       dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -608,7 +608,14 @@ if [ ${flag_ui} -eq 1 -o ${flag_dbinit} -eq 1 ]; then
   exit 0
 fi
 
+## display banner
+banner
+
+# install prerequisite packages
+if [ ${flag_skip_prereqs} -eq 0 ]; then install_prereqs; fi
+
 ## lookup configuration values from config file
+du_url=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
 du_username=$(grep ^os_username ${pf9_config} | cut -d \| -f2)
 du_password=$(grep ^os_password ${pf9_config} | cut -d \| -f2)
 du_region=$(grep ^os_region ${pf9_config} | cut -d \| -f2)
@@ -618,9 +625,18 @@ proxy_url=$(grep ^proxy_url ${pf9_config} | cut -d \| -f2)
 ## append proxy_url to extra_args
 if [ "${proxy_url}" != "-" ]; then extra_vars="${extra_vars} proxy_url=${proxy_url}"; fi
 
+## get region specific hostname
+## Get Keystone Token
+token=`curl -k -i -H "Content-Type: application/json" https://${du_url}/keystone/v3/auth/tokens?nocatalog \
+    -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${du_username}\", \"domain\": {\"id\": \"default\"}, \"password\": \"${du_password}\" } } }, \"scope\": { \"project\": { \"name\": \"${du_tenant}\", \"domain\": {\"id\": \"default\"}}}}}" 2>/dev/null | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
+
+## get region info
+service_id=`curl -X GET -H "X-Auth-Token: ${token}" https://${du_url}/keystone/v3/services?type=regionInfo 2>/dev/null | grep -o '"id": "[a-z0-9 ]*' | cut -c 8-40`
+region_url=`curl -X GET -H "X-Auth-Token: ${token}" https://${du_url}/keystone/v3/endpoints?service_id=${service_id} 2>/dev/null | jq --arg du_region "${du_region}" '.endpoints[] | select(.region_id==$du_region and .interface=="public")' | jq '.url' | awk '{print substr($0,2,length($0)-9)}' | cut -d '/' -f3`
+
 ## assign/validate ctrl_ip from config file and resolve IP for ctrl_hostname
-ctrl_hostname=$(grep ^du_url ${pf9_config} | cut -d \| -f2 | cut -d \/ -f3)
-tmp_ip=$(ping -c 1 ${ctrl_hostname} | grep PING | cut -d ' ' -f3)
+ctrl_hostname=${du_url}
+tmp_ip=$(ping -c 1 ${region_url} | grep PING | cut -d ' ' -f3)
 ctrl_ip=${tmp_ip:1:((${#tmp_ip}-2))}
 
 ## install openstack cli
@@ -628,12 +644,6 @@ if [ ${flag_oscli} -eq 1 ]; then
   install_oscli ${ctrl_hostname} ${du_region} ${du_tenant} ${du_username} ${du_password}
   exit 0
 fi
-
-## display banner
-banner
-
-# install prerequisite packages
-if [ ${flag_skip_prereqs} -eq 0 ]; then install_prereqs; fi
 
 ## validate minimum Ansible version
 ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
