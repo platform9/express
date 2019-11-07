@@ -13,6 +13,7 @@ inventory=${basedir}/inventory/hosts
 express_script=${basedir}/pf9-express.yml
 deauth_script=${basedir}/pf9-deauth.yml
 k8s_upgrade_script=${basedir}/pf9-k8s-upgrade.yml
+k8s_only_playbook=${basedir}/pf9-k8s-express.yml
 platform=""
 target=""
 log=/tmp/pf9-express.log
@@ -36,6 +37,7 @@ flag_autoregister=0
 flag_csvImport=0
 flag_deauth=0
 flag_k8s_upgrade=0
+flag_pmk_only=0
 extra_vars=""
 awx_pf9_user="pf9"
 awx_pf9_password="Pl@tform9"
@@ -503,6 +505,9 @@ while [ $# -gt 0 ]; do
   -u|--upgradeK8s)
     flag_k8s_upgrade=1
     ;;
+  --pmk)
+    flag_pmk_only=1
+    ;;
   -f|--csvFile)
     if [ $# -lt 2 ]; then usage; fi
     flag_csvImport=1
@@ -671,6 +676,17 @@ if [ ${flag_deauth} -eq 1 ]; then
     sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${deauth_script} 2>&1 | tee ${install_log}
     echo -e "Log: ${install_log}\n"
   fi
+  exit 0
+fi
+
+## Do stuff for PMK only
+if [ ${flag_pmk_only} -eq 1 ]; then
+  # Fail if ansible errors out.
+  set -euo pipefail
+  extra_vars="${extra_vars} k8s_only=1"
+  echo -e "Log: ${install_log}\n"
+  sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${k8s_only_playbook} 2>&1 | tee ${install_log}
+  echo -e "Log: ${install_log}\n"
   exit 0
 fi
 
