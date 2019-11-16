@@ -13,14 +13,6 @@
     is_certless_installer: "true"
   when: result.status == 200
 
-- name: Display Variable
-  debug: msg="{{ result }}"
-  ignore_errors: yes
-
-- name: Display Variable
-  debug: msg="{{ is_certless_installer }}"
-  ignore_errors: yes
-
 - include: classic-hostagent-setup.yml
   when: is_certless_installer is undefined
 

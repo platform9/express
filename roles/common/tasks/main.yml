@@ -11,7 +11,7 @@
 - name: Quitting if hardware virtualization is not enabled
   fail:
     msg: "Hardware virtualization is not present, or not enabled."
-  when: hw_virt|failed and
+  when: hw_virt is failed and
         inventory_hostname in groups.hypervisors
 
 - block:
