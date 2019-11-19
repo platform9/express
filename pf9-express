@@ -646,7 +646,7 @@ service_id=`curl -X GET -H "X-Auth-Token: ${token}" https://${du_url}/keystone/v
 region_url=`curl -X GET -H "X-Auth-Token: ${token}" https://${du_url}/keystone/v3/endpoints?service_id=${service_id} 2>/dev/null | jq --arg du_region "${du_region}" '.endpoints[] | select(.region_id==$du_region and .interface=="public")' | jq '.url' | awk '{print substr($0,2,length($0)-9)}' | cut -d '/' -f3`
 
 ## assign/validate ctrl_ip from config file and resolve IP for ctrl_hostname
-ctrl_hostname=${du_url}
+ctrl_hostname=${region_url}
 tmp_ip=$(ping -c 1 ${region_url} | grep PING | cut -d ' ' -f3)
 ctrl_ip=${tmp_ip:1:((${#tmp_ip}-2))}
 
