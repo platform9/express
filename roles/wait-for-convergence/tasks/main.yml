@@ -16,10 +16,10 @@
     flags: ""
   when: flags is undefined
 - debug: var=flags
-- debug: msg="running wait_for_agent_convergence.sh {{ctrl_ip}} {{host_id.stdout.strip()}} {{du_username}} ******** <{{flags}}>"
+- debug: msg="running wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} {{du_username}} ******** <{{flags}}>"
 
 - name: wait for pf9-hostagent to converge
-  script: "files/wait_for_agent_convergence.sh {{ctrl_ip}} {{host_id.stdout.strip()}} {{du_username}} \'{{du_password}}\' {{flags}}"
+  script: "files/wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} {{du_username}} \'{{du_password}}\' {{flags}}"
   register: waitfor_agent
 
 - debug: var=waitfor_agent

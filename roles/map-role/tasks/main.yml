@@ -134,7 +134,7 @@
 
 - name: "Assigning Role - {{rolename}}"
   uri:
-    url: "https://{{ctrl_ip}}/resmgr/v1/hosts/{{host_id.stdout.strip()}}/roles/{{rolename}}"
+    url: "https://{{du_fqdn}}/resmgr/v1/hosts/{{host_id.stdout.strip()}}/roles/{{rolename}}"
     method: PUT
     body: "{{role_json.stdout.strip()}}"
     body_format: json

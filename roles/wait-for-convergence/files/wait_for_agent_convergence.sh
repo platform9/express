@@ -8,7 +8,7 @@ TIMEOUT=900
 flag_k8s=0
 
 usage() {
-  echo -e "usage: `basename $0` <ctrl_ip> <host_id> <admin_user> <admin_password>"
+  echo -e "usage: `basename $0` <du_fqdn> <host_id> <admin_user> <admin_password>"
   exit 1
 }
 
@@ -19,7 +19,7 @@ assert() {
 
 ## validate commandline
 if [ $# -lt 4 ]; then usage; fi
-ctrl_ip=${1}
+du_fqdn=${1}
 host_id=${2}
 admin_user=${3}
 admin_password=${4}
@@ -32,7 +32,7 @@ if [ $# -eq 5 -a "${5}" == "k8s" ]; then
 fi
 
 ## set auth url
-auth_url=https://${ctrl_ip}/keystone/v3
+auth_url=https://${du_fqdn}/keystone/v3
 
 ####################################################################################################
 # Get Keystone Token
@@ -51,7 +51,7 @@ start_time=`date +%s`
 elapsedTime=0
 while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
   role_status=$(curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-      https://${ctrl_ip}/resmgr/v1/hosts/${host_id} 2>/dev/null | python -m json.tool | grep role_status)
+      https://${du_fqdn}/resmgr/v1/hosts/${host_id} 2>/dev/null | python -m json.tool | grep role_status)
   if [ -n "${role_status}" ]; then
     role_status=$(echo ${role_status} | cut -d : -f2 | sed -e 's/\"//g' | sed -e 's/,//g' | sed -e 's/ //g')
   fi
