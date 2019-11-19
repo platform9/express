@@ -58,6 +58,7 @@ usage() {
   echo "-e|--extra-vars <string>   : ansible extra-vars <name=val,...>"
   echo "-b|--bypassPrereqs         : bypass pre-requisites"
   echo "-d|--deauth                : de-authorize host"
+  echo "-l|--log                   : Log output file. Assumes parent directory already exists."
   echo "-u|--upgradeK8s            : upgrade Kubernetes nodes"
   echo "-v|--inventory <file>      : use alternate inventory file for Ansible"
   echo "-f|--csvFile <file>        : import CSV file"
@@ -501,6 +502,11 @@ while [ $# -gt 0 ]; do
     ;;
   -d|--deauth)
     flag_deauth=1
+    ;;
+  -l|--log)
+    if [ $# -lt 2 ]; then usage; fi
+    install_log=${2}
+    shift
     ;;
   -u|--upgradeK8s)
     flag_k8s_upgrade=1
