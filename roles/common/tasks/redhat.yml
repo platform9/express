@@ -17,4 +17,4 @@
 
 - name: Remount devpts mount point
   command: mount -o remount devpts
-  when: devpts_result|changed
+  when: devpts_result is changed
