@@ -20,17 +20,35 @@
       password: "{{os_password}}"
       project_name: "{{os_tenant}}"
 
+- name: Obtain authentication token from Keystone (with custom python)
+  os_auth:
+    auth: "{{os_auth}}"
+    region_name: "{{os_tenant}}"
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ custom_py_interpreter }}"
+  register: auth_reply_custom_py
+  when: custom_py_interpreter is defined
+
 - name: Obtain authentication token from Keystone
   os_auth:
     auth: "{{os_auth}}"
     region_name: "{{os_tenant}}"
   delegate_to: localhost
   register: auth_reply
+  when: custom_py_interpreter is undefined
+
+- name: Set os_auth_token fact (with custom python)
+  set_fact: 
+    os_auth_token: "{{ auth_reply_custom_py.ansible_facts.auth_token }}"
+  when: custom_py_interpreter is defined
+
+- name: Set os_auth_token fact
+  set_fact: 
+    os_auth_token: "{{ auth_reply.ansible_facts.auth_token }}"
+  when: custom_py_interpreter is undefined
 
 - name: Save OS Auth Token
   copy:
-    content: "{{ auth_reply.ansible_facts.auth_token }}"
+    content: "{{ os_auth_token }}"
     dest: /tmp/keystone-token.txt
-
-- name: Store OS_AUTH_TOKEN in fact
-  set_fact: "os_auth_token={{ auth_reply.ansible_facts.auth_token }}"
