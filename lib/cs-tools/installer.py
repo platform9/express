@@ -85,6 +85,31 @@ def login_du(du_url,du_user,du_password,du_tenant):
     return(project_id, token)
 
 
+def get_host_metadata(du, project_id, token):
+    host_metadata = {}
+    region_type = get_du_type(du['url'], project_id, token)
+    host_metadata['ip'] = read_kbd("--> IP Address", [], '', True)
+    if region_type == "KVM":
+        host_metadata['bond_config'] = read_kbd("--> Bond Config", [], '', True)
+        host_metadata['nova'] = read_kbd("--> Enable Nova", ['y','n'], 'y', True)
+        host_metadata['glance'] = read_kbd("--> Enable Glance", ['y','n'], 'n', True)
+        host_metadata['cinder'] = read_kbd("--> Enable Cinder", ['y','n'], 'n', True)
+        host_metadata['designate'] = read_kbd("--> Enable Designate", ['y','n'], 'n', True)
+        host_metadata['node_type'] = ""
+        host_metadata['cluster_name'] = ""
+    elif region_type == "Kubernetes":
+        host_metadata['bond_config'] = ""
+        host_metadata['nova'] = ""
+        host_metadata['glance'] = ""
+        host_metadata['cinder'] = ""
+        host_metadata['designate'] = ""
+        host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], '', True)
+        host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], '', True)
+    elif region_type == "VMware":
+        sys.stdout.write("\nERROR: Unsupported region type: {}".format(region_type))
+
+    return(host_metadata)
+
 def get_du_creds():
     du_metadata = {}
     du_metadata['du_url'] = read_kbd("--> DU URL", [], '', True)
@@ -161,9 +186,23 @@ def get_du_hosts(du_url, project_id, token):
     return(num_hosts)
 
 
+def get_du_type(du_url, project_id, token):
+    region_type = "-"
+    qbert_status = qbert_is_responding(du_url, project_id, token)
+    if qbert_status == True:
+        region_type = "Kubernetes"
+    else:
+        credsmanager_status = credsmanager_is_responding(du_url, project_id, token)
+        if credsmanager_status == True:
+            region_type = "KVM"
+        else:
+            region_type = "VMware"
+    return(region_type)
+
+
 def get_du_info(du_entries):
     if not os.path.isfile(CONFIG_FILE):
-        sys.stdout.write("\nNo regions have been defined yet (select 'Add Region')\n")
+        sys.stdout.write("\nNo regions have been defined yet (run 'Add Region')\n")
         return()
 
     du_table = PrettyTable()
@@ -177,29 +216,41 @@ def get_du_info(du_entries):
     du_table.align["# Hosts"] = "l"
 
     for du in du_entries:
-        region_type = "-"
         num_hosts = "-"
         project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
         if token == None:
             auth_status = "Failed"
         else:
             auth_status = "OK"
-            qbert_status = qbert_is_responding(du['url'], project_id, token)
-            if qbert_status == True:
-                region_type = "Kubernetes"
-            else:
-                credsmanager_status = credsmanager_is_responding(du['url'], project_id, token)
-                if credsmanager_status == True:
-                    region_type = "KVM"
-                else:
-                    region_type = "VMware"
-
+            region_type = get_du_type(du['url'], project_id, token)
             num_hosts = get_du_hosts(du['url'], project_id, token)
 
         du_table.add_row([du['url'], auth_status, region_type, du['region'], du['tenant'], du['proxy'], num_hosts])
 
     print(du_table)
 
+
+def select_du():
+    if not os.path.isdir(CONFIG_DIR):
+        sys.stdout.write("\nNo regions have been defined yet (run 'Add Region')\n")
+    elif not os.path.isfile(CONFIG_FILE):
+        sys.stdout.write("\nNo regions have been defined yet (run 'Add Region')\n")
+    else:
+        current_config = get_configs()
+        if len(current_config) == 0:
+            sys.stdout.write("\nNo regions have been defined yet (run 'Add Region')\n")
+        else:
+            cnt = 1
+            allowed_values = []
+            sys.stdout.write("\n")
+            for du in current_config:
+                sys.stdout.write("{}. {}\n".format(cnt,du['url']))
+                allowed_values.append(str(cnt))
+                cnt += 1
+            user_input = read_kbd("\nSelect Region", allowed_values, '', True)
+            idx = int(user_input) - 1
+            return(current_config[idx])
+        return({})
 
 def get_configs():
     du_configs = []
@@ -208,6 +259,28 @@ def get_configs():
             du_configs = json.load(json_file)
 
     return(du_configs)
+
+
+def get_hosts():
+    du_hosts = []
+    if os.path.isfile(HOST_FILE):
+        with open(HOST_FILE) as json_file:
+            du_hosts = json.load(json_file)
+
+    return(du_hosts)
+
+
+def write_host(host):
+    if not os.path.isdir(CONFIG_DIR):
+        try:
+            os.mkdir(CONFIG_DIR)
+        except:
+            fail("failed to create directory: {}".format(CONFIG_DIR))
+
+    current_hosts = get_hosts()
+    current_hosts.append(host)
+    with open(HOST_FILE, 'w') as outfile:
+        json.dump(current_hosts, outfile)
 
 
 def write_config(du):
@@ -221,6 +294,29 @@ def write_config(du):
     current_config.append(du)
     with open(CONFIG_FILE, 'w') as outfile:
         json.dump(current_config, outfile)
+
+
+def add_host(du):
+    sys.stdout.write("\nAdding Host to Region: {}\n".format(du['url']))
+    project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
+    if token == None:
+        sys.stdout.write("--> failed to login to region")
+    else:
+        host_metadata = get_host_metadata(du, project_id, token)
+        host = {
+            'du_url': du['url'],
+            'ip': host_metadata['ip'],
+            'bond_config': host_metadata['bond_config'],
+            'nova': host_metadata['nova'],
+            'glance': host_metadata['glance'],
+            'cinder': host_metadata['cinder'],
+            'designate': host_metadata['designate'],
+            'node_type': host_metadata['node_type'],
+            'cluster_name': host_metadata['cluster_name']
+        }
+
+        # persist configurtion
+        write_host(host)
 
 
 def add_region():
@@ -256,8 +352,8 @@ def display_menu():
     sys.stdout.write("*****************************************\n")
     sys.stdout.write("1. Add Region\n")
     sys.stdout.write("2. Show Region\n")
-    sys.stdout.write("3. Manage Hosts\n")
-    sys.stdout.write("4. Onboard Hosts\n")
+    sys.stdout.write("3. Add Hosts to Region (KVM/K8s Nodes)\n")
+    sys.stdout.write("4. Configure/Attach Hosts to Region\n")
     sys.stdout.write("*****************************************\n")
 
 
@@ -275,7 +371,8 @@ def cmd_loop():
             du_entries = get_configs()
             get_du_info(du_entries)
         elif user_input == '3':
-            None
+            selected_du = select_du()
+            new_host = add_host(selected_du)
         elif user_input == '4':
             None
         elif user_input in ['q','Q']:
@@ -298,6 +395,16 @@ def cmd_loop():
 # os_password|Pl@tform9
 # os_region|k8s01
 # proxy_url|-
+
+# Host Params:
+# [KVM]
+# - IP
+# - Roles [Nova, Glance, Cinder, Designate]
+#
+# [K8s]
+# - IP
+# - Node Type [Master, Worker]
+# - Cluster UUID
 
 #####################################################################
 ## pf9-express/lib/hosts
@@ -354,6 +461,7 @@ def cmd_loop():
 HOME_DIR = expanduser("~")
 CONFIG_DIR = "{}/.pf9-wizard".format(HOME_DIR)
 CONFIG_FILE = "{}/du.conf".format(CONFIG_DIR)
+HOST_FILE = "{}/hosts.conf".format(CONFIG_DIR)
 
 # main menu loop
 cmd_loop()
