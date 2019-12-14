@@ -22,21 +22,31 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 # functions
-def read_kbd(user_prompt, flag_echo=True):
-    user_input = ""
+def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True):
     if sys.version_info[0] == 2:
-        while user_input == "":
-            if flag_echo == True:
-                user_input = raw_input("{}: ".format(user_prompt))
-            else:
-                user_input = getpass.getpass(prompt='--> DU Password: ', stream=None)
+        if flag_echo == True:
+            input_is_valid = False
+            while not input_is_valid:
+                user_input = raw_input("{} [{}]: ".format(user_prompt,default_value))
+                if user_input == "":
+                    user_input = default_value
+                    input_is_valid = True
+                else:
+                    if len(allowed_values) == 0:
+                        input_is_valid = True
+                    else:
+                        if user_input in allowed_values:
+                            input_is_valid = True
+        else:
+            user_input = getpass.getpass(prompt="{}: ".format(user_prompt), stream=None)
 
     if sys.version_info[0] == 3:
-        while user_input == "":
-            if flag_echo == True:
-                user_input = input("{}: ".format(user_prompt))
-            else:
-                user_input = getpass.getpass(prompt='Password: ', stream=None)
+        if flag_echo == True:
+            user_input = input("{} [{}]: ".format(user_prompt,default_value))
+            if user_input == "":
+                user_input = default_value
+        else:
+            user_input = getpass.getpass(prompt='Password: ', stream=None)
 
     return(user_input)
 
@@ -81,11 +91,31 @@ def login_du(du_url,du_user,du_password,du_tenant):
 
 
 def get_du_creds():
-    du_url = read_kbd("--> DU URL", True)
-    du_user = read_kbd("--> DU Username", True)
-    du_password = read_kbd("--> DU Password", False)
-    du_tenant = read_kbd("--> DU Tenant", True)
-    return(du_url,du_user,du_password,du_tenant)
+    du_metadata = {}
+    du_metadata['du_url'] = read_kbd("--> DU URL", [], '', True)
+    du_metadata['du_user'] = read_kbd("--> DU Username", [], 'admin@platform9.net', True)
+    du_metadata['du_password'] = read_kbd("--> DU Password", [], '', False)
+    du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], 'service', True)
+    du_metadata['region_name'] = read_kbd("--> Region Name", [], '', True)
+    du_metadata['region_proxy'] = read_kbd("--> Proxy", [], '', True)
+    du_metadata['region_dns'] = read_kbd("--> DNS Server (comma-delimited list or IPs)", [], '', True)
+
+    du_metadata['region_auth_type'] = read_kbd("--> Authentication Type ['simple','ssh-key']", ['simple','ssh-key'], 'simple', True)
+    du_metadata['auth_username'] = read_kbd("--> Username for Remote Access", [], '', True)
+    if du_metadata['region_auth_type'] == "simple":
+        du_metadata['auth_password'] = read_kbd("--> Password for Remote Access", [], '', False)
+    else:
+        du_metadata['auth_password'] = ""
+  
+    if du_metadata['region_auth_type'] == "ssh-key":
+        du_metadata['auth_ssh_key'] = read_kbd("--> SSH Key for Remote Access", [], '', True)
+    else:
+        du_metadata['auth_ssh_key'] = ""
+
+    du_metadata['region_bond_if_name'] = read_kbd("--> Interface Name (for OVS Bond)", [], 'bond0', True)
+    du_metadata['region_bond_mode'] = read_kbd("--> Bond Mode", [], '1', True)
+    du_metadata['region_bond_mtu'] = read_kbd("--> MTU for Bond Interface", [], '9000', True)
+    return(du_metadata)
 
 
 def qbert_is_responding(du_url, project_id, token):
@@ -142,10 +172,13 @@ def get_du_info(du_entries):
         return()
 
     du_table = PrettyTable()
-    du_table.field_names = ["DU URL","Auth","Region Type","# Hosts"]
+    du_table.field_names = ["DU URL","Auth","Region Type","Region Name","Tenant","Proxy","# Hosts"]
     du_table.align["DU URL"] = "l"
     du_table.align["Auth"] = "l"
     du_table.align["Region Type"] = "l"
+    du_table.align["Region Name"] = "l"
+    du_table.align["Tenant"] = "l"
+    du_table.align["Proxy"] = "l"
     du_table.align["# Hosts"] = "l"
 
     for du in du_entries:
@@ -168,7 +201,7 @@ def get_du_info(du_entries):
 
             num_hosts = get_du_hosts(du['url'], project_id, token)
 
-        du_table.add_row([du['url'], auth_status, region_type, num_hosts])
+        du_table.add_row([du['url'], auth_status, region_type, du['region'], du['tenant'], du['proxy'], num_hosts])
 
     print(du_table)
 
@@ -197,12 +230,22 @@ def write_config(du):
 
 def add_region():
     sys.stdout.write("\nAdding Region:\n")
-    du_url,du_user,du_password,du_tenant = get_du_creds()
+    du_metadata = get_du_creds()
     du = {
-        'url': du_url,
-        'username': du_user,
-        'password': du_password,
-        'tenant': du_tenant
+        'url': du_metadata['du_url'],
+        'username': du_metadata['du_user'],
+        'password': du_metadata['du_password'],
+        'tenant': du_metadata['du_tenant'],
+        'region': du_metadata['region_name'],
+        'proxy': du_metadata['region_proxy'],
+        'dns_list': du_metadata['region_dns'],
+        'auth_type': du_metadata['region_auth_type'],
+        'auth_ssh_key': du_metadata['auth_ssh_key'],
+        'auth_password': du_metadata['auth_password'],
+        'auth_username': du_metadata['auth_username'],
+        'bond_ifname': du_metadata['region_bond_if_name'],
+        'bond_mode': du_metadata['region_bond_mode'],
+        'bond_mtu': du_metadata['region_bond_mtu']
     }
 
     # persist configurtion
@@ -227,7 +270,7 @@ def cmd_loop():
     user_input = ""
     while not user_input in ['q','Q']:
         display_menu()
-        user_input = read_kbd("Enter Selection ('q' to quit)")
+        user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True)
         if user_input == '1':
             new_du = add_region()
             new_du_list = []
@@ -246,6 +289,69 @@ def cmd_loop():
             sys.stdout.write("ERROR: Invalid Selection\n")
         sys.stdout.write("\n")
 
+
+#####################################################################
+## pf9-express.conf
+#####################################################################
+# manage_hostname|false
+# manage_resolver|false
+# dns_resolver1|8.8.8.8
+# dns_resolver2|8.8.4.4
+# os_tenant|svc-pmo
+# du_url|https://danwright.platform9.horse
+# os_username|pf9-kubeheat
+# os_password|Pl@tform9
+# os_region|k8s01
+# proxy_url|-
+
+#####################################################################
+## pf9-express/lib/hosts
+#####################################################################
+# [all]
+# [all:vars]
+# ansible_user=ubuntu
+# ansible_sudo_pass=winterwonderland
+# ansible_ssh_pass=winterwonderland
+# ansible_ssh_private_key_file=~/.ssh/id_rsa
+# 
+# manage_network=True
+# bond_ifname=bond0
+# bond_mode=1
+# bond_mtu=9000
+# 
+# [bond_config]
+# hv01 bond_members='eth1' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.11","mask":"255.255.255.0"}]'
+# 
+# [pmo:children]
+# hypervisors
+# glance
+# cinder
+# 
+# [hypervisors]
+# hv01 ansible_host=10.0.0.11 vm_console_ip=10.0.0.11 ha_cluster_ip=10.0.1.11 tunnel_ip=10.0.2.11 dhcp=on snat=on
+# hv02 ansible_host=10.0.0.12 vm_console_ip=10.0.0.12 tunnel_ip=10.0.2.12 dhcp=on snat=on
+# hv03 ansible_host=10.0.0.13 vm_console_ip=10.0.0.13 tunnel_ip=10.0.2.13
+# hv04 ansible_host=10.0.0.14
+# 
+# [glance]
+# hv01 glance_ip=10.0.3.11 glance_public_endpoint=True
+# hv02 glance_ip=10.0.3.12
+# 
+# [cinder]
+# hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
+# 
+# [designate]
+# hv01
+# 
+# [pmk:children]
+# k8s_master
+# k8s_worker
+# 
+# [k8s_master]
+# cv01 ansible_host=10.0.0.15
+# 
+# [k8s_worker]
+# cv04 ansible_host=10.0.0.18 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 
 ## main
 
