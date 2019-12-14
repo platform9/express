@@ -11,7 +11,7 @@ if not sys.version_info[0] in (2,3):
 
 # module imports
 try:
-    import requests,urllib3,json,argparse,signal,prettytable
+    import requests,urllib3,json,argparse,signal,prettytable,getpass
 except:
     fail("Failed to import module\n{}".format(sys.exc_info()))
 
@@ -22,14 +22,21 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 # functions
-def read_kbd(user_prompt, user_input=""):
+def read_kbd(user_prompt, flag_echo=True):
+    user_input = ""
     if sys.version_info[0] == 2:
         while user_input == "":
-            user_input = raw_input("{}: ".format(user_prompt))
+            if flag_echo == True:
+                user_input = raw_input("{}: ".format(user_prompt))
+            else:
+                user_input = getpass.getpass(prompt='--> DU Password: ', stream=None)
 
     if sys.version_info[0] == 3:
         while user_input == "":
-            user_input = input("{}: ".format(user_prompt))
+            if flag_echo == True:
+                user_input = input("{}: ".format(user_prompt))
+            else:
+                user_input = getpass.getpass(prompt='Password: ', stream=None)
 
     return(user_input)
 
@@ -74,10 +81,10 @@ def login_du(du_url,du_user,du_password,du_tenant):
 
 
 def get_du_creds():
-    du_url = read_kbd("--> DU URL")
-    du_user = read_kbd("--> DU Username")
-    du_password = read_kbd("--> DU Password")
-    du_tenant = read_kbd("--> DU Tenant")
+    du_url = read_kbd("--> DU URL", True)
+    du_user = read_kbd("--> DU Username", True)
+    du_password = read_kbd("--> DU Password", False)
+    du_tenant = read_kbd("--> DU Tenant", True)
     return(du_url,du_user,du_password,du_tenant)
 
 
