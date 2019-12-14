@@ -220,6 +220,7 @@ def get_du_info(du_entries):
         project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
         if token == None:
             auth_status = "Failed"
+            region_type = ""
         else:
             auth_status = "OK"
             region_type = get_du_type(du['url'], project_id, token)
