@@ -23,30 +23,25 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # functions
 def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True):
-    if sys.version_info[0] == 2:
-        if flag_echo == True:
-            input_is_valid = False
-            while not input_is_valid:
+    if flag_echo == True:
+        input_is_valid = False
+        while not input_is_valid:
+            if sys.version_info[0] == 3:
+                user_input = input("{} [{}]: ".format(user_prompt,default_value))
+            if sys.version_info[0] == 2:
                 user_input = raw_input("{} [{}]: ".format(user_prompt,default_value))
-                if user_input == "":
-                    user_input = default_value
-                    input_is_valid = True
-                else:
-                    if len(allowed_values) == 0:
-                        input_is_valid = True
-                    else:
-                        if user_input in allowed_values:
-                            input_is_valid = True
-        else:
-            user_input = getpass.getpass(prompt="{}: ".format(user_prompt), stream=None)
 
-    if sys.version_info[0] == 3:
-        if flag_echo == True:
-            user_input = input("{} [{}]: ".format(user_prompt,default_value))
             if user_input == "":
                 user_input = default_value
-        else:
-            user_input = getpass.getpass(prompt='Password: ', stream=None)
+                input_is_valid = True
+            else:
+                if len(allowed_values) == 0:
+                    input_is_valid = True
+                else:
+                    if user_input in allowed_values:
+                        input_is_valid = True
+    else:
+        user_input = getpass.getpass(prompt="{}: ".format(user_prompt), stream=None)
 
     return(user_input)
 
