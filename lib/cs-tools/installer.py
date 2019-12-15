@@ -86,6 +86,7 @@ def login_du(du_url,du_user,du_password,du_tenant):
 def get_host_metadata(du, project_id, token):
     host_metadata = {}
     region_type = get_du_type(du['url'], project_id, token)
+    host_metadata['record_source'] = "User-Defined"
     host_metadata['ip'] = read_kbd("--> IP Address", [], '', True)
     if region_type == "KVM":
         host_metadata['bond_config'] = read_kbd("--> Bond Config", [], '', True)
@@ -198,7 +199,7 @@ def get_du_type(du_url, project_id, token):
     return(region_type)
 
 
-def get_du_info(du_entries):
+def report_du_info(du_entries):
     from prettytable import PrettyTable
 
     if not os.path.isfile(CONFIG_FILE):
@@ -231,6 +232,14 @@ def get_du_info(du_entries):
     print(du_table)
 
 
+def map_yn(map_key):
+    if map_key == "y":
+        return("Enabled")
+    elif map_key == "n":
+        return("Disabled")
+    else:
+        return("failed-to-map")
+
 def get_host_info(host_entries):
     from prettytable import PrettyTable
 
@@ -238,20 +247,46 @@ def get_host_info(host_entries):
         sys.stdout.write("\nNo hosts have been defined yet (run 'Add/Update Host')\n")
         return()
 
-    host_table = PrettyTable()
-    host_table.field_names = ["IP","Nova","Glance","Cinder","Designate","Node Type","Cluster Name"]
-    host_table.align["IP"] = "l"
-    host_table.align["Nova"] = "l"
-    host_table.align["Glance"] = "l"
-    host_table.align["Cinder"] = "l"
-    host_table.align["Designate"] = "l"
-    host_table.align["Node Type"] = "l"
-    host_table.align["Cluster Name"] = "l"
+    if len(host_entries) == 0:
+        sys.stdout.write("\nNo hosts have been defined yet (run 'Add/Update Host')\n")
+        return()
+    
+    du_metadata = get_du_metadata(host_entries[0]['du_url'])
+    project_id, token = login_du(du_metadata['url'],du_metadata['username'],du_metadata['password'],du_metadata['tenant'])
+    if token == None:
+        sys.stdout.write("--> failed to login to region")
+    else:
+        region_type = get_du_type(du_metadata['url'], project_id, token)
 
-    for host in host_entries:
-        host_table.add_row([host['ip'], host['nova'], host['glance'], host['cinder'], host['designate'], host['node_type'], host['cluster_name']])
+    if region_type == "KVM":
+        host_table = PrettyTable()
+        host_table.field_names = ["IP","Source","Nova","Glance","Cinder","Designate","Bond Config"]
+        host_table.align["IP"] = "l"
+        host_table.align["Source"] = "l"
+        host_table.align["Nova"] = "l"
+        host_table.align["Glance"] = "l"
+        host_table.align["Cinder"] = "l"
+        host_table.align["Designate"] = "l"
+        host_table.align["Bond Config"] = "l"
+        for host in host_entries:
+            host_table.add_row([host['ip'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config']])
+        print(host_table)
 
-    print(host_table)
+    if region_type == "Kubernetes":
+        host_table = PrettyTable()
+        host_table.field_names = ["IP","Source","Node Type","Cluster Name"]
+        host_table.align["IP"] = "l"
+        host_table.align["Source"] = "l"
+        host_table.align["Node Type"] = "l"
+        host_table.align["Cluster Name"] = "l"
+        for host in host_entries:
+            if host['cluster_name'] == "":
+                cluster_assigned = "Unassigned"
+            else:
+                cluster_assigned = host['cluster_name']
+
+            host_table.add_row([host['ip'], host['record_source'], host['node_type'], cluster_assigned])
+        print(host_table)
 
 
 def select_du():
@@ -283,6 +318,19 @@ def get_configs():
             du_configs = json.load(json_file)
 
     return(du_configs)
+
+
+def get_du_metadata(du_url):
+    du_config = {}
+    if os.path.isfile(CONFIG_FILE):
+        with open(CONFIG_FILE) as json_file:
+            du_configs = json.load(json_file)
+        for du in du_configs:
+            if du['url'] == du_url:
+                du_config = dict(du)
+                break
+
+    return(du_config)
 
 
 def get_hosts(du_url):
@@ -338,6 +386,7 @@ def add_host(du):
         host = {
             'du_url': du['url'],
             'ip': host_metadata['ip'],
+            'record_source': host_metadata['record_source'],
             'bond_config': host_metadata['bond_config'],
             'nova': host_metadata['nova'],
             'glance': host_metadata['glance'],
@@ -399,13 +448,13 @@ def cmd_loop():
             new_du = add_region()
             new_du_list = []
             new_du_list.append(new_du)
-            get_du_info(new_du_list)
+            report_du_info(new_du_list)
         elif user_input == '2':
             selected_du = select_du()
             new_host = add_host(selected_du)
         elif user_input == '3':
             du_entries = get_configs()
-            get_du_info(du_entries)
+            report_du_info(du_entries)
         elif user_input == '4':
             selected_du = select_du()
             host_entries = get_hosts(selected_du['url'])
