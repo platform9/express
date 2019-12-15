@@ -11,11 +11,9 @@ if not sys.version_info[0] in (2,3):
 
 # module imports
 try:
-    import requests,urllib3,json,argparse,signal,prettytable,getpass
+    import requests,urllib3,json,argparse,prettytable,signal,getpass
 except:
     fail("Failed to import module\n{}".format(sys.exc_info()))
-
-from prettytable import PrettyTable
 
 # disable ssl warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -201,8 +199,10 @@ def get_du_type(du_url, project_id, token):
 
 
 def get_du_info(du_entries):
+    from prettytable import PrettyTable
+
     if not os.path.isfile(CONFIG_FILE):
-        sys.stdout.write("\nNo regions have been defined yet (run 'Add Region')\n")
+        sys.stdout.write("\nNo regions have been defined yet (run 'Add/Update Region')\n")
         return()
 
     du_table = PrettyTable()
@@ -231,15 +231,38 @@ def get_du_info(du_entries):
     print(du_table)
 
 
+def get_host_info(host_entries):
+    from prettytable import PrettyTable
+
+    if not os.path.isfile(HOST_FILE):
+        sys.stdout.write("\nNo hosts have been defined yet (run 'Add/Update Host')\n")
+        return()
+
+    host_table = PrettyTable()
+    host_table.field_names = ["IP","Nova","Glance","Cinder","Designate","Node Type","Cluster Name"]
+    host_table.align["IP"] = "l"
+    host_table.align["Nova"] = "l"
+    host_table.align["Glance"] = "l"
+    host_table.align["Cinder"] = "l"
+    host_table.align["Designate"] = "l"
+    host_table.align["Node Type"] = "l"
+    host_table.align["Cluster Name"] = "l"
+
+    for host in host_entries:
+        host_table.add_row([host['ip'], host['nova'], host['glance'], host['cinder'], host['designate'], host['node_type'], host['cluster_name']])
+
+    print(host_table)
+
+
 def select_du():
     if not os.path.isdir(CONFIG_DIR):
-        sys.stdout.write("\nNo regions have been defined yet (run 'Add Region')\n")
+        sys.stdout.write("\nNo regions have been defined yet (run 'Add/Update Region')\n")
     elif not os.path.isfile(CONFIG_FILE):
-        sys.stdout.write("\nNo regions have been defined yet (run 'Add Region')\n")
+        sys.stdout.write("\nNo regions have been defined yet (run 'Add/Update Region')\n")
     else:
         current_config = get_configs()
         if len(current_config) == 0:
-            sys.stdout.write("\nNo regions have been defined yet (run 'Add Region')\n")
+            sys.stdout.write("\nNo regions have been defined yet (run 'Add/Update Region')\n")
         else:
             cnt = 1
             allowed_values = []
@@ -262,13 +285,21 @@ def get_configs():
     return(du_configs)
 
 
-def get_hosts():
+def get_hosts(du_url):
     du_hosts = []
     if os.path.isfile(HOST_FILE):
         with open(HOST_FILE) as json_file:
             du_hosts = json.load(json_file)
 
-    return(du_hosts)
+    if du_url == None:
+        filtered_hosts = list(du_hosts)
+    else:
+        filtered_hosts = []
+        for du in du_hosts:
+            if du['du_url'] == du_url:
+                filtered_hosts.append(du)
+
+    return(filtered_hosts)
 
 
 def write_host(host):
@@ -278,7 +309,7 @@ def write_host(host):
         except:
             fail("failed to create directory: {}".format(CONFIG_DIR))
 
-    current_hosts = get_hosts()
+    current_hosts = get_hosts(None)
     current_hosts.append(host)
     with open(HOST_FILE, 'w') as outfile:
         json.dump(current_hosts, outfile)
@@ -351,10 +382,11 @@ def display_menu():
     sys.stdout.write("*****************************************\n")
     sys.stdout.write("**              Main Menu              **\n")
     sys.stdout.write("*****************************************\n")
-    sys.stdout.write("1. Add Region\n")
-    sys.stdout.write("2. Show Region\n")
-    sys.stdout.write("3. Add Hosts to Region (KVM/K8s Nodes)\n")
-    sys.stdout.write("4. Configure/Attach Hosts to Region\n")
+    sys.stdout.write("1. Add/Edit Region\n")
+    sys.stdout.write("2. Add/Edit Hosts\n")
+    sys.stdout.write("3. Show Region\n")
+    sys.stdout.write("4. Show Hosts\n")
+    sys.stdout.write("5. Attach Hosts to Region\n")
     sys.stdout.write("*****************************************\n")
 
 
@@ -369,12 +401,16 @@ def cmd_loop():
             new_du_list.append(new_du)
             get_du_info(new_du_list)
         elif user_input == '2':
-            du_entries = get_configs()
-            get_du_info(du_entries)
-        elif user_input == '3':
             selected_du = select_du()
             new_host = add_host(selected_du)
+        elif user_input == '3':
+            du_entries = get_configs()
+            get_du_info(du_entries)
         elif user_input == '4':
+            selected_du = select_du()
+            host_entries = get_hosts(selected_du['url'])
+            get_host_info(host_entries)
+        elif user_input == '5':
             None
         elif user_input in ['q','Q']:
             None
