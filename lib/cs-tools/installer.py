@@ -2,6 +2,8 @@ import os
 import sys
 from os.path import expanduser
 
+################################################################################
+# early functions
 def fail(m=None):
     sys.stdout.write("ASSERT: {}\n".format(m))
     sys.exit(1)
@@ -9,9 +11,10 @@ def fail(m=None):
 if not sys.version_info[0] in (2,3):
     fail("Unsupported Python Version: {}\n".format(sys.version_info[0]))
 
+################################################################################
 # module imports
 try:
-    import requests,urllib3,json,argparse,prettytable,signal,getpass
+    import requests,urllib3,json,argparse,prettytable,signal,getpass,argparse
 except:
     fail("Failed to import module\n{}".format(sys.exc_info()))
 
@@ -19,7 +22,13 @@ except:
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-# functions
+################################################################################
+# input functions
+def _parse_args():
+    ap = argparse.ArgumentParser(sys.argv[0],formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ap.add_argument("--init", "-i", help="Initialize Configuration (delete all regions/hosts)", action="store_true")
+    return ap.parse_args()
+
 def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True):
     if flag_echo == True:
         input_is_valid = False
@@ -44,6 +53,8 @@ def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True):
     return(user_input)
 
 
+################################################################################
+# du functions
 def login(du_host, username, password, project_name):
     url = "{}/keystone/v3/auth/tokens?nocatalog".format(du_host)
     body = {
@@ -83,12 +94,15 @@ def login_du(du_url,du_user,du_password,du_tenant):
     return(project_id, token)
 
 
+################################################################################
+# host functions
 def get_host_metadata(du, project_id, token):
     host_metadata = {}
     region_type = get_du_type(du['url'], project_id, token)
     host_metadata['record_source'] = "User-Defined"
-    host_metadata['ip'] = read_kbd("--> IP Address", [], '', True)
     host_metadata['hostname'] = read_kbd("--> Hostname", [], '', True)
+    host_metadata['ip'] = read_kbd("--> Primary IP Address", [], '', True)
+    host_metadata['ip_interfaces'] = ""
     if region_type == "KVM":
         host_metadata['bond_config'] = read_kbd("--> Bond Config", [], '', True)
         host_metadata['nova'] = read_kbd("--> Enable Nova", ['y','n'], 'y', True)
@@ -112,6 +126,9 @@ def get_host_metadata(du, project_id, token):
 
     return(host_metadata)
 
+
+################################################################################
+# du/region functions
 def get_du_creds():
     du_metadata = {}
     du_metadata['du_url'] = read_kbd("--> DU URL", [], '', True)
@@ -140,6 +157,8 @@ def get_du_creds():
     return(du_metadata)
 
 
+################################################################################
+# api functions
 def qbert_is_responding(du_url, project_id, token):
     try:
         api_endpoint = "qbert/v3/{}/nodes".format(project_id)
@@ -186,16 +205,13 @@ def discover_du_hosts(du_url, project_id, token):
     # process discovered hosts
     cnt = 0
     for host in json_response:
-        #print("----------------------------------------------------------------------------")
-        #sys.stdout.write("--> INTERFACES: {}\n".format(host['extensions']['interfaces']))
-        #print("----------------------------------------------------------------------------")
-        #sys.stdout.write("--> IP_ADDRESS: {}\n".format(host['extensions']['ip_address']))
-        #print("============================================================================")
-        #sys.exit(0)
+        # IP Data:
+        #    host['extensions']['interfaces']
+        #    host['extensions']['ip_address']
 
         # get IP
         try:
-            discover_ips = host['extensions']['ip_address']['data'][0]
+            discover_ips = ",".join(host['extensions']['ip_address']['data'])
         except:
             discover_ips = "no-data"
 
@@ -219,7 +235,8 @@ def discover_du_hosts(du_url, project_id, token):
 
         host_record = {
             'du_url': du_url,
-            'ip': discover_ips,
+            'ip': "",
+            'ip_interfaces': discover_ips,
             'hostname': host['info']['hostname'],
             'record_source': "Discovered",
             'bond_config': "",
@@ -333,9 +350,10 @@ def report_host_info(host_entries):
 
     if region_type == "KVM":
         host_table = PrettyTable()
-        host_table.field_names = ["HOSTNAME","IP","Source","Nova","Glance","Cinder","Designate","Bond Config"]
+        host_table.field_names = ["HOSTNAME","Primary IP","Source","Nova","Glance","Cinder","Designate","Bond Config","IP Interfaces"]
         host_table.align["HOSTNAME"] = "l"
-        host_table.align["IP"] = "l"
+        host_table.align["Primary IP"] = "l"
+        host_table.align["IP Interfaces"] = "l"
         host_table.align["Source"] = "l"
         host_table.align["Nova"] = "l"
         host_table.align["Glance"] = "l"
@@ -343,14 +361,15 @@ def report_host_info(host_entries):
         host_table.align["Designate"] = "l"
         host_table.align["Bond Config"] = "l"
         for host in host_entries:
-            host_table.add_row([host['hostname'],host['ip'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config']])
+            host_table.add_row([host['hostname'],host['ip'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config'],host['ip_interfaces']])
         print(host_table)
 
     if region_type == "Kubernetes":
         host_table = PrettyTable()
-        host_table.field_names = ["HOSTNAME","IP","Source","Node Type","Cluster Name"]
+        host_table.field_names = ["HOSTNAME","Primary IP","Source","Node Type","Cluster Name","IP Interfaces"]
         host_table.align["HOSTNAME"] = "l"
-        host_table.align["IP"] = "l"
+        host_table.align["Primary IP"] = "l"
+        host_table.align["IP Interfaces"] = "l"
         host_table.align["Source"] = "l"
         host_table.align["Node Type"] = "l"
         host_table.align["Cluster Name"] = "l"
@@ -360,7 +379,7 @@ def report_host_info(host_entries):
             else:
                 cluster_assigned = host['cluster_name']
 
-            host_table.add_row([host['hostname'], host['ip'], host['record_source'], host['node_type'], cluster_assigned])
+            host_table.add_row([host['hostname'], host['ip'], host['record_source'], host['node_type'], cluster_assigned, host['ip_interfaces']])
         print(host_table)
 
 
@@ -526,12 +545,16 @@ def add_region():
     }
 
     # discovery existing hosts
+    sys.stdout.write("\nPerforming Host Discovery\n")
+    sys.stdout.write("--> Region URL = {}\n".format(du['url']))
     project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
     discoverd_hosts = discover_du_hosts(du['url'], project_id, token)
+    sys.stdout.write("--> persisting hosts (in {})\n".format(HOST_FILE))
     for host in discoverd_hosts:
         write_host(host)
 
     # persist configurtion
+    sys.stdout.write("--> persisting region metadata (in {})\n".format(CONFIG_FILE))
     write_config(du)
 
     # return
@@ -559,11 +582,13 @@ def cmd_loop():
             new_du = add_region()
             new_du_list = []
             new_du_list.append(new_du)
+            sys.stdout.write("\nLogging into Region\n")
             report_du_info(new_du_list)
         elif user_input == '2':
             selected_du = select_du()
             new_host = add_host(selected_du)
         elif user_input == '3':
+            sys.stdout.write("\nLogging into Region(s)\n")
             du_entries = get_configs()
             report_du_info(du_entries)
         elif user_input == '4':
@@ -581,12 +606,23 @@ def cmd_loop():
 
 
 ## main
+args = _parse_args()
 
 # globals
 HOME_DIR = expanduser("~")
 CONFIG_DIR = "{}/.pf9-wizard".format(HOME_DIR)
 CONFIG_FILE = "{}/du.conf".format(CONFIG_DIR)
 HOST_FILE = "{}/hosts.conf".format(CONFIG_DIR)
+
+# perform initialization (if invoked with '--init')
+if args.init:
+    sys.stdout.write("Initializing Configuration\n")
+    sys.stdout.write("--> deleting {}\n".format(HOST_FILE))
+    if os.path.isfile(HOST_FILE):
+        os.remove(HOST_FILE)
+    sys.stdout.write("--> deleting {}\n".format(CONFIG_FILE))
+    if os.path.isfile(CONFIG_FILE):
+        os.remove(CONFIG_FILE)
 
 # main menu loop
 cmd_loop()
