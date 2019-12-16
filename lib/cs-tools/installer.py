@@ -568,8 +568,9 @@ def cmd_loop():
             report_du_info(du_entries)
         elif user_input == '4':
             selected_du = select_du()
-            host_entries = get_hosts(selected_du['url'])
-            report_host_info(host_entries)
+            if selected_du != None:
+                host_entries = get_hosts(selected_du['url'])
+                report_host_info(host_entries)
         elif user_input == '5':
             None
         elif user_input in ['q','Q']:
