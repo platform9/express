@@ -639,7 +639,8 @@ def display_menu():
     sys.stdout.write("2. Add/Edit Hosts\n")
     sys.stdout.write("3. Show Region\n")
     sys.stdout.write("4. Show Hosts\n")
-    sys.stdout.write("5. Attach Hosts to Region\n")
+    sys.stdout.write("5. Attach Hosts to Region (PF9-Express)\n")
+    sys.stdout.write("6. Maintenance\n")
     sys.stdout.write("*****************************************\n")
 
 
