@@ -116,9 +116,9 @@ def get_host_metadata(du, project_id, token):
         host_node_type = host_settings['node_type']
         host_pf9_kube = host_settings['pf9-kube']
         host_cluster_name = host_settings['cluster_name']
+        host_metadata['ip_interfaces'] = host_settings['ip_interfaces']
     else:
         host_ip = ""
-        host_ip_interfaces = ""
         host_bond_config = ""
         host_nova = "y"
         host_glance = "n"
@@ -127,9 +127,9 @@ def get_host_metadata(du, project_id, token):
         host_node_type = ""
         host_pf9_kube = "n"
         host_cluster_name = ""
+        host_metadata['ip_interfaces'] = ""
 
     host_metadata['ip'] = read_kbd("--> Primary IP Address", [], host_ip, True)
-    host_metadata['ip_interfaces'] = ""
     if region_type == "KVM":
         host_metadata['bond_config'] = read_kbd("--> Bond Config", [], host_bond_config, True)
         host_metadata['nova'] = read_kbd("--> Enable Nova", ['y','n'], host_nova, True)
@@ -578,6 +578,7 @@ def add_host(du):
         host = {
             'du_url': du['url'],
             'ip': host_metadata['ip'],
+            'ip_interfaces': host_metadata['ip_interfaces'],
             'hostname': host_metadata['hostname'],
             'record_source': host_metadata['record_source'],
             'bond_config': host_metadata['bond_config'],
@@ -631,7 +632,7 @@ def add_region():
     return(du)
 
 
-def display_menu():
+def display_menu0():
     sys.stdout.write("*****************************************\n")
     sys.stdout.write("**              Main Menu              **\n")
     sys.stdout.write("*****************************************\n")
@@ -644,10 +645,10 @@ def display_menu():
     sys.stdout.write("*****************************************\n")
 
 
-def cmd_loop():
+def menu_level0():
     user_input = ""
     while not user_input in ['q','Q']:
-        display_menu()
+        display_menu0()
         user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True)
         if user_input == '1':
             new_du = add_region()
@@ -696,4 +697,4 @@ if args.init:
         os.remove(CONFIG_FILE)
 
 # main menu loop
-cmd_loop()
+menu_level0()
