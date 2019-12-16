@@ -271,6 +271,42 @@ def qbert_get_primary_ip(du_url, project_id, token, node_uuid):
     return primary_ip
 
 
+def qbert_get_cluster_uuid(du_url, project_id, token, node_uuid):
+    cluster_uuid = ""
+    try:
+        api_endpoint = "qbert/v3/{}/nodes/{}".format(project_id, node_uuid)
+        headers = { 'content-type': 'application/json', 'X-Auth-Token': token }
+        pf9_response = requests.get("{}/{}".format(du_url,api_endpoint), verify=False, headers=headers)
+        if pf9_response.status_code == 200:
+            try:
+                json_response = json.loads(pf9_response.text)
+                return(json_response['clusterUuid'])
+            except:
+                return(cluster_uuid)
+    except:
+        return cluster_uuid
+
+    return cluster_uuid
+
+
+def qbert_get_cluster_name(du_url, project_id, token, cluster_uuid):
+    cluster_name = ""
+    try:
+        api_endpoint = "qbert/v3/{}/clusters/{}".format(project_id, cluster_uuid)
+        headers = { 'content-type': 'application/json', 'X-Auth-Token': token }
+        pf9_response = requests.get("{}/{}".format(du_url,api_endpoint), verify=False, headers=headers)
+        if pf9_response.status_code == 200:
+            try:
+                json_response = json.loads(pf9_response.text)
+                return(json_response['name'])
+            except:
+                return(cluster_name)
+    except:
+        return cluster_name
+
+    return cluster_name
+
+
 def credsmanager_is_responding(du_url, project_id, token):
     try:
         api_endpoint = "credsmanager"
@@ -331,6 +367,8 @@ def discover_du_hosts(du_url, project_id, token):
 
         qbert_nodetype = qbert_get_nodetype(du_url, project_id, token, host['id'])
         qbert_primary_ip = qbert_get_primary_ip(du_url, project_id, token, host['id'])
+        qbert_cluster_uuid = qbert_get_cluster_uuid(du_url, project_id, token, host['id'])
+        qbert_cluster_name = qbert_get_cluster_name(du_url, project_id, token, qbert_cluster_uuid)
 
         host_record = {
             'du_url': du_url,
@@ -346,7 +384,7 @@ def discover_du_hosts(du_url, project_id, token):
             'cinder': role_cinder,
             'designate': role_designate,
             'node_type': qbert_nodetype,
-            'cluster_name': ""
+            'cluster_name': qbert_cluster_name
         }
         discovered_hosts.append(host_record)
 
