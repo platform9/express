@@ -24,12 +24,12 @@
 - debug: msg="TOKEN = {{api_token.stdout.strip()}}"
 
 - block:
-  - debug: msg="URI = https://{{ctrl_ip}}/qbert/v1/clusters/{{cluster_uuid}}/attach"
+  - debug: msg="URI = https://{{du_fqdn}}/qbert/v1/clusters/{{cluster_uuid}}/attach"
   - debug: msg="BODY = {{host_id.stdout.strip()}}"
 
   - name: "Attaching to Cluster : UUID = {{cluster_uuid}}"
     uri:
-      url: "https://{{ctrl_ip}}/qbert/v1/clusters/{{cluster_uuid}}/attach"
+      url: "https://{{du_fqdn}}/qbert/v1/clusters/{{cluster_uuid}}/attach"
       method: POST
       body: "['{{host_id.stdout.strip()}}']"
       body_format: json

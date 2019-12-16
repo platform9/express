@@ -1,26 +1,20 @@
 ---
-- name: stage agent download script
-  template:
-    src: files/pf9_get_hostagent.py.j2
-    dest: /tmp/pf9_get_hostagent.py
-    mode: 0755
 
-- name: Download Platform9 installers
-  shell: "./pf9_get_hostagent.py --account_endpoint {{du_fqdn}} --region {{os_region}} --user {{os_username}} --password '{{os_password}}' --tenant {{os_tenant}} --platform {{ansible_os_family|lower}}"
-  args:
-    chdir: "/tmp"
-  when: proxy_url is undefined
+- name: Check if the certless installer is available
+  uri:
+    url: "https://{{du_fqdn}}/clarity/platform9-install-{{ansible_os_family|lower}}.sh"
+    method: "HEAD"
+    status_code: [200, 404]
+    timeout: 30 
+  register: result
 
-- name: Download Platform9 installers
-  shell: "./pf9_get_hostagent.py --account_endpoint {{du_fqdn}} --region {{os_region}} --user {{os_username}} --password '{{os_password}}' --tenant {{os_tenant}} --proxy {{proxy_url}} --platform {{ansible_os_family|lower}}"
-  args:
-    chdir: "/tmp"
-  when: proxy_url is defined
+- name: Set if certless installer to true
+  set_fact:
+    is_certless_installer: "true"
+  when: result.status == 200
 
-- include: packages.yml
+- include: classic-hostagent-setup.yml
+  when: is_certless_installer is undefined
 
-- name: Enable and start pf9-hostagent
-  service:
-    name: pf9-hostagent
-    state: started
-    enabled: yes
+- include: certless-hostinstaller-setup.yml
+  when: is_certless_installer is defined
