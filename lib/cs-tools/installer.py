@@ -88,6 +88,7 @@ def get_host_metadata(du, project_id, token):
     region_type = get_du_type(du['url'], project_id, token)
     host_metadata['record_source'] = "User-Defined"
     host_metadata['ip'] = read_kbd("--> IP Address", [], '', True)
+    host_metadata['hostname'] = read_kbd("--> Hostname", [], '', True)
     if region_type == "KVM":
         host_metadata['bond_config'] = read_kbd("--> Bond Config", [], '', True)
         host_metadata['nova'] = read_kbd("--> Enable Nova", ['y','n'], 'y', True)
@@ -95,6 +96,7 @@ def get_host_metadata(du, project_id, token):
         host_metadata['cinder'] = read_kbd("--> Enable Cinder", ['y','n'], 'n', True)
         host_metadata['designate'] = read_kbd("--> Enable Designate", ['y','n'], 'n', True)
         host_metadata['node_type'] = ""
+        host_metadata['pf9-kube'] = "n"
         host_metadata['cluster_name'] = ""
     elif region_type == "Kubernetes":
         host_metadata['bond_config'] = ""
@@ -102,6 +104,7 @@ def get_host_metadata(du, project_id, token):
         host_metadata['glance'] = ""
         host_metadata['cinder'] = ""
         host_metadata['designate'] = ""
+        host_metadata['pf9-kube'] = "y"
         host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], '', True)
         host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], '', True)
     elif region_type == "VMware":
@@ -112,9 +115,9 @@ def get_host_metadata(du, project_id, token):
 def get_du_creds():
     du_metadata = {}
     du_metadata['du_url'] = read_kbd("--> DU URL", [], '', True)
-    du_metadata['du_user'] = read_kbd("--> DU Username", [], 'admin@platform9.net', True)
+    du_metadata['du_user'] = read_kbd("--> DU Username", [], 'pf9-kubeheat', True)
     du_metadata['du_password'] = read_kbd("--> DU Password", [], '', False)
-    du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], 'service', True)
+    du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], 'svc-pmo', True)
     du_metadata['region_name'] = read_kbd("--> Region Name", [], '', True)
     du_metadata['region_proxy'] = read_kbd("--> Proxy", [], '', True)
     du_metadata['region_dns'] = read_kbd("--> DNS Server (comma-delimited list or IPs)", [], '', True)
@@ -161,6 +164,76 @@ def credsmanager_is_responding(du_url, project_id, token):
         return False
 
     return False
+
+
+def discover_du_hosts(du_url, project_id, token):
+    discovered_hosts = []
+    try:
+        api_endpoint = "resmgr/v1/hosts"
+        headers = { 'content-type': 'application/json', 'X-Auth-Token': token }
+        pf9_response = requests.get("{}/{}".format(du_url,api_endpoint), verify=False, headers=headers)
+        if pf9_response.status_code != 200:
+            return(discovered_hosts)
+    except:
+        return(discovered_hosts)
+
+    # parse resmgr response
+    try:
+        json_response = json.loads(pf9_response.text)
+    except:
+        return(discovered_hosts)
+
+    # process discovered hosts
+    cnt = 0
+    for host in json_response:
+        #print("----------------------------------------------------------------------------")
+        #sys.stdout.write("--> INTERFACES: {}\n".format(host['extensions']['interfaces']))
+        #print("----------------------------------------------------------------------------")
+        #sys.stdout.write("--> IP_ADDRESS: {}\n".format(host['extensions']['ip_address']))
+        #print("============================================================================")
+        #sys.exit(0)
+
+        # get IP
+        try:
+            discover_ips = host['extensions']['ip_address']['data'][0]
+        except:
+            discover_ips = "no-data"
+
+        # get roles
+        role_kube = "n"
+        role_nova = "n"
+        role_glance = "n"
+        role_cinder = "n"
+        role_designate = "n"
+        for role in host['roles']:
+            if role == "pf9-kube":
+                role_kube = "y"
+            if role == "pf9-glance-role":
+                role_glance = "y"
+            if role == "pf9-cindervolume-base":
+                role_cinder = "y"
+            if role == "pf9-ostackhost-neutron":
+                role_nova = "y"
+            if role == "pf9-designate":
+                role_designate = "y"
+
+        host_record = {
+            'du_url': du_url,
+            'ip': discover_ips,
+            'hostname': host['info']['hostname'],
+            'record_source': "Discovered",
+            'bond_config': "",
+            'pf9-kube': role_kube,
+            'nova': role_nova,
+            'glance': role_glance,
+            'cinder': role_cinder,
+            'designate': role_designate,
+            'node_type': "",
+            'cluster_name': ""
+        }
+        discovered_hosts.append(host_record)
+
+    return(discovered_hosts)
 
 
 def get_du_hosts(du_url, project_id, token):
@@ -240,7 +313,7 @@ def map_yn(map_key):
     else:
         return("failed-to-map")
 
-def get_host_info(host_entries):
+def report_host_info(host_entries):
     from prettytable import PrettyTable
 
     if not os.path.isfile(HOST_FILE):
@@ -260,7 +333,8 @@ def get_host_info(host_entries):
 
     if region_type == "KVM":
         host_table = PrettyTable()
-        host_table.field_names = ["IP","Source","Nova","Glance","Cinder","Designate","Bond Config"]
+        host_table.field_names = ["HOSTNAME","IP","Source","Nova","Glance","Cinder","Designate","Bond Config"]
+        host_table.align["HOSTNAME"] = "l"
         host_table.align["IP"] = "l"
         host_table.align["Source"] = "l"
         host_table.align["Nova"] = "l"
@@ -269,12 +343,13 @@ def get_host_info(host_entries):
         host_table.align["Designate"] = "l"
         host_table.align["Bond Config"] = "l"
         for host in host_entries:
-            host_table.add_row([host['ip'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config']])
+            host_table.add_row([host['hostname'],host['ip'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config']])
         print(host_table)
 
     if region_type == "Kubernetes":
         host_table = PrettyTable()
-        host_table.field_names = ["IP","Source","Node Type","Cluster Name"]
+        host_table.field_names = ["HOSTNAME","IP","Source","Node Type","Cluster Name"]
+        host_table.align["HOSTNAME"] = "l"
         host_table.align["IP"] = "l"
         host_table.align["Source"] = "l"
         host_table.align["Node Type"] = "l"
@@ -285,7 +360,7 @@ def get_host_info(host_entries):
             else:
                 cluster_assigned = host['cluster_name']
 
-            host_table.add_row([host['ip'], host['record_source'], host['node_type'], cluster_assigned])
+            host_table.add_row([host['hostname'], host['ip'], host['record_source'], host['node_type'], cluster_assigned])
         print(host_table)
 
 
@@ -358,9 +433,23 @@ def write_host(host):
             fail("failed to create directory: {}".format(CONFIG_DIR))
 
     current_hosts = get_hosts(None)
-    current_hosts.append(host)
-    with open(HOST_FILE, 'w') as outfile:
-        json.dump(current_hosts, outfile)
+    if len(current_hosts) == 0:
+        current_hosts.append(host)
+        with open(HOST_FILE, 'w') as outfile:
+            json.dump(current_hosts, outfile)
+    else:
+        update_hosts = []
+        flag_found = False
+        for h in current_hosts:
+            if h['hostname'] == host['hostname']:
+                update_hosts.append(host)
+                flag_found = True
+            else:
+                update_hosts.append(h)
+        if not flag_found:
+            update_hosts.append(host)
+        with open(HOST_FILE, 'w') as outfile:
+            json.dump(update_hosts, outfile)
 
 
 def write_config(du):
@@ -371,9 +460,23 @@ def write_config(du):
             fail("failed to create directory: {}".format(CONFIG_DIR))
 
     current_config = get_configs()
-    current_config.append(du)
-    with open(CONFIG_FILE, 'w') as outfile:
-        json.dump(current_config, outfile)
+    if len(current_config) == 0:
+        current_config.append(du)
+        with open(CONFIG_FILE, 'w') as outfile:
+            json.dump(current_config, outfile)
+    else:
+        update_config = []
+        flag_found = False
+        for config in current_config:
+            if config['url'] == du['url']:
+                update_config.append(du)
+                flag_found = True
+            else:
+                update_config.append(config)
+        if not flag_found:
+            update_config.append(du)
+        with open(CONFIG_FILE, 'w') as outfile:
+            json.dump(update_config, outfile)
 
 
 def add_host(du):
@@ -386,8 +489,10 @@ def add_host(du):
         host = {
             'du_url': du['url'],
             'ip': host_metadata['ip'],
+            'hostname': host_metadata['hostname'],
             'record_source': host_metadata['record_source'],
             'bond_config': host_metadata['bond_config'],
+            'pf9-kube': host_metadata['pf9-kube'],
             'nova': host_metadata['nova'],
             'glance': host_metadata['glance'],
             'cinder': host_metadata['cinder'],
@@ -419,6 +524,12 @@ def add_region():
         'bond_mode': du_metadata['region_bond_mode'],
         'bond_mtu': du_metadata['region_bond_mtu']
     }
+
+    # discovery existing hosts
+    project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
+    discoverd_hosts = discover_du_hosts(du['url'], project_id, token)
+    for host in discoverd_hosts:
+        write_host(host)
 
     # persist configurtion
     write_config(du)
@@ -458,7 +569,7 @@ def cmd_loop():
         elif user_input == '4':
             selected_du = select_du()
             host_entries = get_hosts(selected_du['url'])
-            get_host_info(host_entries)
+            report_host_info(host_entries)
         elif user_input == '5':
             None
         elif user_input in ['q','Q']:
@@ -467,79 +578,6 @@ def cmd_loop():
             sys.stdout.write("ERROR: Invalid Selection\n")
         sys.stdout.write("\n")
 
-
-#####################################################################
-## pf9-express.conf
-#####################################################################
-# manage_hostname|false
-# manage_resolver|false
-# dns_resolver1|8.8.8.8
-# dns_resolver2|8.8.4.4
-# os_tenant|svc-pmo
-# du_url|https://danwright.platform9.horse
-# os_username|pf9-kubeheat
-# os_password|Pl@tform9
-# os_region|k8s01
-# proxy_url|-
-
-# Host Params:
-# [KVM]
-# - IP
-# - Roles [Nova, Glance, Cinder, Designate]
-#
-# [K8s]
-# - IP
-# - Node Type [Master, Worker]
-# - Cluster UUID
-
-#####################################################################
-## pf9-express/lib/hosts
-#####################################################################
-# [all]
-# [all:vars]
-# ansible_user=ubuntu
-# ansible_sudo_pass=winterwonderland
-# ansible_ssh_pass=winterwonderland
-# ansible_ssh_private_key_file=~/.ssh/id_rsa
-# 
-# manage_network=True
-# bond_ifname=bond0
-# bond_mode=1
-# bond_mtu=9000
-# 
-# [bond_config]
-# hv01 bond_members='eth1' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.11","mask":"255.255.255.0"}]'
-# 
-# [pmo:children]
-# hypervisors
-# glance
-# cinder
-# 
-# [hypervisors]
-# hv01 ansible_host=10.0.0.11 vm_console_ip=10.0.0.11 ha_cluster_ip=10.0.1.11 tunnel_ip=10.0.2.11 dhcp=on snat=on
-# hv02 ansible_host=10.0.0.12 vm_console_ip=10.0.0.12 tunnel_ip=10.0.2.12 dhcp=on snat=on
-# hv03 ansible_host=10.0.0.13 vm_console_ip=10.0.0.13 tunnel_ip=10.0.2.13
-# hv04 ansible_host=10.0.0.14
-# 
-# [glance]
-# hv01 glance_ip=10.0.3.11 glance_public_endpoint=True
-# hv02 glance_ip=10.0.3.12
-# 
-# [cinder]
-# hv02 cinder_ip=10.0.4.14 pvs=["/dev/sdb","/dev/sdc","/dev/sdd","/dev/sde"]
-# 
-# [designate]
-# hv01
-# 
-# [pmk:children]
-# k8s_master
-# k8s_worker
-# 
-# [k8s_master]
-# cv01 ansible_host=10.0.0.15
-# 
-# [k8s_worker]
-# cv04 ansible_host=10.0.0.18 cluster_uuid=7273706d-afd5-44ea-8fbf-901ceb6bef27
 
 ## main
 
