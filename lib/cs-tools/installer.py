@@ -101,14 +101,41 @@ def get_host_metadata(du, project_id, token):
     region_type = get_du_type(du['url'], project_id, token)
     host_metadata['record_source'] = "User-Defined"
     host_metadata['hostname'] = read_kbd("--> Hostname", [], '', True)
-    host_metadata['ip'] = read_kbd("--> Primary IP Address", [], '', True)
+
+    # get current host settings (if already defined)
+    host_settings = get_host_record(du['url'], host_metadata['hostname'])
+    print(host_settings)
+    if host_settings:
+        host_ip = host_settings['ip']
+        host_ip_interfaces = host_settings['ip_interfaces']
+        host_bond_config = host_settings['bond_config']
+        host_nova = host_settings['nova']
+        host_glance = host_settings['glance']
+        host_cinder = host_settings['cinder']
+        host_designate = host_settings['designate']
+        host_node_type = host_settings['node_type']
+        host_pf9_kube = host_settings['pf9-kube']
+        host_cluster_name = host_settings['cluster_name']
+    else:
+        host_ip = ""
+        host_ip_interfaces = ""
+        host_bond_config = ""
+        host_nova = "y"
+        host_glance = "n"
+        host_cinder = "n"
+        host_designate = "n"
+        host_node_type = ""
+        host_pf9_kube = "n"
+        host_cluster_name = ""
+
+    host_metadata['ip'] = read_kbd("--> Primary IP Address", [], host_ip, True)
     host_metadata['ip_interfaces'] = ""
     if region_type == "KVM":
-        host_metadata['bond_config'] = read_kbd("--> Bond Config", [], '', True)
-        host_metadata['nova'] = read_kbd("--> Enable Nova", ['y','n'], 'y', True)
-        host_metadata['glance'] = read_kbd("--> Enable Glance", ['y','n'], 'n', True)
-        host_metadata['cinder'] = read_kbd("--> Enable Cinder", ['y','n'], 'n', True)
-        host_metadata['designate'] = read_kbd("--> Enable Designate", ['y','n'], 'n', True)
+        host_metadata['bond_config'] = read_kbd("--> Bond Config", [], host_bond_config, True)
+        host_metadata['nova'] = read_kbd("--> Enable Nova", ['y','n'], host_nova, True)
+        host_metadata['glance'] = read_kbd("--> Enable Glance", ['y','n'], host_glance, True)
+        host_metadata['cinder'] = read_kbd("--> Enable Cinder", ['y','n'], host_cinder, True)
+        host_metadata['designate'] = read_kbd("--> Enable Designate", ['y','n'], host_designate, True)
         host_metadata['node_type'] = ""
         host_metadata['pf9-kube'] = "n"
         host_metadata['cluster_name'] = ""
@@ -119,8 +146,8 @@ def get_host_metadata(du, project_id, token):
         host_metadata['cinder'] = ""
         host_metadata['designate'] = ""
         host_metadata['pf9-kube'] = "y"
-        host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], '', True)
-        host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], '', True)
+        host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], host_node_type, True)
+        host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], host_cluster_name, True)
     elif region_type == "VMware":
         sys.stdout.write("\nERROR: Unsupported region type: {}".format(region_type))
 
@@ -132,28 +159,59 @@ def get_host_metadata(du, project_id, token):
 def get_du_creds():
     du_metadata = {}
     du_metadata['du_url'] = read_kbd("--> DU URL", [], '', True)
-    du_metadata['du_user'] = read_kbd("--> DU Username", [], 'pf9-kubeheat', True)
-    du_metadata['du_password'] = read_kbd("--> DU Password", [], '', False)
-    du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], 'svc-pmo', True)
-    du_metadata['region_name'] = read_kbd("--> Region Name", [], '', True)
-    du_metadata['region_proxy'] = read_kbd("--> Proxy", [], '', True)
-    du_metadata['region_dns'] = read_kbd("--> DNS Server (comma-delimited list or IPs)", [], '', True)
 
-    du_metadata['region_auth_type'] = read_kbd("--> Authentication Type ['simple','ssh-key']", ['simple','ssh-key'], 'simple', True)
-    du_metadata['auth_username'] = read_kbd("--> Username for Remote Access", [], '', True)
+    # get current du settings (if already defined)
+    du_settings = get_du_metadata(du_metadata['du_url'])
+    if du_settings:
+        du_user = du_settings['username']
+        du_password = du_settings['password']
+        du_tenant = du_settings['tenant']
+        region_name = du_settings['region']
+        region_proxy = du_settings['proxy']
+        region_dns = du_settings['dns_list']
+        region_auth_type = du_settings['auth_type']
+        auth_username = du_settings['auth_username']
+        auth_password = du_settings['auth_password']
+        auth_ssh_key = du_settings['auth_ssh_key']
+        region_bond_if_name = du_settings['bond_ifname']
+        region_bond_mode = du_settings['bond_mode']
+        region_bond_mtu = du_settings['bond_mtu']
+    else:
+        du_user = "pf9-kubeheat"
+        du_password = ""
+        du_tenant = "svc-pmo"
+        region_name = ""
+        region_proxy = ""
+        region_dns = ""
+        region_auth_type = "simple"
+        auth_username = ""
+        auth_password = ""
+        auth_ssh_key = ""
+        region_bond_if_name = "bond0"
+        region_bond_mode = "1"
+        region_bond_mtu = "9000"
+
+    du_metadata['du_user'] = read_kbd("--> DU Username", [], du_user, True)
+    du_metadata['du_password'] = read_kbd("--> DU Password", [], du_password, False)
+    du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], du_tenant, True)
+    du_metadata['region_name'] = read_kbd("--> Region Name", [], region_name, True)
+    du_metadata['region_proxy'] = read_kbd("--> Proxy", [], region_proxy, True)
+    du_metadata['region_dns'] = read_kbd("--> DNS Server (comma-delimited list or IPs)", [], region_dns, True)
+    du_metadata['region_auth_type'] = read_kbd("--> Authentication Type ['simple','ssh-key']", ['simple','ssh-key'], region_auth_type, True)
+    du_metadata['auth_username'] = read_kbd("--> Username for Remote Access", [], auth_username, True)
     if du_metadata['region_auth_type'] == "simple":
-        du_metadata['auth_password'] = read_kbd("--> Password for Remote Access", [], '', False)
+        du_metadata['auth_password'] = read_kbd("--> Password for Remote Access", [], auth_password, False)
     else:
         du_metadata['auth_password'] = ""
   
     if du_metadata['region_auth_type'] == "ssh-key":
-        du_metadata['auth_ssh_key'] = read_kbd("--> SSH Key for Remote Access", [], '', True)
+        du_metadata['auth_ssh_key'] = read_kbd("--> SSH Key for Remote Access", [], auth_ssh_key, True)
     else:
         du_metadata['auth_ssh_key'] = ""
 
-    du_metadata['region_bond_if_name'] = read_kbd("--> Interface Name (for OVS Bond)", [], 'bond0', True)
-    du_metadata['region_bond_mode'] = read_kbd("--> Bond Mode", [], '1', True)
-    du_metadata['region_bond_mtu'] = read_kbd("--> MTU for Bond Interface", [], '9000', True)
+    du_metadata['region_bond_if_name'] = read_kbd("--> Interface Name (for OVS Bond)", [], region_bond_if_name, True)
+    du_metadata['region_bond_mode'] = read_kbd("--> Bond Mode", [], region_bond_mode, True)
+    du_metadata['region_bond_mtu'] = read_kbd("--> MTU for Bond Interface", [], region_bond_mtu, True)
     return(du_metadata)
 
 
@@ -413,6 +471,18 @@ def get_configs():
 
     return(du_configs)
 
+
+def get_host_record(du_url, hostname):
+    host_metadata = {}
+    if os.path.isfile(HOST_FILE):
+        with open(HOST_FILE) as json_file:
+            host_configs = json.load(json_file)
+        for host in host_configs:
+            if host['du_url'] == du_url and host['hostname'] == hostname:
+                host_metadata = dict(host)
+                break
+
+    return(host_metadata)
 
 def get_du_metadata(du_url):
     du_config = {}
