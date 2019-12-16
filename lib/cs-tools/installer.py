@@ -104,7 +104,6 @@ def get_host_metadata(du, project_id, token):
 
     # get current host settings (if already defined)
     host_settings = get_host_record(du['url'], host_metadata['hostname'])
-    print(host_settings)
     if host_settings:
         host_ip = host_settings['ip']
         host_ip_interfaces = host_settings['ip_interfaces']
@@ -117,6 +116,7 @@ def get_host_metadata(du, project_id, token):
         host_pf9_kube = host_settings['pf9-kube']
         host_cluster_name = host_settings['cluster_name']
         host_metadata['ip_interfaces'] = host_settings['ip_interfaces']
+        host_metadata['uuid'] = host_settings['uuid']
     else:
         host_ip = ""
         host_bond_config = ""
@@ -128,6 +128,7 @@ def get_host_metadata(du, project_id, token):
         host_pf9_kube = "n"
         host_cluster_name = ""
         host_metadata['ip_interfaces'] = ""
+        host_metadata['uuid'] = ""
 
     host_metadata['ip'] = read_kbd("--> Primary IP Address", [], host_ip, True)
     if region_type == "KVM":
@@ -230,6 +231,46 @@ def qbert_is_responding(du_url, project_id, token):
     return False
 
 
+def qbert_get_nodetype(du_url, project_id, token, node_uuid):
+    node_type = ""
+    try:
+        api_endpoint = "qbert/v3/{}/nodes/{}".format(project_id, node_uuid)
+        headers = { 'content-type': 'application/json', 'X-Auth-Token': token }
+        pf9_response = requests.get("{}/{}".format(du_url,api_endpoint), verify=False, headers=headers)
+        if pf9_response.status_code == 200:
+            try:
+                json_response = json.loads(pf9_response.text)
+                if json_response['isMaster'] == 1:
+                    return("master")
+                else:
+                    return("worker")
+
+            except:
+                return(node_type)
+    except:
+        return node_type
+
+    return node_type
+
+
+def qbert_get_primary_ip(du_url, project_id, token, node_uuid):
+    primary_ip = ""
+    try:
+        api_endpoint = "qbert/v3/{}/nodes/{}".format(project_id, node_uuid)
+        headers = { 'content-type': 'application/json', 'X-Auth-Token': token }
+        pf9_response = requests.get("{}/{}".format(du_url,api_endpoint), verify=False, headers=headers)
+        if pf9_response.status_code == 200:
+            try:
+                json_response = json.loads(pf9_response.text)
+                return(json_response['primaryIp'])
+            except:
+                return(primary_ip)
+    except:
+        return primary_ip
+
+    return primary_ip
+
+
 def credsmanager_is_responding(du_url, project_id, token):
     try:
         api_endpoint = "credsmanager"
@@ -244,6 +285,7 @@ def credsmanager_is_responding(du_url, project_id, token):
 
 
 def discover_du_hosts(du_url, project_id, token):
+
     discovered_hosts = []
     try:
         api_endpoint = "resmgr/v1/hosts"
@@ -263,10 +305,6 @@ def discover_du_hosts(du_url, project_id, token):
     # process discovered hosts
     cnt = 0
     for host in json_response:
-        # IP Data:
-        #    host['extensions']['interfaces']
-        #    host['extensions']['ip_address']
-
         # get IP
         try:
             discover_ips = ",".join(host['extensions']['ip_address']['data'])
@@ -291,9 +329,13 @@ def discover_du_hosts(du_url, project_id, token):
             if role == "pf9-designate":
                 role_designate = "y"
 
+        qbert_nodetype = qbert_get_nodetype(du_url, project_id, token, host['id'])
+        qbert_primary_ip = qbert_get_primary_ip(du_url, project_id, token, host['id'])
+
         host_record = {
             'du_url': du_url,
-            'ip': "",
+            'ip': qbert_primary_ip,
+            'uuid': host['id'],
             'ip_interfaces': discover_ips,
             'hostname': host['info']['hostname'],
             'record_source': "Discovered",
@@ -303,7 +345,7 @@ def discover_du_hosts(du_url, project_id, token):
             'glance': role_glance,
             'cinder': role_cinder,
             'designate': role_designate,
-            'node_type': "",
+            'node_type': qbert_nodetype,
             'cluster_name': ""
         }
         discovered_hosts.append(host_record)
@@ -578,6 +620,7 @@ def add_host(du):
         host = {
             'du_url': du['url'],
             'ip': host_metadata['ip'],
+            'uuid': host_metadata['uuid'],
             'ip_interfaces': host_metadata['ip_interfaces'],
             'hostname': host_metadata['hostname'],
             'record_source': host_metadata['record_source'],
@@ -632,8 +675,27 @@ def add_region():
     return(du)
 
 
+def dump_database(db_file):
+    if os.path.isfile(db_file):
+        with open(db_file) as json_file:
+            db_json = json.load(json_file)
+        print(db_json)
+
+def display_menu1():
+    sys.stdout.write("*****************************************\n")
+    sys.stdout.write("**         Maintenance Menu            **\n")
+    sys.stdout.write("*****************************************\n")
+    sys.stdout.write("1. Delete Region\n")
+    sys.stdout.write("2. Delete Host\n")
+    sys.stdout.write("3. Display Region Database (raw dump)\n")
+    sys.stdout.write("4. Display Host Database (raw dump)\n")
+    sys.stdout.write("5. Install Platform9 Express\n")
+    sys.stdout.write("*****************************************\n")
+
+
 def display_menu0():
     sys.stdout.write("*****************************************\n")
+    sys.stdout.write("**          Platform9 Wizard           **\n")
     sys.stdout.write("**              Main Menu              **\n")
     sys.stdout.write("*****************************************\n")
     sys.stdout.write("1. Add/Edit Region\n")
@@ -643,6 +705,28 @@ def display_menu0():
     sys.stdout.write("5. Attach Hosts to Region (PF9-Express)\n")
     sys.stdout.write("6. Maintenance\n")
     sys.stdout.write("*****************************************\n")
+
+
+def menu_level1():
+    user_input = ""
+    while not user_input in ['q','Q']:
+        display_menu1()
+        user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True)
+        if user_input == '1':
+            sys.stdout.write("\nNot Implemented\n")
+        elif user_input == '2':
+            sys.stdout.write("\nNot Implemented\n")
+        elif user_input == '3':
+            dump_database(CONFIG_FILE)
+        elif user_input == '4':
+            dump_database(HOST_FILE)
+        elif user_input == '5':
+            sys.stdout.write("\nNot Implemented\n")
+        elif user_input in ['q','Q']:
+            None
+        else:
+            sys.stdout.write("ERROR: Invalid Selection\n")
+        sys.stdout.write("\n")
 
 
 def menu_level0():
@@ -670,6 +754,8 @@ def menu_level0():
                 report_host_info(host_entries)
         elif user_input == '5':
             None
+        elif user_input == '6':
+            menu_level1()
         elif user_input in ['q','Q']:
             None
         else:
