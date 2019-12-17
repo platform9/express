@@ -590,7 +590,6 @@ def select_du():
                 allowed_values.append(str(cnt))
                 cnt += 1
             user_input = read_kbd("\nSelect Region", allowed_values, '', True)
-            print("type={} [{}]".format(type(user_input),user_input))
             idx = int(user_input) - 1
             return(current_config[idx])
         return({})
