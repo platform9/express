@@ -590,9 +590,11 @@ def select_du():
                 allowed_values.append(str(cnt))
                 cnt += 1
             user_input = read_kbd("\nSelect Region", allowed_values, '', True)
+            print("type={} [{}]".format(type(user_input),user_input))
             idx = int(user_input) - 1
             return(current_config[idx])
         return({})
+
 
 def get_configs():
     du_configs = []
@@ -910,16 +912,43 @@ def build_express_inventory(du, host_entries):
     return(express_inventory)
 
 
-def install_express():
+def checkout_branch(git_branch):
+    cmd = "cd {} && git checkout {}".format(EXPRESS_INSTALL_DIR, git_branch)
+    exit_status, stdout = run_cmd(cmd)
+
+    current_branch = get_express_branch(git_branch)
+    if current_branch != git_branch:
+        return(False)
+
+    return(True)
+
+
+def get_express_branch(git_branch):
+    if not os.path.isdir(EXPRESS_INSTALL_DIR):
+        return(None)
+
+    cmd = "cd {} && git symbolic-ref --short -q HEAD".format(EXPRESS_INSTALL_DIR)
+    exit_status, stdout = run_cmd(cmd)
+    if exit_status != 0:
+        return(none)
+
+    return(stdout[0].strip())
+    
+
+def install_express(du):
     if not os.path.isdir(EXPRESS_INSTALL_DIR):
         cmd = "git clone {} {}".format(EXPRESS_REPO, EXPRESS_INSTALL_DIR)
         exit_status, stdout = run_cmd(cmd)
-        if exit_status == 0:
-            return(True)
-        else:
-            sys.stdout.write("{}\n".format(stdout))
+        if not os.path.isdir(EXPRESS_INSTALL_DIR):
+            sys.stdout.write("ERROR: failed to clone PF9-Express Repository\n")
             return(False)
 
+    current_branch = get_express_branch(du['git_branch'])
+    if current_branch != du['git_branch']:
+        if (checkout_branch(du['git_branch'])) == False:
+            sys.stdout.write("ERROR: failed to checkout git branch: {}\n".format(du['git_branch']))
+            return(False)
+ 
     return(True)
 
 
@@ -945,7 +974,7 @@ def run_express(du, host_entries):
     if express_config:
         express_inventory = build_express_inventory(du, host_entries)
         if express_inventory:
-            flag_installed = install_express()
+            flag_installed = install_express(du)
             if flag_installed == True:
                 invoke_express(express_config, express_inventory)
 
