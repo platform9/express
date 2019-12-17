@@ -167,6 +167,7 @@ def get_du_creds():
         du_user = du_settings['username']
         du_password = du_settings['password']
         du_tenant = du_settings['tenant']
+        git_branch = du_settings['git_branch']
         region_name = du_settings['region']
         region_proxy = du_settings['proxy']
         region_dns = du_settings['dns_list']
@@ -181,6 +182,7 @@ def get_du_creds():
         du_user = "pf9-kubeheat"
         du_password = ""
         du_tenant = "svc-pmo"
+        git_branch = "master"
         region_name = ""
         region_proxy = ""
         region_dns = ""
@@ -195,6 +197,7 @@ def get_du_creds():
     du_metadata['du_user'] = read_kbd("--> DU Username", [], du_user, True)
     du_metadata['du_password'] = read_kbd("--> DU Password", [], du_password, False)
     du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], du_tenant, True)
+    du_metadata['git_branch'] = read_kbd("--> GIT Branch (for PF9-Express)", [], git_branch, True)
     du_metadata['region_name'] = read_kbd("--> Region Name", [], region_name, True)
     du_metadata['region_proxy'] = read_kbd("--> Proxy", [], region_proxy, True)
     du_metadata['region_dns'] = read_kbd("--> DNS Server (comma-delimited list or IPs)", [], region_dns, True)
@@ -435,13 +438,15 @@ def report_du_info(du_entries):
         return()
 
     du_table = PrettyTable()
-    du_table.field_names = ["DU URL","Auth","Region Type","Region Name","Tenant","Proxy","# Hosts"]
+    du_table.field_names = ["DU URL","DU Auth","Region Type","Region Name","Tenant","Git Branch","SSH Auth Type","SSH User","# Hosts"]
     du_table.align["DU URL"] = "l"
-    du_table.align["Auth"] = "l"
+    du_table.align["DU Auth"] = "l"
     du_table.align["Region Type"] = "l"
     du_table.align["Region Name"] = "l"
     du_table.align["Tenant"] = "l"
-    du_table.align["Proxy"] = "l"
+    du_table.align["Git Branch"] = "l"
+    du_table.align["SSH Auth Type"] = "l"
+    du_table.align["SSH User"] = "l"
     du_table.align["# Hosts"] = "l"
 
     for du in du_entries:
@@ -453,9 +458,15 @@ def report_du_info(du_entries):
         else:
             auth_status = "OK"
             region_type = get_du_type(du['url'], project_id, token)
-            num_hosts = get_du_hosts(du['url'], project_id, token)
+            if du['auth_type'] == "ssh-key":
+                ssh_keypass = du['auth_ssh_key']
+            else:
+                ssh_keypass = "********"
+            num_discovered_hosts = get_du_hosts(du['url'], project_id, token)
+            num_defined_hosts = get_defined_hosts(du['url'])
+            num_hosts = num_discovered_hosts + num_defined_hosts
 
-        du_table.add_row([du['url'], auth_status, region_type, du['region'], du['tenant'], du['proxy'], num_hosts])
+        du_table.add_row([du['url'], auth_status, region_type, du['region'], du['tenant'], du['git_branch'], du['auth_type'], du['auth_username'], num_hosts])
 
     print(du_table)
 
@@ -467,6 +478,33 @@ def map_yn(map_key):
         return("Disabled")
     else:
         return("failed-to-map")
+
+def ssh_validate_login(du_metadata, host_ip):
+    if du_metadata['auth_type'] == "simple":
+        return(False)
+    elif du_metadata['auth_type'] == "ssh-key":
+        cmd = "ssh -o StrictHostKeyChecking=no -i {} {}@{} 'echo 201'".format(du_metadata['auth_ssh_key'], du_metadata['auth_username'], host_ip)
+        exit_status, stdout = run_cmd(cmd)
+        if exit_status == 0:
+            return(True)
+        else:
+            return(False)
+
+    return(False)
+
+
+def get_defined_hosts(du_url):
+    num_discovered_hosts = 0
+
+    if os.path.isfile(HOST_FILE):
+        with open(HOST_FILE) as json_file:
+            host_configs = json.load(json_file)
+        for host in host_configs:
+            if host['du_url'] == du_url:
+                num_discovered_hosts += 1
+
+    return(num_discovered_hosts)
+
 
 def report_host_info(host_entries):
     from prettytable import PrettyTable
@@ -488,9 +526,10 @@ def report_host_info(host_entries):
 
     if region_type == "KVM":
         host_table = PrettyTable()
-        host_table.field_names = ["HOSTNAME","Primary IP","Source","Nova","Glance","Cinder","Designate","Bond Config","IP Interfaces"]
+        host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Nova","Glance","Cinder","Designate","Bond Config","IP Interfaces"]
         host_table.align["HOSTNAME"] = "l"
         host_table.align["Primary IP"] = "l"
+        host_table.align["SSH Auth"] = "l"
         host_table.align["IP Interfaces"] = "l"
         host_table.align["Source"] = "l"
         host_table.align["Nova"] = "l"
@@ -499,25 +538,37 @@ def report_host_info(host_entries):
         host_table.align["Designate"] = "l"
         host_table.align["Bond Config"] = "l"
         for host in host_entries:
-            host_table.add_row([host['hostname'],host['ip'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config'],host['ip_interfaces']])
+            ssh_status = ssh_validate_login(du_metadata, host['ip'])
+            if ssh_status == True:
+                ssh_status = "OK"
+            else:
+                ssh_status = "Failed"
+            host_table.add_row([host['hostname'],host['ip'], ssh_status, host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config'],host['ip_interfaces']])
         print(host_table)
 
     if region_type == "Kubernetes":
         host_table = PrettyTable()
-        host_table.field_names = ["HOSTNAME","Primary IP","Source","Node Type","Cluster Name","IP Interfaces"]
+        host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Node Type","Cluster Name","IP Interfaces"]
         host_table.align["HOSTNAME"] = "l"
         host_table.align["Primary IP"] = "l"
+        host_table.align["SSH Auth"] = "l"
         host_table.align["IP Interfaces"] = "l"
         host_table.align["Source"] = "l"
         host_table.align["Node Type"] = "l"
         host_table.align["Cluster Name"] = "l"
         for host in host_entries:
+            ssh_status = ssh_validate_login(du_metadata, host['ip'])
+            if ssh_status == True:
+                ssh_status = "OK"
+            else:
+                ssh_status = "Failed"
+
             if host['cluster_name'] == "":
                 cluster_assigned = "Unassigned"
             else:
                 cluster_assigned = host['cluster_name']
 
-            host_table.add_row([host['hostname'], host['ip'], host['record_source'], host['node_type'], cluster_assigned, host['ip_interfaces']])
+            host_table.add_row([host['hostname'], host['ip'], ssh_status, host['record_source'], host['node_type'], cluster_assigned, host['ip_interfaces']])
         print(host_table)
 
 
@@ -684,6 +735,7 @@ def add_region():
         'username': du_metadata['du_user'],
         'password': du_metadata['du_password'],
         'tenant': du_metadata['du_tenant'],
+        'git_branch': du_metadata['git_branch'],
         'region': du_metadata['region_name'],
         'proxy': du_metadata['region_proxy'],
         'dns_list': du_metadata['region_dns'],
@@ -713,14 +765,216 @@ def add_region():
     return(du)
 
 
+#######################################################################
+# data model
+#######################################################################
+# du = {
+#   "username": "admin@platform.net", 
+#   "auth_type": "ssh-key", 
+#   "password": "", 
+#   "url": "",
+#   "region": "", 
+#   "dns_list": "", 
+#   "bond_ifname": "bond0", 
+#   "bond_mode": "1", 
+#   "proxy": "", 
+#   "auth_password": "", 
+#   "auth_username": "", 
+#   "auth_ssh_key": "", 
+#   "bond_mtu": "", 
+#   "tenant": "service"
+# }
+#######################################################################
+# host = {
+#   "pf9-kube": "", 
+#   "uuid": "", 
+#   "bond_config": "", 
+#   "ip": "", 
+#   "hostname": "", 
+#   "record_source": "User-Defined|Discovered", 
+#   "nova": "y", 
+#   "ip_interfaces": "", 
+#   "cluster_name": "", 
+#   "du_url": "",
+#   "node_type": "", 
+#   "cinder": "", 
+#   "glance": "", 
+#   "designate": ""
+# }
+#######################################################################
+
+
+def build_express_config(du):
+    express_config = "{}/{}.conf".format(CONFIG_DIR, "{}".format(du['url'].replace('https://','')))
+    sys.stdout.write("--> Building configuration file: {}\n".format(express_config))
+
+    # write config file
+    try:
+        express_config_fh = open(express_config, "w")
+        express_config_fh.write("manage_hostname|false\n")
+        express_config_fh.write("manage_resolver|false\n")
+        express_config_fh.write("dns_resolver1|8.8.8.8\n")
+        express_config_fh.write("dns_resolver2|8.8.4.4\n")
+        express_config_fh.write("os_tenant|{}\n".format(du['tenant']))
+        express_config_fh.write("du_url|{}\n".format(du['url']))
+        express_config_fh.write("os_username|{}\n".format(du['username']))
+        express_config_fh.write("os_password|{}\n".format(du['password']))
+        express_config_fh.write("os_region|{}\n".format(du['region']))
+        express_config_fh.write("proxy_url|{}\n".format(du['proxy']))
+        express_config_fh.close()
+    except:
+        return(None)
+
+    # validate config was written
+    if not os.path.isfile(express_config):
+        return(None)
+
+    return(express_config)
+
+
+def build_express_inventory(du, host_entries):
+    express_inventory = "{}/{}.inv".format(CONFIG_DIR, "{}".format(du['url'].replace('https://','')))
+    sys.stdout.write("--> Building inventory file: {}\n".format(express_inventory))
+
+    # write inventory file
+    try:
+        express_inventory_fh = open(express_inventory, "w")
+        express_inventory_fh.write("# Built by pf9-wizard\n")
+        express_inventory_fh.write("[all]\n")
+        express_inventory_fh.write("[all:vars]\n")
+        express_inventory_fh.write("ansible_user={}\n".format(du['auth_username']))
+        if du['auth_type'] == "simple":
+            express_inventory_fh.write("ansible_sudo_pass={}\n".format(du['auth_password']))
+            express_inventory_fh.write("ansible_ssh_pass={}\n".format(du['auth_password']))
+        if du['auth_type'] == "ssh-key":
+            express_inventory_fh.write("ansible_ssh_private_key_file={}\n".format(du['auth_ssh_key']))
+        express_inventory_fh.write("manage_network=True\n")
+        express_inventory_fh.write("bond_ifname={}\n".format(du['bond_ifname']))
+        express_inventory_fh.write("bond_mode={}\n".format(du['bond_mode']))
+        express_inventory_fh.write("bond_mtu={}\n".format(du['bond_mtu']))
+
+        # manage bond stanza
+        express_inventory_fh.write("[bond_config]\n")
+        for host in host_entries:
+            if host['bond_config'] != "":
+                express_inventory_fh.write("{} {}\n".format(host['hostname'], host['bond_config']))
+
+        # manage openstack groups
+        express_inventory_fh.write("[pmo:children]\n")
+        express_inventory_fh.write("hypervisors\n")
+        express_inventory_fh.write("glance\n")
+        express_inventory_fh.write("cinder\n")
+
+        # manage hypervisors group
+        express_inventory_fh.write("[hypervisors]\n")
+        cnt = 0
+        for host in host_entries:
+            if cnt < 2:
+                express_inventory_fh.write("{} ansible_host={} vm_console_ip={} ha_cluster_ip={} tunnel_ip={} dhcp=on snat=on\n".format(host['hostname'],host['ip'],host['ip'],host['ip'],host['ip']))
+            else:
+                express_inventory_fh.write("{} ansible_host={} vm_console_ip={} ha_cluster_ip={} tunnel_ip={}\n".format(host['hostname'],host['ip'],host['ip'],host['ip'],host['ip']))
+            cnt += 1
+
+        # manage glance group
+        express_inventory_fh.write("[glance]\n")
+        cnt = 0
+        for host in host_entries:
+            if host['glance'] == "y":
+                if cnt < 1:
+                    express_inventory_fh.write("{} glance_ip={} glance_public_endpoint=True\n".format(host['hostname'],host['ip']))
+                else:
+                    express_inventory_fh.write("{} glance_ip={}\n".format(host['hostname'],host['ip']))
+            cnt += 1
+
+        # manage cinder group
+        express_inventory_fh.write("[cinder]\n")
+        for host in host_entries:
+            if host['cinder'] == "y":
+                express_inventory_fh.write("{} cinder_ip={} pvs=['/dev/sdb','/dev/sdc','/dev/sdd','/dev/sde']\n".format(host['hostname'],host['ip']))
+
+        # manage designate group
+        express_inventory_fh.write("[designate]\n")
+        for host in host_entries:
+            if host['designate'] == "y":
+                express_inventory_fh.write("{}\n".format(host['hostname']))
+
+        # close inventory file
+        express_inventory_fh.close()
+    except:
+        return(None)
+
+    # validate inventory was written
+    if not os.path.isfile(express_inventory):
+        return(None)
+
+    return(express_inventory)
+
+
+def install_express():
+    if not os.path.isdir(EXPRESS_INSTALL_DIR):
+        cmd = "git clone {} {}".format(EXPRESS_REPO, EXPRESS_INSTALL_DIR)
+        exit_status, stdout = run_cmd(cmd)
+        if exit_status == 0:
+            return(True)
+        else:
+            sys.stdout.write("{}\n".format(stdout))
+            return(False)
+
+    return(True)
+
+
+def invoke_express(express_config, express_inventory):
+    log = "/tmp/pf9-express.log"
+
+    sys.stdout.write("--> Instaling PF9-Express Prerequisites (log = {})\n".format(log))
+    cmd = "{} -i -c {} -v {} > {} 2>&1".format(PF9_EXPRESS, express_config, express_inventory, log)
+    exit_status, stdout = run_cmd(cmd)
+    if exit_status != 0:
+        sys.stdout.write("FAILED : prerequisites failed to install\n")
+
+    sys.stdout.write("--> Running PF9-Express (log = {})\n".format(log))
+    cmd = "{} -b -c {} -v {} hypervisors > {} 2>&1".format(PF9_EXPRESS, express_config, express_inventory, log)
+    exit_status, stdout = run_cmd(cmd)
+    for line in stdout:
+        sys.stdout.write(line)
+
+
+def run_express(du, host_entries):
+    sys.stdout.write("\nRunning PF9-Express\n")
+    express_config = build_express_config(du)
+    if express_config:
+        express_inventory = build_express_inventory(du, host_entries)
+        if express_inventory:
+            flag_installed = install_express()
+            if flag_installed == True:
+                invoke_express(express_config, express_inventory)
+
+
 def dump_database(db_file):
     if os.path.isfile(db_file):
         with open(db_file) as json_file:
             db_json = json.load(json_file)
         print(db_json)
 
+def run_cmd(cmd):
+    cmd_stdout = ""
+    tmpfile = "/tmp/pf9.{}.tmp".format(os.getppid())
+    cmd_exitcode = os.system("{} > {} 2>&1".format(cmd,tmpfile))
+
+    # read output of command
+    if os.path.isfile(tmpfile):
+        try:
+            fh_tmpfile = open(tmpfile, 'r')
+            cmd_stdout = fh_tmpfile.readlines()
+        except:
+            None
+
+    os.remove(tmpfile)
+    return cmd_exitcode, cmd_stdout
+
+
 def display_menu1():
-    sys.stdout.write("*****************************************\n")
+    sys.stdout.write("\n*****************************************\n")
     sys.stdout.write("**         Maintenance Menu            **\n")
     sys.stdout.write("*****************************************\n")
     sys.stdout.write("1. Delete Region\n")
@@ -791,14 +1045,19 @@ def menu_level0():
                 host_entries = get_hosts(selected_du['url'])
                 report_host_info(host_entries)
         elif user_input == '5':
-            None
+            selected_du = select_du()
+            if selected_du != None:
+                host_entries = get_hosts(selected_du['url'])
+                run_express(selected_du, host_entries)
         elif user_input == '6':
             menu_level1()
         elif user_input in ['q','Q']:
             None
         else:
             sys.stdout.write("ERROR: Invalid Selection\n")
-        sys.stdout.write("\n")
+
+        if user_input != '6':
+            sys.stdout.write("\n")
 
 
 ## main
@@ -809,6 +1068,9 @@ HOME_DIR = expanduser("~")
 CONFIG_DIR = "{}/.pf9-wizard".format(HOME_DIR)
 CONFIG_FILE = "{}/du.conf".format(CONFIG_DIR)
 HOST_FILE = "{}/hosts.conf".format(CONFIG_DIR)
+EXPRESS_REPO = "https://github.com/platform9/express.git"
+EXPRESS_INSTALL_DIR = "{}/.pf9-wizard/pf9-express".format(HOME_DIR)
+PF9_EXPRESS = "{}/.pf9-wizard/pf9-express/pf9-express".format(HOME_DIR)
 
 # perform initialization (if invoked with '--init')
 if args.init:
