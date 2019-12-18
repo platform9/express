@@ -1066,6 +1066,39 @@ def run_express(du, host_entries):
                 invoke_express(express_config, express_inventory, target_inventory)
 
 
+def view_log(log_files):
+    cnt = 1
+    allowed_values = []
+    for log_file in log_files:
+        sys.stdout.write("{}. {}\n".format(cnt,log_file))
+        allowed_values.append(str(cnt))
+        cnt += 1
+    user_input = read_kbd("\nSelect Log", allowed_values, '', True)
+    idx = int(user_input) - 1
+    target_log = log_files[idx]
+    target_log_path = "{}/{}".format(EXPRESS_LOG_DIR,target_log)
+
+    try:
+        log_fh = open(target_log_path,mode='r')
+        sys.stdout.write(log_fh.read())
+        log_fh.close()
+    except:
+        sys.stdout.write("failed to open log: {}/{}".format(EXPRESS_LOG_DIR,target_log))
+
+def get_logs():
+    log_files = []
+    if not os.path.isdir(EXPRESS_LOG_DIR):
+        return(log_files)
+
+    for r, d, f in os.walk(EXPRESS_LOG_DIR):
+        for file in f:
+            if file == ".keep":
+                continue
+            log_files.append(file)
+
+    return(log_files)
+
+
 def dump_database(db_file):
     if os.path.isfile(db_file):
         with open(db_file) as json_file:
@@ -1098,6 +1131,7 @@ def display_menu1():
     sys.stdout.write("3. Display Region Database (raw dump)\n")
     sys.stdout.write("4. Display Host Database (raw dump)\n")
     sys.stdout.write("5. Install Platform9 Express\n")
+    sys.stdout.write("6. View Last Log (from last run of PF9-Express)\n")
     sys.stdout.write("*****************************************\n")
 
 
@@ -1130,6 +1164,12 @@ def menu_level1():
             dump_database(HOST_FILE)
         elif user_input == '5':
             sys.stdout.write("\nNot Implemented\n")
+        elif user_input == '6':
+            log_files = get_logs()
+            if len(log_files) == 0:
+                sys.stdout.write("\nNo Logs Found")
+            else:
+                view_log(log_files)
         elif user_input in ['q','Q']:
             None
         else:
@@ -1187,6 +1227,7 @@ CONFIG_FILE = "{}/du.conf".format(CONFIG_DIR)
 HOST_FILE = "{}/hosts.conf".format(CONFIG_DIR)
 EXPRESS_REPO = "https://github.com/platform9/express.git"
 EXPRESS_INSTALL_DIR = "{}/.pf9-wizard/pf9-express".format(HOME_DIR)
+EXPRESS_LOG_DIR = "{}/.pf9-wizard/pf9-express/log".format(HOME_DIR)
 PF9_EXPRESS = "{}/.pf9-wizard/pf9-express/pf9-express".format(HOME_DIR)
 
 # perform initialization (if invoked with '--init')
