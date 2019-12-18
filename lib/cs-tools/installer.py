@@ -611,7 +611,7 @@ def report_host_info(host_entries):
             host_table.add_row([host['hostname'], host['ip'], ssh_status, host['record_source'], host['node_type'], cluster_assigned, host['ip_interfaces']])
             num_k8s_rows += 1
         if num_k8s_rows > 0:
-            if num_kvm_rows > 0:
+            if num_k8s_rows > 0:
                 sys.stdout.write("\n")
             sys.stdout.write("Kubernetes Hosts\n")
             print(host_table)
