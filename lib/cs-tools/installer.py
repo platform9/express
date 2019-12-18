@@ -389,6 +389,7 @@ def discover_du_hosts(du_url, project_id, token):
             'ip': qbert_primary_ip,
             'uuid': host['id'],
             'ip_interfaces': discover_ips,
+            'du_host_type': "kubernetes",
             'hostname': host['info']['hostname'],
             'record_source': "Discovered",
             'bond_config': "",
