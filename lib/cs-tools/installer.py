@@ -169,9 +169,30 @@ def get_host_metadata(du, project_id, token):
 ################################################################################
 # du/region functions
 def get_du_creds():
+    # initialize du data structure
     du_metadata = {}
 
+    # define du types
+    du_types = [
+        'KVM',
+        'Kubernetes',
+        'KVM/Kubernetes'
+    ]
+
+    # prompt for du type
+    cnt = 1
+    allowed_values = []
+    sys.stdout.write("\n")
+    for target_type in du_types:
+        sys.stdout.write("{}. {}\n".format(cnt,target_type))
+        allowed_values.append(str(cnt))
+        cnt += 1
+    user_input = read_kbd("\nSelect Region Type", allowed_values, '', True)
+    idx = int(user_input) - 1
+    selected_du_type = du_types[idx]
+
     # get du_url from user (handle missing https://)
+    sys.stdout.write("\nDefine DU Parameters\n")
     user_url = read_kbd("--> DU URL", [], '', True)
     if user_url.startswith('http://'):
         user_url = user_url.replace('http://','https://')
@@ -186,8 +207,9 @@ def get_du_creds():
         du_password = du_settings['password']
         du_tenant = du_settings['tenant']
         git_branch = du_settings['git_branch']
+        du_type = du_settings['du_type']
         region_name = du_settings['region']
-        region_proxy = du_settings['proxy']
+        region_proxy = du_settings['region_proxy']
         region_dns = du_settings['dns_list']
         region_auth_type = du_settings['auth_type']
         auth_username = du_settings['auth_username']
@@ -200,40 +222,54 @@ def get_du_creds():
         du_user = "pf9-kubeheat"
         du_password = ""
         du_tenant = "svc-pmo"
+        du_type = selected_du_type
         git_branch = "master"
         region_name = ""
         region_proxy = ""
         region_dns = ""
-        region_auth_type = "simple"
+        region_auth_type = "sshkey"
         auth_username = ""
         auth_password = ""
-        auth_ssh_key = ""
+        auth_ssh_key = "~/.ssh/id_rsa"
         region_bond_if_name = "bond0"
         region_bond_mode = "1"
         region_bond_mtu = "9000"
 
+    # set du type
+    du_metadata['du_type'] = selected_du_type
+
+    # get common du parameters
     du_metadata['du_user'] = read_kbd("--> DU Username", [], du_user, True)
     du_metadata['du_password'] = read_kbd("--> DU Password", [], du_password, False)
     du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], du_tenant, True)
     du_metadata['git_branch'] = read_kbd("--> GIT Branch (for PF9-Express)", [], git_branch, True)
     du_metadata['region_name'] = read_kbd("--> Region Name", [], region_name, True)
-    du_metadata['region_proxy'] = read_kbd("--> Proxy", [], region_proxy, True)
-    du_metadata['region_dns'] = read_kbd("--> DNS Server (comma-delimited list or IPs)", [], region_dns, True)
-    du_metadata['region_auth_type'] = read_kbd("--> Authentication Type ['simple','ssh-key']", ['simple','ssh-key'], region_auth_type, True)
+    du_metadata['region_auth_type'] = read_kbd("--> Authentication Type ['simple','sshkey']", ['simple','sshkey'], region_auth_type, True)
     du_metadata['auth_username'] = read_kbd("--> Username for Remote Access", [], auth_username, True)
     if du_metadata['region_auth_type'] == "simple":
         du_metadata['auth_password'] = read_kbd("--> Password for Remote Access", [], auth_password, False)
     else:
         du_metadata['auth_password'] = ""
   
-    if du_metadata['region_auth_type'] == "ssh-key":
+    if du_metadata['region_auth_type'] == "sshkey":
         du_metadata['auth_ssh_key'] = read_kbd("--> SSH Key for Remote Access", [], auth_ssh_key, True)
     else:
         du_metadata['auth_ssh_key'] = ""
 
-    du_metadata['region_bond_if_name'] = read_kbd("--> Interface Name (for OVS Bond)", [], region_bond_if_name, True)
-    du_metadata['region_bond_mode'] = read_kbd("--> Bond Mode", [], region_bond_mode, True)
-    du_metadata['region_bond_mtu'] = read_kbd("--> MTU for Bond Interface", [], region_bond_mtu, True)
+    # get du-specific parameters
+    if selected_du_type in ['KVM','KVM/Kubernetes']:
+        du_metadata['region_proxy'] = read_kbd("--> Proxy", [], region_proxy, True)
+        du_metadata['region_dns'] = read_kbd("--> DNS Server (comma-delimited list or IPs)", [], region_dns, True)
+        du_metadata['region_bond_if_name'] = read_kbd("--> Interface Name (for OVS Bond)", [], region_bond_if_name, True)
+        du_metadata['region_bond_mode'] = read_kbd("--> Bond Mode", [], region_bond_mode, True)
+        du_metadata['region_bond_mtu'] = read_kbd("--> MTU for Bond Interface", [], region_bond_mtu, True)
+    else:
+        du_metadata['region_proxy'] = ""
+        du_metadata['region_dns'] = ""
+        du_metadata['region_bond_if_name'] = ""
+        du_metadata['region_bond_mode'] = ""
+        du_metadata['region_bond_mtu'] = ""
+
     return(du_metadata)
 
 
@@ -479,7 +515,7 @@ def report_du_info(du_entries):
         else:
             auth_status = "OK"
             region_type = get_du_type(du['url'], project_id, token)
-            if du['auth_type'] == "ssh-key":
+            if du['auth_type'] == "sshkey":
                 ssh_keypass = du['auth_ssh_key']
             else:
                 ssh_keypass = "********"
@@ -503,7 +539,7 @@ def map_yn(map_key):
 def ssh_validate_login(du_metadata, host_ip):
     if du_metadata['auth_type'] == "simple":
         return(False)
-    elif du_metadata['auth_type'] == "ssh-key":
+    elif du_metadata['auth_type'] == "sshkey":
         cmd = "ssh -o StrictHostKeyChecking=no -i {} {}@{} 'echo 201'".format(du_metadata['auth_ssh_key'], du_metadata['auth_username'], host_ip)
         exit_status, stdout = run_cmd(cmd)
         if exit_status == 0:
@@ -770,12 +806,13 @@ def add_region():
     du_metadata = get_du_creds()
     du = {
         'url': du_metadata['du_url'],
+        'du_type': du_metadata['du_type'],
         'username': du_metadata['du_user'],
         'password': du_metadata['du_password'],
         'tenant': du_metadata['du_tenant'],
         'git_branch': du_metadata['git_branch'],
         'region': du_metadata['region_name'],
-        'proxy': du_metadata['region_proxy'],
+        'region_proxy': du_metadata['region_proxy'],
         'dns_list': du_metadata['region_dns'],
         'auth_type': du_metadata['region_auth_type'],
         'auth_ssh_key': du_metadata['auth_ssh_key'],
@@ -808,7 +845,7 @@ def add_region():
 #######################################################################
 # du = {
 #   "username": "admin@platform.net", 
-#   "auth_type": "ssh-key", 
+#   "auth_type": "sshkey", 
 #   "password": "", 
 #   "url": "",
 #   "region": "", 
@@ -884,7 +921,7 @@ def build_express_inventory(du, host_entries):
         if du['auth_type'] == "simple":
             express_inventory_fh.write("ansible_sudo_pass={}\n".format(du['auth_password']))
             express_inventory_fh.write("ansible_ssh_pass={}\n".format(du['auth_password']))
-        if du['auth_type'] == "ssh-key":
+        if du['auth_type'] == "sshkey":
             express_inventory_fh.write("ansible_ssh_private_key_file={}\n".format(du['auth_ssh_key']))
         express_inventory_fh.write("manage_network=True\n")
         express_inventory_fh.write("bond_ifname={}\n".format(du['bond_ifname']))
