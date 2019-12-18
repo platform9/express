@@ -170,7 +170,14 @@ def get_host_metadata(du, project_id, token):
 # du/region functions
 def get_du_creds():
     du_metadata = {}
-    du_metadata['du_url'] = read_kbd("--> DU URL", [], '', True)
+
+    # get du_url from user (handle missing https://)
+    user_url = read_kbd("--> DU URL", [], '', True)
+    if user_url.startswith('http://'):
+        user_url = user_url.replace('http://','https://')
+    if not user_url.startswith('https://'):
+        user_url = "https://{}".format(user_url)
+    du_metadata['du_url'] = user_url
 
     # get current du settings (if already defined)
     du_settings = get_du_metadata(du_metadata['du_url'])
