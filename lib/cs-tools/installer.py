@@ -421,6 +421,9 @@ def get_du_type(du_url, project_id, token):
     qbert_status = qbert_is_responding(du_url, project_id, token)
     if qbert_status == True:
         region_type = "Kubernetes"
+        credsmanager_status = credsmanager_is_responding(du_url, project_id, token)
+        if credsmanager_status == True:
+            region_type = "KVM/Kubernetes"
     else:
         credsmanager_status = credsmanager_is_responding(du_url, project_id, token)
         if credsmanager_status == True:
