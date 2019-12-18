@@ -14,7 +14,7 @@ if not sys.version_info[0] in (2,3):
 ################################################################################
 # module imports
 try:
-    import requests,urllib3,json,argparse,prettytable,signal,getpass,argparse
+    import requests,urllib3,json,argparse,prettytable,signal,getpass,argparse,subprocess,select,time
 except:
     except_str = str(sys.exc_info()[1])
     module_name = except_str.split(' ')[-1]
@@ -980,31 +980,90 @@ def install_express(du):
     return(True)
 
 
-def invoke_express(express_config, express_inventory):
-    log = "/tmp/pf9-express.log"
+def wait_for_job(p):
+    cnt = 0
+    minute = 1
+    while True:
+        if cnt == 0:
+            sys.stdout.write(".")
+        elif (cnt % 9) == 0:
+            sys.stdout.write("|")
+            if (minute % 6) == 0:
+                sys.stdout.write("\n")
+            cnt = -1
+            minute += 1
+        else:
+            sys.stdout.write(".")
+        sys.stdout.flush()
+        if p.poll() != None:
+            break
+        time.sleep(1)
+        cnt += 1
+    sys.stdout.write("\n")
 
-    sys.stdout.write("--> Instaling PF9-Express Prerequisites (log = {})\n".format(log))
-    cmd = "{} -i -c {} -v {} > {} 2>&1".format(PF9_EXPRESS, express_config, express_inventory, log)
-    exit_status, stdout = run_cmd(cmd)
-    if exit_status != 0:
-        sys.stdout.write("FAILED : prerequisites failed to install\n")
 
-    sys.stdout.write("--> Running PF9-Express (log = {})\n".format(log))
-    cmd = "{} -b -c {} -v {} hypervisors > {} 2>&1".format(PF9_EXPRESS, express_config, express_inventory, log)
-    exit_status, stdout = run_cmd(cmd)
-    for line in stdout:
-        sys.stdout.write(line)
+def tail_log(p):
+    last_line = None
+    while True:
+        current_line = p.stdout.readline()
+        sys.stdout.write(current_line)
+        if p.poll() != None:
+            if current_line == last_line:
+                sys.stdout.write("-------------------- PROCESS COMPETE --------------------\n")
+                break
+        last_line = current_line
+
+
+def invoke_express(express_config, express_inventory, target_inventory):
+    user_input = read_kbd("--> Installing PF9-Express Prerequisites, do you want to tail the log", ['y','n'], 'n', True)
+    p = subprocess.Popen([PF9_EXPRESS,'-i','-c',express_config],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    if user_input == 'y':
+        sys.stdout.write("----------------------------------- Start Log -----------------------------------\n")
+        tail_log(p)
+    else:
+        wait_for_job(p)
+
+    user_input = read_kbd("--> Running PF9-Express, do you want to tail the log", ['y','n'], 'n', True)
+    sys.stdout.write("Running: {} -b -c {} -v {} {}\n".format(PF9_EXPRESS,express_config,express_inventory,target_inventory))
+    p = subprocess.Popen([PF9_EXPRESS,'-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    if user_input == 'y':
+        sys.stdout.write("----------------------------------- Start Log -----------------------------------\n")
+        tail_log(p)
+    else:
+        wait_for_job(p)
 
 
 def run_express(du, host_entries):
-    sys.stdout.write("\nRunning PF9-Express\n")
+    sys.stdout.write("\nPF9-Express Inventory\n")
+    express_inventories = [
+        'all',
+        'hypervisors',
+        'glance',
+        'cinder',
+        'designate',
+        'k8s_master',
+        'k8s_worker'
+    ]
+
+    cnt = 1
+    allowed_values = []
+    for inventory in express_inventories:
+        sys.stdout.write("    {}. {}\n".format(cnt,inventory))
+        allowed_values.append(str(cnt))
+        cnt += 1
+    user_input = read_kbd("\nSelect Inventory (to run PF9-Express against)", allowed_values, '', True)
+    idx = int(user_input) - 1
+    target_inventory = express_inventories[idx]
+
+    sys.stdout.write("\nConfiguring PF9-Express\n")
     express_config = build_express_config(du)
     if express_config:
         express_inventory = build_express_inventory(du, host_entries)
         if express_inventory:
+            sys.stdout.write("\nRunning PF9-Express\n")
             flag_installed = install_express(du)
             if flag_installed == True:
-                invoke_express(express_config, express_inventory)
+                invoke_express(express_config, express_inventory, target_inventory)
 
 
 def dump_database(db_file):
