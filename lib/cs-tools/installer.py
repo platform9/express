@@ -99,12 +99,11 @@ def login_du(du_url,du_user,du_password,du_tenant):
 ################################################################################
 # host functions
 def get_host_metadata(du, project_id, token):
-    region_type = get_du_type(du['url'], project_id, token)
-    if region_type == "KVM":
+    if du['du_type'] == "KVM":
         du_host_type = "kvm"
-    elif region_type == "Kubernetes":
+    elif du['du_type'] == "Kubernetes":
         du_host_type = "kubernetes"
-    elif region_type == "KVM/Kubernetes":
+    elif du['du_type'] == "KVM/Kubernetes":
         du_host_type = read_kbd("--> Host Type ['kvm','kubernetes']", ['kvm','kubernetes'], 'kvm', True)
 
     # initialize host record
@@ -160,8 +159,6 @@ def get_host_metadata(du, project_id, token):
         host_metadata['pf9-kube'] = "y"
         host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], host_node_type, True)
         host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], host_cluster_name, True)
-    elif region_type == "VMware":
-        sys.stdout.write("\nERROR: Unsupported region type: {}".format(region_type))
 
     return(host_metadata)
 
@@ -228,7 +225,7 @@ def get_du_creds():
         region_proxy = ""
         region_dns = ""
         region_auth_type = "sshkey"
-        auth_username = ""
+        auth_username = "centos"
         auth_password = ""
         auth_ssh_key = "~/.ssh/id_rsa"
         region_bond_if_name = "bond0"
@@ -471,23 +468,6 @@ def get_du_hosts(du_url, project_id, token):
     return(num_hosts)
 
 
-def get_du_type(du_url, project_id, token):
-    region_type = "-"
-    qbert_status = qbert_is_responding(du_url, project_id, token)
-    if qbert_status == True:
-        region_type = "Kubernetes"
-        credsmanager_status = credsmanager_is_responding(du_url, project_id, token)
-        if credsmanager_status == True:
-            region_type = "KVM/Kubernetes"
-    else:
-        credsmanager_status = credsmanager_is_responding(du_url, project_id, token)
-        if credsmanager_status == True:
-            region_type = "KVM"
-        else:
-            region_type = "VMware"
-    return(region_type)
-
-
 def report_du_info(du_entries):
     from prettytable import PrettyTable
 
@@ -514,7 +494,6 @@ def report_du_info(du_entries):
             region_type = ""
         else:
             auth_status = "OK"
-            region_type = get_du_type(du['url'], project_id, token)
             if du['auth_type'] == "sshkey":
                 ssh_keypass = du['auth_ssh_key']
             else:
@@ -523,7 +502,7 @@ def report_du_info(du_entries):
             num_defined_hosts = get_defined_hosts(du['url'])
             num_hosts = num_discovered_hosts + num_defined_hosts
 
-        du_table.add_row([du['url'], auth_status, region_type, du['region'], du['tenant'], du['auth_type'], du['auth_username'], num_hosts])
+        du_table.add_row([du['url'], auth_status, du['du_type'], du['region'], du['tenant'], du['auth_type'], du['auth_username'], num_hosts])
 
     print(du_table)
 
@@ -575,13 +554,7 @@ def report_host_info(host_entries):
         return()
     
     du_metadata = get_du_metadata(host_entries[0]['du_url'])
-    project_id, token = login_du(du_metadata['url'],du_metadata['username'],du_metadata['password'],du_metadata['tenant'])
-    if token == None:
-        sys.stdout.write("--> failed to login to region")
-    else:
-        region_type = get_du_type(du_metadata['url'], project_id, token)
-
-    if region_type in ['KVM','KVM/Kubernetes']:
+    if du_metadata['du_type'] in ['KVM','KVM/Kubernetes']:
         host_table = PrettyTable()
         host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Nova","Glance","Cinder","Designate","Bond Config","IP Interfaces"]
         host_table.align["HOSTNAME"] = "l"
@@ -610,7 +583,7 @@ def report_host_info(host_entries):
             sys.stdout.write("KVM Hosts\n")
             print(host_table)
 
-    if region_type in ['Kubernetes','KVM/Kubernetes']:
+    if du_metadata['du_type'] in ['Kubernetes','KVM/Kubernetes']:
         host_table = PrettyTable()
         host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Node Type","Cluster Name","IP Interfaces"]
         host_table.align["HOSTNAME"] = "l"
