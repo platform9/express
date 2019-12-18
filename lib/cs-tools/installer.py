@@ -14,9 +14,11 @@ if not sys.version_info[0] in (2,3):
 ################################################################################
 # module imports
 try:
-    import requests,urllib3,json,argparse,prettytable,signal,getpass,argparse,cmd2
+    import requests,urllib3,json,argparse,prettytable,signal,getpass,argparse
 except:
-    fail("Failed to import module\n{}".format(sys.exc_info()))
+    except_str = str(sys.exc_info()[1])
+    module_name = except_str.split(' ')[-1]
+    fail("Failed to import module: {} (try running 'pip install {}')".format(sys.exc_info()[1],module_name))
 
 # disable ssl warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -97,9 +99,18 @@ def login_du(du_url,du_user,du_password,du_tenant):
 ################################################################################
 # host functions
 def get_host_metadata(du, project_id, token):
-    host_metadata = {}
     region_type = get_du_type(du['url'], project_id, token)
+    if region_type == "KVM":
+        du_host_type = "kvm"
+    elif region_type == "Kubernetes":
+        du_host_type = "kubernetes"
+    elif region_type == "KVM/Kubernetes":
+        du_host_type = read_kbd("--> Host Type ['kvm','kubernetes']", ['kvm','kubernetes'], 'kvm', True)
+
+    # initialize host record
+    host_metadata = {}
     host_metadata['record_source'] = "User-Defined"
+    host_metadata['du_host_type'] = du_host_type
     host_metadata['hostname'] = read_kbd("--> Hostname", [], '', True)
 
     # get current host settings (if already defined)
@@ -131,7 +142,7 @@ def get_host_metadata(du, project_id, token):
         host_metadata['uuid'] = ""
 
     host_metadata['ip'] = read_kbd("--> Primary IP Address", [], host_ip, True)
-    if region_type == "KVM":
+    if du_host_type == "kvm":
         host_metadata['bond_config'] = read_kbd("--> Bond Config", [], host_bond_config, True)
         host_metadata['nova'] = read_kbd("--> Enable Nova", ['y','n'], host_nova, True)
         host_metadata['glance'] = read_kbd("--> Enable Glance", ['y','n'], host_glance, True)
@@ -140,7 +151,7 @@ def get_host_metadata(du, project_id, token):
         host_metadata['node_type'] = ""
         host_metadata['pf9-kube'] = "n"
         host_metadata['cluster_name'] = ""
-    elif region_type == "Kubernetes":
+    elif du_host_type == "kubernetes":
         host_metadata['bond_config'] = ""
         host_metadata['nova'] = ""
         host_metadata['glance'] = ""
@@ -441,13 +452,12 @@ def report_du_info(du_entries):
         return()
 
     du_table = PrettyTable()
-    du_table.field_names = ["DU URL","DU Auth","Region Type","Region Name","Tenant","Git Branch","SSH Auth Type","SSH User","# Hosts"]
+    du_table.field_names = ["DU URL","DU Auth","Region Type","Region Name","Tenant","SSH Auth Type","SSH User","# Hosts"]
     du_table.align["DU URL"] = "l"
     du_table.align["DU Auth"] = "l"
     du_table.align["Region Type"] = "l"
     du_table.align["Region Name"] = "l"
     du_table.align["Tenant"] = "l"
-    du_table.align["Git Branch"] = "l"
     du_table.align["SSH Auth Type"] = "l"
     du_table.align["SSH User"] = "l"
     du_table.align["# Hosts"] = "l"
@@ -469,7 +479,7 @@ def report_du_info(du_entries):
             num_defined_hosts = get_defined_hosts(du['url'])
             num_hosts = num_discovered_hosts + num_defined_hosts
 
-        du_table.add_row([du['url'], auth_status, region_type, du['region'], du['tenant'], du['git_branch'], du['auth_type'], du['auth_username'], num_hosts])
+        du_table.add_row([du['url'], auth_status, region_type, du['region'], du['tenant'], du['auth_type'], du['auth_username'], num_hosts])
 
     print(du_table)
 
@@ -527,7 +537,7 @@ def report_host_info(host_entries):
     else:
         region_type = get_du_type(du_metadata['url'], project_id, token)
 
-    if region_type == "KVM":
+    if region_type in ['KVM','KVM/Kubernetes']:
         host_table = PrettyTable()
         host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Nova","Glance","Cinder","Designate","Bond Config","IP Interfaces"]
         host_table.align["HOSTNAME"] = "l"
@@ -540,16 +550,23 @@ def report_host_info(host_entries):
         host_table.align["Cinder"] = "l"
         host_table.align["Designate"] = "l"
         host_table.align["Bond Config"] = "l"
+        num_kvm_rows = 0
         for host in host_entries:
+            if host['du_host_type'] != "kvm":
+                continue
             ssh_status = ssh_validate_login(du_metadata, host['ip'])
             if ssh_status == True:
                 ssh_status = "OK"
             else:
                 ssh_status = "Failed"
             host_table.add_row([host['hostname'],host['ip'], ssh_status, host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config'],host['ip_interfaces']])
-        print(host_table)
+            num_kvm_rows += 1
 
-    if region_type == "Kubernetes":
+        if num_kvm_rows > 0:
+            sys.stdout.write("KVM Hosts\n")
+            print(host_table)
+
+    if region_type in ['Kubernetes','KVM/Kubernetes']:
         host_table = PrettyTable()
         host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Node Type","Cluster Name","IP Interfaces"]
         host_table.align["HOSTNAME"] = "l"
@@ -559,7 +576,10 @@ def report_host_info(host_entries):
         host_table.align["Source"] = "l"
         host_table.align["Node Type"] = "l"
         host_table.align["Cluster Name"] = "l"
+        num_k8s_rows = 0
         for host in host_entries:
+            if host['du_host_type'] != "kubernetes":
+                continue
             ssh_status = ssh_validate_login(du_metadata, host['ip'])
             if ssh_status == True:
                 ssh_status = "OK"
@@ -572,7 +592,12 @@ def report_host_info(host_entries):
                 cluster_assigned = host['cluster_name']
 
             host_table.add_row([host['hostname'], host['ip'], ssh_status, host['record_source'], host['node_type'], cluster_assigned, host['ip_interfaces']])
-        print(host_table)
+            num_k8s_rows += 1
+        if num_k8s_rows > 0:
+            if num_kvm_rows > 0:
+                sys.stdout.write("\n")
+            sys.stdout.write("Kubernetes Hosts\n")
+            print(host_table)
 
 
 def select_du():
@@ -712,6 +737,7 @@ def add_host(du):
         host_metadata = get_host_metadata(du, project_id, token)
         host = {
             'du_url': du['url'],
+            'du_host_type': host_metadata['du_host_type'],
             'ip': host_metadata['ip'],
             'uuid': host_metadata['uuid'],
             'ip_interfaces': host_metadata['ip_interfaces'],
@@ -1065,7 +1091,8 @@ def menu_level0():
             report_du_info(new_du_list)
         elif user_input == '2':
             selected_du = select_du()
-            new_host = add_host(selected_du)
+            if selected_du != None:
+                new_host = add_host(selected_du)
         elif user_input == '3':
             sys.stdout.write("\nLogging into Region(s)\n")
             du_entries = get_configs()
