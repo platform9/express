@@ -14,7 +14,7 @@ if not sys.version_info[0] in (2,3):
 ################################################################################
 # module imports
 try:
-    import requests,urllib3,json,argparse,prettytable,signal,getpass,argparse
+    import requests,urllib3,json,argparse,prettytable,signal,getpass,argparse,cmd2
 except:
     fail("Failed to import module\n{}".format(sys.exc_info()))
 
