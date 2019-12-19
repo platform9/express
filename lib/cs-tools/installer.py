@@ -112,12 +112,16 @@ def get_host_metadata(du, project_id, token):
         du_host_type = "kubernetes"
     elif du['du_type'] == "KVM/Kubernetes":
         du_host_type = read_kbd("--> Host Type ['kvm','kubernetes']", ['kvm','kubernetes'], 'kvm', True, True)
+        if du_host_type == "q":
+            return({})
 
     # initialize host record
     host_metadata = {}
     host_metadata['record_source'] = "User-Defined"
     host_metadata['du_host_type'] = du_host_type
     host_metadata['hostname'] = read_kbd("--> Hostname", [], '', True, True)
+    if host_metadata['hostname'] == "q":
+        return({})
 
     # get current host settings (if already defined)
     host_settings = get_host_record(du['url'], host_metadata['hostname'])
@@ -148,12 +152,24 @@ def get_host_metadata(du, project_id, token):
         host_metadata['uuid'] = ""
 
     host_metadata['ip'] = read_kbd("--> Primary IP Address", [], host_ip, True, True)
+    if host_metadata['ip'] == "q":
+        return({})
     if du_host_type == "kvm":
-        host_metadata['bond_config'] = read_kbd("--> Bond Config", [], host_bond_config, True, True)
+        host_metadata['bond_config'] = read_kbd("--> Bond Config", [], host_bond_config, True, False)
+        if host_metadata['bond_config'] == "q":
+            return({})
         host_metadata['nova'] = read_kbd("--> Enable Nova", ['y','n'], host_nova, True, True)
+        if host_metadata['nova'] == "q":
+            return({})
         host_metadata['glance'] = read_kbd("--> Enable Glance", ['y','n'], host_glance, True, True)
+        if host_metadata['glance'] == "q":
+            return({})
         host_metadata['cinder'] = read_kbd("--> Enable Cinder", ['y','n'], host_cinder, True, True)
+        if host_metadata['cinder'] == "q":
+            return({})
         host_metadata['designate'] = read_kbd("--> Enable Designate", ['y','n'], host_designate, True, True)
+        if host_metadata['designate'] == "q":
+            return({})
         host_metadata['node_type'] = ""
         host_metadata['pf9-kube'] = "n"
         host_metadata['cluster_name'] = ""
@@ -165,7 +181,11 @@ def get_host_metadata(du, project_id, token):
         host_metadata['designate'] = ""
         host_metadata['pf9-kube'] = "y"
         host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], host_node_type, True, True)
+        if host_metadata['node_type'] == "q":
+            return({})
         host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], host_cluster_name, True, True)
+        if host_metadata['cluster_name'] == "q":
+            return({})
 
     return(host_metadata)
 
@@ -234,8 +254,8 @@ def get_du_creds():
         du_type = selected_du_type
         git_branch = "master"
         region_name = ""
-        region_proxy = ""
-        region_dns = ""
+        region_proxy = "-"
+        region_dns = "8.8.8.8,8.8.4.4"
         region_auth_type = "sshkey"
         auth_username = "centos"
         auth_password = ""
@@ -674,7 +694,7 @@ def select_du():
                 sys.stdout.write("{}. {}\n".format(cnt,du['url']))
                 allowed_values.append(str(cnt))
                 cnt += 1
-            user_input = read_kbd("\nSelect Region", allowed_values, '', True, True)
+            user_input = read_kbd("Select Region", allowed_values, '', True, True)
             idx = int(user_input) - 1
             return(current_config[idx])
         return({})
@@ -814,26 +834,27 @@ def add_host(du):
         sys.stdout.write("--> failed to login to region")
     else:
         host_metadata = get_host_metadata(du, project_id, token)
-        host = {
-            'du_url': du['url'],
-            'du_host_type': host_metadata['du_host_type'],
-            'ip': host_metadata['ip'],
-            'uuid': host_metadata['uuid'],
-            'ip_interfaces': host_metadata['ip_interfaces'],
-            'hostname': host_metadata['hostname'],
-            'record_source': host_metadata['record_source'],
-            'bond_config': host_metadata['bond_config'],
-            'pf9-kube': host_metadata['pf9-kube'],
-            'nova': host_metadata['nova'],
-            'glance': host_metadata['glance'],
-            'cinder': host_metadata['cinder'],
-            'designate': host_metadata['designate'],
-            'node_type': host_metadata['node_type'],
-            'cluster_name': host_metadata['cluster_name']
-        }
+        if host_metadata:
+            host = {
+                'du_url': du['url'],
+                'du_host_type': host_metadata['du_host_type'],
+                'ip': host_metadata['ip'],
+                'uuid': host_metadata['uuid'],
+                'ip_interfaces': host_metadata['ip_interfaces'],
+                'hostname': host_metadata['hostname'],
+                'record_source': host_metadata['record_source'],
+                'bond_config': host_metadata['bond_config'],
+                'pf9-kube': host_metadata['pf9-kube'],
+                'nova': host_metadata['nova'],
+                'glance': host_metadata['glance'],
+                'cinder': host_metadata['cinder'],
+                'designate': host_metadata['designate'],
+                'node_type': host_metadata['node_type'],
+                'cluster_name': host_metadata['cluster_name']
+            }
 
-        # persist configurtion
-        write_host(host)
+            # persist configurtion
+            write_host(host)
 
 
 def add_region():
