@@ -189,7 +189,7 @@ def get_du_creds():
     selected_du_type = du_types[idx]
 
     # get du_url from user (handle missing https://)
-    sys.stdout.write("\nDefine DU Parameters\n")
+    sys.stdout.write("\nDefine DU Parameters (du_type = {})\n".format(selected_du_type))
     user_url = read_kbd("--> DU URL", [], '', True)
     if user_url.startswith('http://'):
         user_url = user_url.replace('http://','https://')
@@ -868,9 +868,10 @@ def build_express_config(du):
         express_config_fh.write("os_username|{}\n".format(du['username']))
         express_config_fh.write("os_password|{}\n".format(du['password']))
         express_config_fh.write("os_region|{}\n".format(du['region']))
-        express_config_fh.write("proxy_url|{}\n".format(du['proxy']))
+        express_config_fh.write("proxy_url|{}\n".format(du['region_proxy']))
         express_config_fh.close()
     except:
+        sys.stdout.write("ERROR: failed to build configuration file: {}\n{}\n".format(express_config,sys.exc_info()))
         return(None)
 
     # validate config was written
