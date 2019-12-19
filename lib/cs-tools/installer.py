@@ -31,7 +31,7 @@ def _parse_args():
     ap.add_argument("--init", "-i", help="Initialize Configuration (delete all regions/hosts)", action="store_true")
     return ap.parse_args()
 
-def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True):
+def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True, disallow_null=True):
     if flag_echo == True:
         input_is_valid = False
         while not input_is_valid:
@@ -41,8 +41,11 @@ def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True):
                 user_input = raw_input("{} [{}]: ".format(user_prompt,default_value))
 
             if user_input == "":
-                user_input = default_value
-                input_is_valid = True
+                if disallow_null == True:
+                    input_is_valid = False
+                else:
+                    user_input = default_value
+                    input_is_valid = True
             else:
                 if len(allowed_values) == 0:
                     input_is_valid = True
@@ -104,13 +107,13 @@ def get_host_metadata(du, project_id, token):
     elif du['du_type'] == "Kubernetes":
         du_host_type = "kubernetes"
     elif du['du_type'] == "KVM/Kubernetes":
-        du_host_type = read_kbd("--> Host Type ['kvm','kubernetes']", ['kvm','kubernetes'], 'kvm', True)
+        du_host_type = read_kbd("--> Host Type ['kvm','kubernetes']", ['kvm','kubernetes'], 'kvm', True, True)
 
     # initialize host record
     host_metadata = {}
     host_metadata['record_source'] = "User-Defined"
     host_metadata['du_host_type'] = du_host_type
-    host_metadata['hostname'] = read_kbd("--> Hostname", [], '', True)
+    host_metadata['hostname'] = read_kbd("--> Hostname", [], '', True, True)
 
     # get current host settings (if already defined)
     host_settings = get_host_record(du['url'], host_metadata['hostname'])
@@ -140,13 +143,13 @@ def get_host_metadata(du, project_id, token):
         host_metadata['ip_interfaces'] = ""
         host_metadata['uuid'] = ""
 
-    host_metadata['ip'] = read_kbd("--> Primary IP Address", [], host_ip, True)
+    host_metadata['ip'] = read_kbd("--> Primary IP Address", [], host_ip, True, True)
     if du_host_type == "kvm":
-        host_metadata['bond_config'] = read_kbd("--> Bond Config", [], host_bond_config, True)
-        host_metadata['nova'] = read_kbd("--> Enable Nova", ['y','n'], host_nova, True)
-        host_metadata['glance'] = read_kbd("--> Enable Glance", ['y','n'], host_glance, True)
-        host_metadata['cinder'] = read_kbd("--> Enable Cinder", ['y','n'], host_cinder, True)
-        host_metadata['designate'] = read_kbd("--> Enable Designate", ['y','n'], host_designate, True)
+        host_metadata['bond_config'] = read_kbd("--> Bond Config", [], host_bond_config, True, True)
+        host_metadata['nova'] = read_kbd("--> Enable Nova", ['y','n'], host_nova, True, True)
+        host_metadata['glance'] = read_kbd("--> Enable Glance", ['y','n'], host_glance, True, True)
+        host_metadata['cinder'] = read_kbd("--> Enable Cinder", ['y','n'], host_cinder, True, True)
+        host_metadata['designate'] = read_kbd("--> Enable Designate", ['y','n'], host_designate, True, True)
         host_metadata['node_type'] = ""
         host_metadata['pf9-kube'] = "n"
         host_metadata['cluster_name'] = ""
@@ -157,8 +160,8 @@ def get_host_metadata(du, project_id, token):
         host_metadata['cinder'] = ""
         host_metadata['designate'] = ""
         host_metadata['pf9-kube'] = "y"
-        host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], host_node_type, True)
-        host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], host_cluster_name, True)
+        host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], host_node_type, True, True)
+        host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], host_cluster_name, True, True)
 
     return(host_metadata)
 
@@ -178,19 +181,24 @@ def get_du_creds():
 
     # prompt for du type
     cnt = 1
-    allowed_values = []
+    allowed_values = ['q']
     sys.stdout.write("\n")
     for target_type in du_types:
         sys.stdout.write("{}. {}\n".format(cnt,target_type))
         allowed_values.append(str(cnt))
         cnt += 1
-    user_input = read_kbd("\nSelect Region Type", allowed_values, '', True)
-    idx = int(user_input) - 1
-    selected_du_type = du_types[idx]
+    user_input = read_kbd("Select Region Type", allowed_values, '', True, True)
+    if user_input == 'q':
+        return({})
+    else:
+        idx = int(user_input) - 1
+        selected_du_type = du_types[idx]
 
     # get du_url from user (handle missing https://)
     sys.stdout.write("\nDefine DU Parameters (du_type = {})\n".format(selected_du_type))
-    user_url = read_kbd("--> DU URL", [], '', True)
+    user_url = read_kbd("--> DU URL", [], '', True, True)
+    if user_url == 'q':
+        return({})
     if user_url.startswith('http://'):
         user_url = user_url.replace('http://','https://')
     if not user_url.startswith('https://'):
@@ -236,30 +244,58 @@ def get_du_creds():
     du_metadata['du_type'] = selected_du_type
 
     # get common du parameters
-    du_metadata['du_user'] = read_kbd("--> DU Username", [], du_user, True)
-    du_metadata['du_password'] = read_kbd("--> DU Password", [], du_password, False)
-    du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], du_tenant, True)
-    du_metadata['git_branch'] = read_kbd("--> GIT Branch (for PF9-Express)", [], git_branch, True)
-    du_metadata['region_name'] = read_kbd("--> Region Name", [], region_name, True)
-    du_metadata['region_auth_type'] = read_kbd("--> Authentication Type ['simple','sshkey']", ['simple','sshkey'], region_auth_type, True)
-    du_metadata['auth_username'] = read_kbd("--> Username for Remote Access", [], auth_username, True)
+    du_metadata['du_user'] = read_kbd("--> DU Username", [], du_user, True, True)
+    if du_metadata['du_user'] == 'q':
+        return({})
+    du_metadata['du_password'] = read_kbd("--> DU Password", [], du_password, False, True)
+    if du_metadata['du_password'] == 'q':
+        return({})
+    du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], du_tenant, True, True)
+    if du_metadata['du_tenant'] == 'q':
+        return({})
+    du_metadata['git_branch'] = read_kbd("--> GIT Branch (for PF9-Express)", [], git_branch, True, True)
+    if du_metadata['git_branch'] == 'q':
+        return({})
+    du_metadata['region_name'] = read_kbd("--> Region Name", [], region_name, True, True)
+    if du_metadata['region_name'] == 'q':
+        return({})
+    du_metadata['region_auth_type'] = read_kbd("--> Authentication Type ['simple','sshkey']", ['simple','sshkey'], region_auth_type, True, True)
+    if du_metadata['region_auth_type'] == 'q':
+        return({})
+    du_metadata['auth_username'] = read_kbd("--> Username for Remote Access", [], auth_username, True, True)
+    if du_metadata['auth_username'] == 'q':
+        return({})
     if du_metadata['region_auth_type'] == "simple":
-        du_metadata['auth_password'] = read_kbd("--> Password for Remote Access", [], auth_password, False)
+        du_metadata['auth_password'] = read_kbd("--> Password for Remote Access", [], auth_password, False, True)
+        if du_metadata['auth_password'] == 'q':
+            return({})
     else:
         du_metadata['auth_password'] = ""
   
     if du_metadata['region_auth_type'] == "sshkey":
-        du_metadata['auth_ssh_key'] = read_kbd("--> SSH Key for Remote Access", [], auth_ssh_key, True)
+        du_metadata['auth_ssh_key'] = read_kbd("--> SSH Key for Remote Access", [], auth_ssh_key, True, True)
+        if du_metadata['auth_ssh_key'] == 'q':
+            return({})
     else:
         du_metadata['auth_ssh_key'] = ""
 
     # get du-specific parameters
     if selected_du_type in ['KVM','KVM/Kubernetes']:
-        du_metadata['region_proxy'] = read_kbd("--> Proxy", [], region_proxy, True)
-        du_metadata['region_dns'] = read_kbd("--> DNS Server (comma-delimited list or IPs)", [], region_dns, True)
-        du_metadata['region_bond_if_name'] = read_kbd("--> Interface Name (for OVS Bond)", [], region_bond_if_name, True)
-        du_metadata['region_bond_mode'] = read_kbd("--> Bond Mode", [], region_bond_mode, True)
-        du_metadata['region_bond_mtu'] = read_kbd("--> MTU for Bond Interface", [], region_bond_mtu, True)
+        du_metadata['region_proxy'] = read_kbd("--> Proxy", [], region_proxy, True, True)
+        if du_metadata['region_proxy'] == 'q':
+            return({})
+        du_metadata['region_dns'] = read_kbd("--> DNS Server (comma-delimited list or IPs)", [], region_dns, True, True)
+        if du_metadata['region_dns'] == 'q':
+            return({})
+        du_metadata['region_bond_if_name'] = read_kbd("--> Interface Name (for OVS Bond)", [], region_bond_if_name, True, True)
+        if du_metadata['region_bond_if_name'] == 'q':
+            return({})
+        du_metadata['region_bond_mode'] = read_kbd("--> Bond Mode", [], region_bond_mode, True, True)
+        if du_metadata['region_bond_mode'] == 'q':
+            return({})
+        du_metadata['region_bond_mtu'] = read_kbd("--> MTU for Bond Interface", [], region_bond_mtu, True, True)
+        if du_metadata['region_bond_mtu'] == 'q':
+            return({})
     else:
         du_metadata['region_proxy'] = ""
         du_metadata['region_dns'] = ""
@@ -634,7 +670,7 @@ def select_du():
                 sys.stdout.write("{}. {}\n".format(cnt,du['url']))
                 allowed_values.append(str(cnt))
                 cnt += 1
-            user_input = read_kbd("\nSelect Region", allowed_values, '', True)
+            user_input = read_kbd("\nSelect Region", allowed_values, '', True, True)
             idx = int(user_input) - 1
             return(current_config[idx])
         return({})
@@ -797,26 +833,29 @@ def add_host(du):
 
 
 def add_region():
-    sys.stdout.write("\nAdding Region:\n")
+    sys.stdout.write("\nAdding a Region:")
     du_metadata = get_du_creds()
-    du = {
-        'url': du_metadata['du_url'],
-        'du_type': du_metadata['du_type'],
-        'username': du_metadata['du_user'],
-        'password': du_metadata['du_password'],
-        'tenant': du_metadata['du_tenant'],
-        'git_branch': du_metadata['git_branch'],
-        'region': du_metadata['region_name'],
-        'region_proxy': du_metadata['region_proxy'],
-        'dns_list': du_metadata['region_dns'],
-        'auth_type': du_metadata['region_auth_type'],
-        'auth_ssh_key': du_metadata['auth_ssh_key'],
-        'auth_password': du_metadata['auth_password'],
-        'auth_username': du_metadata['auth_username'],
-        'bond_ifname': du_metadata['region_bond_if_name'],
-        'bond_mode': du_metadata['region_bond_mode'],
-        'bond_mtu': du_metadata['region_bond_mtu']
-    }
+    if not du_metadata:
+        return(du_metadata)
+    else:
+        du = {
+            'url': du_metadata['du_url'],
+            'du_type': du_metadata['du_type'],
+            'username': du_metadata['du_user'],
+            'password': du_metadata['du_password'],
+            'tenant': du_metadata['du_tenant'],
+            'git_branch': du_metadata['git_branch'],
+            'region': du_metadata['region_name'],
+            'region_proxy': du_metadata['region_proxy'],
+            'dns_list': du_metadata['region_dns'],
+            'auth_type': du_metadata['region_auth_type'],
+            'auth_ssh_key': du_metadata['auth_ssh_key'],
+            'auth_password': du_metadata['auth_password'],
+            'auth_username': du_metadata['auth_username'],
+            'bond_ifname': du_metadata['region_bond_if_name'],
+            'bond_mode': du_metadata['region_bond_mode'],
+            'bond_mtu': du_metadata['region_bond_mtu']
+        }
 
     # discovery existing hosts
     sys.stdout.write("\nPerforming Host Discovery\n")
@@ -1056,7 +1095,7 @@ def tail_log(p):
 
 
 def invoke_express(express_config, express_inventory, target_inventory):
-    user_input = read_kbd("--> Installing PF9-Express Prerequisites, do you want to tail the log", ['y','n'], 'n', True)
+    user_input = read_kbd("--> Installing PF9-Express Prerequisites, do you want to tail the log", ['y','n'], 'n', True, True)
     p = subprocess.Popen([PF9_EXPRESS,'-i','-c',express_config],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     if user_input == 'y':
         sys.stdout.write("----------------------------------- Start Log -----------------------------------\n")
@@ -1064,7 +1103,7 @@ def invoke_express(express_config, express_inventory, target_inventory):
     else:
         wait_for_job(p)
 
-    user_input = read_kbd("--> Running PF9-Express, do you want to tail the log", ['y','n'], 'n', True)
+    user_input = read_kbd("--> Running PF9-Express, do you want to tail the log", ['y','n'], 'n', True, True)
     sys.stdout.write("Running: {} -b -c {} -v {} {}\n".format(PF9_EXPRESS,express_config,express_inventory,target_inventory))
     p = subprocess.Popen([PF9_EXPRESS,'-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     if user_input == 'y':
@@ -1092,7 +1131,7 @@ def run_express(du, host_entries):
         sys.stdout.write("    {}. {}\n".format(cnt,inventory))
         allowed_values.append(str(cnt))
         cnt += 1
-    user_input = read_kbd("\nSelect Inventory (to run PF9-Express against)", allowed_values, '', True)
+    user_input = read_kbd("\nSelect Inventory (to run PF9-Express against)", allowed_values, '', True, True)
     idx = int(user_input) - 1
     target_inventory = express_inventories[idx]
 
@@ -1126,7 +1165,7 @@ def view_log(log_files):
         sys.stdout.write("{}. {}\n".format(cnt,log_file))
         allowed_values.append(str(cnt))
         cnt += 1
-    user_input = read_kbd("\nSelect Log", allowed_values, '', True)
+    user_input = read_kbd("\nSelect Log", allowed_values, '', True, True)
     idx = int(user_input) - 1
     target_log = log_files[idx]
     target_log_path = "{}/{}".format(EXPRESS_LOG_DIR,target_log)
@@ -1219,7 +1258,7 @@ def menu_level1():
     user_input = ""
     while not user_input in ['q','Q']:
         display_menu1()
-        user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True)
+        user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True, True)
         if user_input == '1':
             selected_du = select_du()
             if selected_du != None:
@@ -1258,13 +1297,14 @@ def menu_level0():
     user_input = ""
     while not user_input in ['q','Q']:
         display_menu0()
-        user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True)
+        user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True, True)
         if user_input == '1':
             new_du = add_region()
-            new_du_list = []
-            new_du_list.append(new_du)
-            sys.stdout.write("\nLogging into Region\n")
-            report_du_info(new_du_list)
+            if new_du:
+                new_du_list = []
+                new_du_list.append(new_du)
+                sys.stdout.write("\nLogging into Region\n")
+                report_du_info(new_du_list)
         elif user_input == '2':
             selected_du = select_du()
             if selected_du != None:
