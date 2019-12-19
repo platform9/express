@@ -194,7 +194,7 @@ def get_host_metadata(du, project_id, token):
 # du/region functions
 def get_du_creds(existing_du_url):
     # initialize du data structure
-    du_metadata = {}
+    du_metadata = create_du_entry()
 
     if existing_du_url == None:
         user_url = read_kbd("--> DU URL", [], '', True, True)
@@ -434,8 +434,7 @@ def credsmanager_is_responding(du_url, project_id, token):
     return False
 
 
-def discover_du_hosts(du_url, project_id, token):
-
+def discover_du_hosts(du_url, du_type, project_id, token):
     discovered_hosts = []
     try:
         api_endpoint = "resmgr/v1/hosts"
@@ -483,13 +482,18 @@ def discover_du_hosts(du_url, project_id, token):
         qbert_primary_ip = qbert_get_primary_ip(du_url, project_id, token, host['id'])
         qbert_cluster_uuid = qbert_get_cluster_uuid(du_url, project_id, token, host['id'])
         qbert_cluster_name = qbert_get_cluster_name(du_url, project_id, token, qbert_cluster_uuid)
+        if role_kube == "y":
+            host_type = "kubernetes"
+        else:
+            host_type = "kvm"
 
         host_record = {
             'du_url': du_url,
+            'du_type': du_type,
             'ip': qbert_primary_ip,
             'uuid': host['id'],
             'ip_interfaces': discover_ips,
-            'du_host_type': "kubernetes",
+            'du_host_type': host_type,
             'hostname': host['info']['hostname'],
             'record_source': "Discovered",
             'bond_config': "",
@@ -680,7 +684,7 @@ def add_edit_du():
     if not os.path.isdir(CONFIG_DIR):
         return(None)
     elif not os.path.isfile(CONFIG_FILE):
-        return(None)
+        return("define-new-du")
     else:
         current_config = get_configs()
         if len(current_config) == 0:
@@ -716,15 +720,18 @@ def select_du():
             sys.stdout.write("\nNo regions have been defined yet (run 'Add/Update Region')\n")
         else:
             cnt = 1
-            allowed_values = []
+            allowed_values = ['q']
             sys.stdout.write("\n")
             for du in current_config:
                 sys.stdout.write("{}. {}\n".format(cnt,du['url']))
                 allowed_values.append(str(cnt))
                 cnt += 1
             user_input = read_kbd("Select Region", allowed_values, '', True, True)
-            idx = int(user_input) - 1
-            return(current_config[idx])
+            if user_input == "q":
+                return({})
+            else:
+                idx = int(user_input) - 1
+                return(current_config[idx])
         return({})
 
 
@@ -885,6 +892,28 @@ def add_host(du):
             write_host(host)
 
 
+def create_du_entry():
+    du_record = {
+        'url': "",
+        'du_type': "",
+        'username': "",
+        'password': "",
+        'tenant': "",
+        'git_branch': "",
+        'region': "",
+        'region_proxy': "",
+        'dns_list': "",
+        'auth_type': "",
+        'auth_ssh_key': "",
+        'auth_password': "",
+        'auth_username': "",
+        'bond_ifname': "",
+        'bond_mode': "",
+        'bond_mtu': ""
+    }
+    return(du_record)
+
+
 def add_region(existing_du_url):
     if existing_du_url == None:
         sys.stdout.write("\nAdding a Region:\n")
@@ -895,30 +924,30 @@ def add_region(existing_du_url):
     if not du_metadata:
         return(du_metadata)
     else:
-        du = {
-            'url': du_metadata['du_url'],
-            'du_type': du_metadata['du_type'],
-            'username': du_metadata['du_user'],
-            'password': du_metadata['du_password'],
-            'tenant': du_metadata['du_tenant'],
-            'git_branch': du_metadata['git_branch'],
-            'region': du_metadata['region_name'],
-            'region_proxy': du_metadata['region_proxy'],
-            'dns_list': du_metadata['region_dns'],
-            'auth_type': du_metadata['region_auth_type'],
-            'auth_ssh_key': du_metadata['auth_ssh_key'],
-            'auth_password': du_metadata['auth_password'],
-            'auth_username': du_metadata['auth_username'],
-            'bond_ifname': du_metadata['region_bond_if_name'],
-            'bond_mode': du_metadata['region_bond_mode'],
-            'bond_mtu': du_metadata['region_bond_mtu']
-        }
+        # initialize du data structure
+        du = create_du_entry()
+        du['url'] = du_metadata['du_url']
+        du['du_type'] = du_metadata['du_type']
+        du['username'] = du_metadata['du_user']
+        du['password'] = du_metadata['du_password']
+        du['tenant'] = du_metadata['du_tenant']
+        du['git_branch'] = du_metadata['git_branch']
+        du['region'] = du_metadata['region_name']
+        du['region_proxy'] = du_metadata['region_proxy']
+        du['dns_list'] = du_metadata['region_dns']
+        du['auth_type'] = du_metadata['region_auth_type']
+        du['auth_ssh_key'] = du_metadata['auth_ssh_key']
+        du['auth_password'] = du_metadata['auth_password']
+        du['auth_username'] = du_metadata['auth_username']
+        du['bond_ifname'] = du_metadata['region_bond_if_name']
+        du['bond_mode'] = du_metadata['region_bond_mode']
+        du['bond_mtu'] = du_metadata['region_bond_mtu']
 
     # discovery existing hosts
     sys.stdout.write("\nPerforming Host Discovery\n")
     sys.stdout.write("--> Region URL = {}\n".format(du['url']))
     project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
-    discoverd_hosts = discover_du_hosts(du['url'], project_id, token)
+    discoverd_hosts = discover_du_hosts(du['url'], du['du_type'], project_id, token)
     sys.stdout.write("--> persisting hosts (in {})\n".format(HOST_FILE))
     for host in discoverd_hosts:
         write_host(host)
@@ -1217,16 +1246,17 @@ def dump_text_file(target_file):
 
 def view_log(log_files):
     cnt = 1
-    allowed_values = []
+    allowed_values = ['q']
     for log_file in log_files:
         sys.stdout.write("{}. {}\n".format(cnt,log_file))
         allowed_values.append(str(cnt))
         cnt += 1
-    user_input = read_kbd("\nSelect Log", allowed_values, '', True, True)
-    idx = int(user_input) - 1
-    target_log = log_files[idx]
-    target_log_path = "{}/{}".format(EXPRESS_LOG_DIR,target_log)
-    dump_text_file(target_log_path)
+    user_input = read_kbd("Select Log", allowed_values, '', True, True)
+    if user_input != "q":
+        idx = int(user_input) - 1
+        target_log = log_files[idx]
+        target_log_path = "{}/{}".format(EXPRESS_LOG_DIR,target_log)
+        dump_text_file(target_log_path)
 
 
 def get_logs():
@@ -1318,8 +1348,9 @@ def menu_level1():
         user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True, True)
         if user_input == '1':
             selected_du = select_du()
-            if selected_du != None:
-                delete_du(selected_du)
+            if selected_du:
+                if selected_du != "q":
+                    delete_du(selected_du)
         elif user_input == '2':
             sys.stdout.write("\nNot Implemented\n")
         elif user_input == '3':
@@ -1330,13 +1361,15 @@ def menu_level1():
             sys.stdout.write("\nNot Implemented\n")
         elif user_input == '6':
             selected_du = select_du()
-            if selected_du != None:
-                new_host = view_config(selected_du)
+            if selected_du:
+                if selected_du != "q":
+                    new_host = view_config(selected_du)
         elif user_input == '7':
             selected_du = select_du()
-            if selected_du != None:
-                host_entries = get_hosts(selected_du['url'])
-                new_host = view_inventory(selected_du, host_entries)
+            if selected_du:
+                if selected_du != "q":
+                    host_entries = get_hosts(selected_du['url'])
+                    new_host = view_inventory(selected_du, host_entries)
         elif user_input == '8':
             log_files = get_logs()
             if len(log_files) == 0:
@@ -1370,22 +1403,25 @@ def menu_level0():
                     report_du_info(new_du_list)
         elif user_input == '2':
             selected_du = select_du()
-            if selected_du != None:
-                new_host = add_host(selected_du)
+            if selected_du:
+                if selected_du != "q":
+                    new_host = add_host(selected_du)
         elif user_input == '3':
             sys.stdout.write("\nLogging into Region(s)\n")
             du_entries = get_configs()
             report_du_info(du_entries)
         elif user_input == '4':
             selected_du = select_du()
-            if selected_du != None:
-                host_entries = get_hosts(selected_du['url'])
-                report_host_info(host_entries)
+            if selected_du:
+                if selected_du != "q":
+                    host_entries = get_hosts(selected_du['url'])
+                    report_host_info(host_entries)
         elif user_input == '5':
             selected_du = select_du()
-            if selected_du != None:
-                host_entries = get_hosts(selected_du['url'])
-                run_express(selected_du, host_entries)
+            if selected_du:
+                if selected_du != "q":
+                    host_entries = get_hosts(selected_du['url'])
+                    run_express(selected_du, host_entries)
         elif user_input == '6':
             menu_level1()
         elif user_input in ['q','Q']:
