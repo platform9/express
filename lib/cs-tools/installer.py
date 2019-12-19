@@ -42,7 +42,11 @@ def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True, disallo
 
             if user_input == "":
                 if disallow_null == True:
-                    input_is_valid = False
+                    if default_value != "":
+                        user_input = default_value
+                        input_is_valid = True
+                    else:
+                        input_is_valid = False
                 else:
                     user_input = default_value
                     input_is_valid = True
@@ -1349,11 +1353,9 @@ PF9_EXPRESS = "{}/.pf9-wizard/pf9-express/pf9-express".format(HOME_DIR)
 
 # perform initialization (if invoked with '--init')
 if args.init:
-    sys.stdout.write("Initializing Configuration\n")
-    sys.stdout.write("--> deleting {}\n".format(HOST_FILE))
+    sys.stdout.write("INFO initializing configuration\n")
     if os.path.isfile(HOST_FILE):
         os.remove(HOST_FILE)
-    sys.stdout.write("--> deleting {}\n".format(CONFIG_FILE))
     if os.path.isfile(CONFIG_FILE):
         os.remove(CONFIG_FILE)
 
