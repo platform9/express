@@ -661,6 +661,28 @@ def get_host_record(du_url, hostname):
 
     return(host_metadata)
 
+
+def delete_du(target_du):
+    new_du_list = []
+    if os.path.isfile(CONFIG_FILE):
+        with open(CONFIG_FILE) as json_file:
+            du_configs = json.load(json_file)
+        for du in du_configs:
+            if du['url'] == target_du['url']:
+                sys.stdout.write("--> found target DU\n")
+            else:
+                new_du_list.append(du)
+    else:
+        sys.stdout.write("\nERROR: failed to open DU database: {}".format(CONFIG_FILE))
+
+    # update DU database
+    try:
+        with open(CONFIG_FILE, 'w') as outfile:
+            json.dump(new_du_list, outfile)
+    except:
+        sys.stdout.write("\nERROR: failed to update DU database: {}".format(CONFIG_FILE))
+
+
 def get_du_metadata(du_url):
     du_config = {}
     if os.path.isfile(CONFIG_FILE):
@@ -1085,6 +1107,18 @@ def run_express(du, host_entries):
                 invoke_express(express_config, express_inventory, target_inventory)
 
 
+def dump_text_file(target_file):
+    BAR = "======================================================================================================"
+    try:
+        target_fh = open(target_file,mode='r')
+        sys.stdout.write('\n========== {0:^80} ==========\n'.format(target_file))
+        sys.stdout.write(target_fh.read())
+        sys.stdout.write('{}\n'.format(BAR))
+        target_fh.close()
+    except:
+        sys.stdout.write("ERROR: failed to open file: {}".format(target_file))
+
+
 def view_log(log_files):
     cnt = 1
     allowed_values = []
@@ -1096,13 +1130,8 @@ def view_log(log_files):
     idx = int(user_input) - 1
     target_log = log_files[idx]
     target_log_path = "{}/{}".format(EXPRESS_LOG_DIR,target_log)
+    dump_text_file(target_log_path)
 
-    try:
-        log_fh = open(target_log_path,mode='r')
-        sys.stdout.write(log_fh.read())
-        log_fh.close()
-    except:
-        sys.stdout.write("failed to open log: {}/{}".format(EXPRESS_LOG_DIR,target_log))
 
 def get_logs():
     log_files = []
@@ -1116,6 +1145,22 @@ def get_logs():
             log_files.append(file)
 
     return(log_files)
+
+
+def view_inventory(du, host_entries):
+    express_inventory = build_express_inventory(du, host_entries)
+    if express_inventory:
+        dump_text_file(express_inventory)
+    else:
+        sys.stdout.write("ERROR: failed to build inventory file: {}".format(express_inventory))
+
+
+def view_config(du):
+    express_config = build_express_config(du)
+    if express_config:
+        dump_text_file(express_config)
+    else:
+        sys.stdout.write("ERROR: failed to build configuration file: {}".format(express_config))
 
 
 def dump_database(db_file):
@@ -1150,7 +1195,9 @@ def display_menu1():
     sys.stdout.write("3. Display Region Database (raw dump)\n")
     sys.stdout.write("4. Display Host Database (raw dump)\n")
     sys.stdout.write("5. Install Platform9 Express\n")
-    sys.stdout.write("6. View Last Log (from last run of PF9-Express)\n")
+    sys.stdout.write("6. View Configuration File\n")
+    sys.stdout.write("7. View Inventory File\n")
+    sys.stdout.write("8. View Last Log (from last run of PF9-Express)\n")
     sys.stdout.write("*****************************************\n")
 
 
@@ -1174,7 +1221,9 @@ def menu_level1():
         display_menu1()
         user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True)
         if user_input == '1':
-            sys.stdout.write("\nNot Implemented\n")
+            selected_du = select_du()
+            if selected_du != None:
+                delete_du(selected_du)
         elif user_input == '2':
             sys.stdout.write("\nNot Implemented\n")
         elif user_input == '3':
@@ -1184,6 +1233,15 @@ def menu_level1():
         elif user_input == '5':
             sys.stdout.write("\nNot Implemented\n")
         elif user_input == '6':
+            selected_du = select_du()
+            if selected_du != None:
+                new_host = view_config(selected_du)
+        elif user_input == '7':
+            selected_du = select_du()
+            if selected_du != None:
+                host_entries = get_hosts(selected_du['url'])
+                new_host = view_inventory(selected_du, host_entries)
+        elif user_input == '8':
             log_files = get_logs()
             if len(log_files) == 0:
                 sys.stdout.write("\nNo Logs Found")
