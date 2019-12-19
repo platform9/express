@@ -196,30 +196,7 @@ def get_du_creds():
     # initialize du data structure
     du_metadata = {}
 
-    # define du types
-    du_types = [
-        'KVM',
-        'Kubernetes',
-        'KVM/Kubernetes'
-    ]
-
-    # prompt for du type
-    cnt = 1
-    allowed_values = ['q']
-    sys.stdout.write("\n")
-    for target_type in du_types:
-        sys.stdout.write("{}. {}\n".format(cnt,target_type))
-        allowed_values.append(str(cnt))
-        cnt += 1
-    user_input = read_kbd("Select Region Type", allowed_values, '', True, True)
-    if user_input == 'q':
-        return({})
-    else:
-        idx = int(user_input) - 1
-        selected_du_type = du_types[idx]
-
     # get du_url from user (handle missing https://)
-    sys.stdout.write("\nDefine DU Parameters (du_type = {})\n".format(selected_du_type))
     user_url = read_kbd("--> DU URL", [], '', True, True)
     if user_url == 'q':
         return({})
@@ -229,6 +206,13 @@ def get_du_creds():
         user_url = "https://{}".format(user_url)
     du_metadata['du_url'] = user_url
 
+    # define du types
+    du_types = [
+        'KVM',
+        'Kubernetes',
+        'KVM/Kubernetes'
+    ]
+
     # get current du settings (if already defined)
     du_settings = get_du_metadata(du_metadata['du_url'])
     if du_settings:
@@ -236,6 +220,7 @@ def get_du_creds():
         du_password = du_settings['password']
         du_tenant = du_settings['tenant']
         git_branch = du_settings['git_branch']
+        selected_du_type = du_metadata['du_type']
         du_type = du_settings['du_type']
         region_name = du_settings['region']
         region_proxy = du_settings['region_proxy']
@@ -251,7 +236,6 @@ def get_du_creds():
         du_user = "pf9-kubeheat"
         du_password = ""
         du_tenant = "svc-pmo"
-        du_type = selected_du_type
         git_branch = "master"
         region_name = ""
         region_proxy = "-"
@@ -263,6 +247,20 @@ def get_du_creds():
         region_bond_if_name = "bond0"
         region_bond_mode = "1"
         region_bond_mtu = "9000"
+
+        # prompt for du type
+        cnt = 1
+        allowed_values = ['q']
+        for target_type in du_types:
+            sys.stdout.write("    {}. {}\n".format(cnt,target_type))
+            allowed_values.append(str(cnt))
+            cnt += 1
+        user_input = read_kbd("--> Region Type", allowed_values, '', True, True)
+        if user_input == 'q':
+            return({})
+        else:
+            idx = int(user_input) - 1
+            selected_du_type = du_types[idx]
 
     # set du type
     du_metadata['du_type'] = selected_du_type
@@ -858,7 +856,7 @@ def add_host(du):
 
 
 def add_region():
-    sys.stdout.write("\nAdding a Region:")
+    sys.stdout.write("\nAdd/Edit Region:\n")
     du_metadata = get_du_creds()
     if not du_metadata:
         return(du_metadata)
@@ -1374,7 +1372,7 @@ PF9_EXPRESS = "{}/.pf9-wizard/pf9-express/pf9-express".format(HOME_DIR)
 
 # perform initialization (if invoked with '--init')
 if args.init:
-    sys.stdout.write("INFO initializing configuration\n")
+    sys.stdout.write("INFO: initializing configuration\n")
     if os.path.isfile(HOST_FILE):
         os.remove(HOST_FILE)
     if os.path.isfile(CONFIG_FILE):
