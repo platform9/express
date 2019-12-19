@@ -192,19 +192,23 @@ def get_host_metadata(du, project_id, token):
 
 ################################################################################
 # du/region functions
-def get_du_creds():
+def get_du_creds(existing_du_url):
     # initialize du data structure
     du_metadata = {}
 
-    # get du_url from user (handle missing https://)
-    user_url = read_kbd("--> DU URL", [], '', True, True)
-    if user_url == 'q':
-        return({})
-    if user_url.startswith('http://'):
-        user_url = user_url.replace('http://','https://')
-    if not user_url.startswith('https://'):
-        user_url = "https://{}".format(user_url)
+    if existing_du_url == None:
+        user_url = read_kbd("--> DU URL", [], '', True, True)
+        if user_url == 'q':
+            return({})
+        if user_url.startswith('http://'):
+            user_url = user_url.replace('http://','https://')
+        if not user_url.startswith('https://'):
+            user_url = "https://{}".format(user_url)
+    else:
+        user_url = existing_du_url
+
     du_metadata['du_url'] = user_url
+    du_settings = get_du_metadata(du_metadata['du_url'])
 
     # define du types
     du_types = [
@@ -213,14 +217,12 @@ def get_du_creds():
         'KVM/Kubernetes'
     ]
 
-    # get current du settings (if already defined)
-    du_settings = get_du_metadata(du_metadata['du_url'])
     if du_settings:
         du_user = du_settings['username']
         du_password = du_settings['password']
         du_tenant = du_settings['tenant']
         git_branch = du_settings['git_branch']
-        selected_du_type = du_metadata['du_type']
+        selected_du_type = du_settings['du_type']
         du_type = du_settings['du_type']
         region_name = du_settings['region']
         region_proxy = du_settings['region_proxy']
@@ -674,6 +676,34 @@ def report_host_info(host_entries):
             sys.stdout.write("Kubernetes Hosts\n")
             print(host_table)
 
+def add_edit_du():
+    if not os.path.isdir(CONFIG_DIR):
+        return(None)
+    elif not os.path.isfile(CONFIG_FILE):
+        return(None)
+    else:
+        current_config = get_configs()
+        if len(current_config) == 0:
+            return(None)
+        else:
+            cnt = 1
+            allowed_values = ['q','n']
+            sys.stdout.write("\n")
+            for du in current_config:
+                sys.stdout.write("{}. {}\n".format(cnt,du['url']))
+                allowed_values.append(str(cnt))
+                cnt += 1
+            sys.stdout.write("\n")
+            user_input = read_kbd("Select Region (enter 'n' to create a New Region)", allowed_values, '', True, True)
+            if user_input == "q":
+                return(None)
+            elif user_input == "n":
+                return("define-new-du")
+            else:
+                idx = int(user_input) - 1
+                return(current_config[idx]['url'])
+        return(None)
+
 
 def select_du():
     if not os.path.isdir(CONFIG_DIR):
@@ -855,9 +885,13 @@ def add_host(du):
             write_host(host)
 
 
-def add_region():
-    sys.stdout.write("\nAdd/Edit Region:\n")
-    du_metadata = get_du_creds()
+def add_region(existing_du_url):
+    if existing_du_url == None:
+        sys.stdout.write("\nAdding a Region:\n")
+    else:
+        sys.stdout.write("\nUpdate Region:\n")
+
+    du_metadata = get_du_creds(existing_du_url)
     if not du_metadata:
         return(du_metadata)
     else:
@@ -1322,12 +1356,18 @@ def menu_level0():
         display_menu0()
         user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True, True)
         if user_input == '1':
-            new_du = add_region()
-            if new_du:
-                new_du_list = []
-                new_du_list.append(new_du)
-                sys.stdout.write("\nLogging into Region\n")
-                report_du_info(new_du_list)
+            selected_du = add_edit_du()
+            if selected_du != None:
+                if selected_du == "define-new-du":
+                    target_du = None
+                else:
+                    target_du = selected_du
+                new_du = add_region(target_du)
+                if new_du:
+                    new_du_list = []
+                    new_du_list.append(new_du)
+                    sys.stdout.write("\nLogging into Region\n")
+                    report_du_info(new_du_list)
         elif user_input == '2':
             selected_du = select_du()
             if selected_du != None:
