@@ -106,7 +106,7 @@ def login_du(du_url,du_user,du_password,du_tenant):
 def get_sub_dus(du):
     project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
     if token == None:
-        return(None)
+        return(None,None)
 
     try:
         api_endpoint = "keystone/v3/services?type=regionInfo"
@@ -124,22 +124,24 @@ def get_sub_dus(du):
                             try:
                                 json_subresponse = json.loads(pf9_subresponse.text)
                                 url_list = []
+                                du_type_list = []
                                 for ep in json_subresponse['endpoints']:
                                     baseurl = ep['url'].replace('https://','').split('/')[0]
                                     if not baseurl in url_list:
                                         url_list.append(baseurl)
-                                return(url_list)
+                                        du_type_list.append(ep['region'])
+                                return(url_list,du_type_list)
                             except:
-                                return(None)
+                                return(None,None)
                     except:
-                        return(None)
-                return(json_response)
+                        return(None,None)
+                return(None,None)
             except:
-                return(None)
+                return(None,None)
     except:
-        return(None)
+        return(None,None)
 
-    return(None)
+    return(None,None)
 
 
 ################################################################################
@@ -1011,7 +1013,7 @@ def add_region(existing_du_url):
     discover_targets = []
 
     # check for sub-regions
-    sub_regions = get_sub_dus(du)
+    sub_regions, du_type_list = get_sub_dus(du)
     if sub_regions:
         sys.stdout.write("\nThe Following Sub-Regions Have Been Detected:\n\n")
         cnt = 1
@@ -1027,9 +1029,19 @@ def add_region(existing_du_url):
                 sub_du = create_du_entry()
                 sub_du['url'] = "https://{}".format(sub_region)
                 sub_du['du_type'] = "KVM/Kubernetes"
+                sub_du['region'] = du_type_list[sub_regions.index(sub_region)]
                 sub_du['username'] = du_metadata['du_user']
                 sub_du['password'] = du_metadata['du_password']
                 sub_du['tenant'] = du_metadata['du_tenant']
+                sub_du['git_branch'] = "master"
+                sub_du['region_proxy'] = "-"
+                sub_du['dns_list'] = "8.8.8.8,8.8.4.4"
+                sub_du['auth_type'] = "sshkey"
+                sub_du['auth_ssh_key'] = "~/.ssh/id_rsa"
+                sub_du['auth_username'] = "centos"
+                sub_du['bond_ifname'] = "bond0"
+                sub_du['bond_mode'] = "1"
+                sub_du['bond_mtu'] = "9000"
                 discover_targets.append(sub_du)
         else:
             discover_targets.append(du)
