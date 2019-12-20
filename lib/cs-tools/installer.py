@@ -103,6 +103,45 @@ def login_du(du_url,du_user,du_password,du_tenant):
     return(project_id, token)
 
 
+def get_sub_dus(du):
+    project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
+    if token == None:
+        return(None)
+
+    try:
+        api_endpoint = "keystone/v3/services?type=regionInfo"
+        headers = { 'content-type': 'application/json', 'X-Auth-Token': token }
+        pf9_response = requests.get("{}/{}".format(du['url'],api_endpoint), verify=False, headers=headers)
+        if pf9_response.status_code == 200:
+            try:
+                json_response = json.loads(pf9_response.text)
+                services_id = json_response['services'][0]['id']
+                if services_id:
+                    api_endpoint = "keystone/v3/endpoints?service_id={}".format(services_id)
+                    try:
+                        pf9_subresponse = requests.get("{}/{}".format(du['url'],api_endpoint), verify=False, headers=headers)
+                        if pf9_subresponse.status_code == 200:
+                            try:
+                                json_subresponse = json.loads(pf9_subresponse.text)
+                                url_list = []
+                                for ep in json_subresponse['endpoints']:
+                                    baseurl = ep['url'].replace('https://','').split('/')[0]
+                                    if not baseurl in url_list:
+                                        url_list.append(baseurl)
+                                return(url_list)
+                            except:
+                                return(None)
+                    except:
+                        return(None)
+                return(json_response)
+            except:
+                return(None)
+    except:
+        return(None)
+
+    return(None)
+
+
 ################################################################################
 # host functions
 def get_host_metadata(du, project_id, token):
@@ -968,21 +1007,51 @@ def add_region(existing_du_url):
         du['bond_mode'] = du_metadata['region_bond_mode']
         du['bond_mtu'] = du_metadata['region_bond_mtu']
 
-    # discovery existing hosts
-    sys.stdout.write("\nPerforming Host Discovery\n")
-    sys.stdout.write("--> Region URL = {}\n".format(du['url']))
-    project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
-    discoverd_hosts = discover_du_hosts(du['url'], du['du_type'], project_id, token)
-    sys.stdout.write("--> persisting hosts (in {})\n".format(HOST_FILE))
-    for host in discoverd_hosts:
-        write_host(host)
+    # initialize list of regions to be descovered
+    discover_targets = []
 
-    # persist configurtion
-    sys.stdout.write("--> persisting region metadata (in {})\n".format(CONFIG_FILE))
-    write_config(du)
+    # check for sub-regions
+    sub_regions = get_sub_dus(du)
+    if sub_regions:
+        sys.stdout.write("\nThe Following Sub-Regions Have Been Detected:\n\n")
+        cnt = 1
+        for sub_region in sub_regions:
+            if sub_region != du['url'].replace('https://',''):
+                sys.stdout.write("{}. {}\n".format(cnt, sub_region))
+                cnt += 1
+        user_input = read_kbd("\nDo you want to discover these regions as well", ['q','y','n'], 'n', True, True)
+        if user_input == "q":
+            return(None)
+        elif user_input == "y":
+            for sub_region in sub_regions:
+                sub_du = create_du_entry()
+                sub_du['url'] = "https://{}".format(sub_region)
+                sub_du['du_type'] = "KVM/Kubernetes"
+                sub_du['username'] = du_metadata['du_user']
+                sub_du['password'] = du_metadata['du_password']
+                sub_du['tenant'] = du_metadata['du_tenant']
+                discover_targets.append(sub_du)
+        else:
+            discover_targets.append(du)
+
+    # create region (and sub-regions)
+    sys.stdout.write("\nCreating Regions:\n")
+    for discover_target in discover_targets:
+        sys.stdout.write("--> Adding region: {}\n".format(discover_target['url']))
+        write_config(discover_target)
+
+    # perform host discovery
+    sys.stdout.write("\nPerforming Host Discovery\n")
+    for discover_target in discover_targets:
+        sys.stdout.write("--> Discovering hosts for region: {}\n".format(discover_target['url']))
+        project_id, token = login_du(discover_target['url'],discover_target['username'],discover_target['password'],discover_target['tenant'])
+        discoverd_hosts = discover_du_hosts(discover_target['url'], discover_target['du_type'], project_id, token)
+        for host in discoverd_hosts:
+            write_host(host)
+    sys.stdout.write("\n")
 
     # return
-    return(du)
+    return(discover_targets)
 
 
 #######################################################################
@@ -1476,18 +1545,18 @@ def menu_level0():
                     target_du = None
                 else:
                     target_du = selected_du
-                new_du = add_region(target_du)
-                if new_du:
-                    new_du_list = []
-                    new_du_list.append(new_du)
-                    report_du_info(new_du_list)
+                new_du_list = add_region(target_du)
+                report_du_info(new_du_list)
+                #if new_du:
+                #    new_du_list = []
+                #    new_du_list.append(new_du)
+                #    report_du_info(new_du_list)
         elif user_input == '2':
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
                     new_host = add_host(selected_du)
         elif user_input == '3':
-            sys.stdout.write("\nLogging into Region(s)\n")
             du_entries = get_configs()
             report_du_info(du_entries)
         elif user_input == '4':
