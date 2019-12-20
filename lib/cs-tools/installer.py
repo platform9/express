@@ -280,6 +280,7 @@ def get_du_creds(existing_du_url):
         du_password = ""
         du_tenant = "svc-pmo"
         git_branch = "master"
+        selected_du_type = ""
         region_name = ""
         region_proxy = "-"
         region_dns = "8.8.8.8,8.8.4.4"
@@ -291,22 +292,23 @@ def get_du_creds(existing_du_url):
         region_bond_mode = "1"
         region_bond_mtu = "9000"
 
-        # prompt for du type
-        cnt = 1
-        allowed_values = ['q']
-        for target_type in du_types:
-            sys.stdout.write("    {}. {}\n".format(cnt,target_type))
-            allowed_values.append(str(cnt))
-            cnt += 1
-        user_input = read_kbd("--> Region Type", allowed_values, '', True, True)
-        if user_input == 'q':
-            return({})
-        else:
-            idx = int(user_input) - 1
-            selected_du_type = du_types[idx]
+    # prompt for du type
+    cnt = 1
+    allowed_values = ['q']
+    for target_type in du_types:
+        sys.stdout.write("    {}. {}\n".format(cnt,target_type))
+        allowed_values.append(str(cnt))
+        cnt += 1
+    user_input = read_kbd("--> Region Type", allowed_values, selected_du_type, True, True)
+    if user_input == 'q':
+        return({})
+    else:
+        idx = int(user_input) - 1
+        selected_du_type = du_types[idx]
 
     # set du type
     du_metadata['du_type'] = selected_du_type
+    du_metadata['region_name'] = ""
 
     # get common du parameters
     du_metadata['du_user'] = read_kbd("--> DU Username", [], du_user, True, True)
@@ -321,9 +323,9 @@ def get_du_creds(existing_du_url):
     du_metadata['git_branch'] = read_kbd("--> GIT Branch (for PF9-Express)", [], git_branch, True, True)
     if du_metadata['git_branch'] == 'q':
         return({})
-    du_metadata['region_name'] = read_kbd("--> Region Name", [], region_name, True, True)
-    if du_metadata['region_name'] == 'q':
-        return({})
+    #du_metadata['region_name'] = read_kbd("--> Region Name", [], region_name, True, True)
+    #if du_metadata['region_name'] == 'q':
+    #    return({})
     du_metadata['region_auth_type'] = read_kbd("--> Authentication Type ['simple','sshkey']", ['simple','sshkey'], region_auth_type, True, True)
     if du_metadata['region_auth_type'] == 'q':
         return({})
