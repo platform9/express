@@ -487,24 +487,24 @@ def discover_du_hosts(du_url, du_type, project_id, token):
         else:
             host_type = "kvm"
 
-        host_record = {
-            'du_url': du_url,
-            'du_type': du_type,
-            'ip': qbert_primary_ip,
-            'uuid': host['id'],
-            'ip_interfaces': discover_ips,
-            'du_host_type': host_type,
-            'hostname': host['info']['hostname'],
-            'record_source': "Discovered",
-            'bond_config': "",
-            'pf9-kube': role_kube,
-            'nova': role_nova,
-            'glance': role_glance,
-            'cinder': role_cinder,
-            'designate': role_designate,
-            'node_type': qbert_nodetype,
-            'cluster_name': qbert_cluster_name
-        }
+        host_record = create_host_entry()
+        host_record['du_url'] = du_url
+        host_record['du_type'] = du_type
+        host_record['ip'] = qbert_primary_ip
+        host_record['uuid'] = host['id']
+        host_record['ip_interfaces'] = discover_ips
+        host_record['du_host_type'] = host_type
+        host_record['hostname'] = host['info']['hostname']
+        host_record['record_source'] = "Discovered"
+        host_record['bond_config'] = ""
+        host_record['pf9-kube'] = role_kube
+        host_record['nova'] = role_nova
+        host_record['glance'] = role_glance
+        host_record['cinder'] = role_cinder
+        host_record['designate'] = role_designate
+        host_record['node_type'] = qbert_nodetype
+        host_record['cluster_name'] = qbert_cluster_name
+        host_record['cluster_uuid'] = qbert_cluster_uuid
         discovered_hosts.append(host_record)
 
     return(discovered_hosts)
@@ -873,23 +873,22 @@ def add_host(du):
     else:
         host_metadata = get_host_metadata(du, project_id, token)
         if host_metadata:
-            host = {
-                'du_url': du['url'],
-                'du_host_type': host_metadata['du_host_type'],
-                'ip': host_metadata['ip'],
-                'uuid': host_metadata['uuid'],
-                'ip_interfaces': host_metadata['ip_interfaces'],
-                'hostname': host_metadata['hostname'],
-                'record_source': host_metadata['record_source'],
-                'bond_config': host_metadata['bond_config'],
-                'pf9-kube': host_metadata['pf9-kube'],
-                'nova': host_metadata['nova'],
-                'glance': host_metadata['glance'],
-                'cinder': host_metadata['cinder'],
-                'designate': host_metadata['designate'],
-                'node_type': host_metadata['node_type'],
-                'cluster_name': host_metadata['cluster_name']
-            }
+            host = create_host_entry()
+            host['du_url'] = du['url']
+            host['du_host_type'] = host_metadata['du_host_type']
+            host['ip'] = host_metadata['ip']
+            host['uuid'] = host_metadata['uuid']
+            host['ip_interfaces'] = host_metadata['ip_interfaces']
+            host['hostname'] = host_metadata['hostname']
+            host['record_source'] = host_metadata['record_source']
+            host['bond_config'] = host_metadata['bond_config']
+            host['pf9-kube'] = host_metadata['pf9-kube']
+            host['nova'] = host_metadata['nova']
+            host['glance'] = host_metadata['glance']
+            host['cinder'] = host_metadata['cinder']
+            host['designate'] = host_metadata['designate']
+            host['node_type'] = host_metadata['node_type']
+            host['cluster_name'] = host_metadata['cluster_name']
 
             # persist configurtion
             write_host(host)
@@ -915,6 +914,29 @@ def create_du_entry():
         'bond_mtu': ""
     }
     return(du_record)
+
+
+def create_host_entry():
+    host_record = {
+        'du_url': "",
+        'du_type': "",
+        'ip': "",
+        'uuid': "",
+        'ip_interfaces': "",
+        'du_host_type': "",
+        'hostname': "",
+        'record_source': "",
+        'bond_config': "",
+        'pf9-kube': "",
+        'nova': "",
+        'glance': "",
+        'cinder': "",
+        'designate': "",
+        'node_type': "",
+        'cluster_name': "",
+        'cluster_uuid': ""
+    }
+    return(host_record)
 
 
 def add_region(existing_du_url):
@@ -1382,10 +1404,9 @@ def display_menu1():
     sys.stdout.write("2. Delete Host\n")
     sys.stdout.write("3. Display Region Database (raw dump)\n")
     sys.stdout.write("4. Display Host Database (raw dump)\n")
-    sys.stdout.write("5. Install Platform9 Express\n")
-    sys.stdout.write("6. View Configuration File\n")
-    sys.stdout.write("7. View Inventory File\n")
-    sys.stdout.write("8. View Last Log (from last run of PF9-Express)\n")
+    sys.stdout.write("5. View Configuration File\n")
+    sys.stdout.write("6. View Inventory File\n")
+    sys.stdout.write("7. View Last Log (from last run of PF9-Express)\n")
     sys.stdout.write("*****************************************\n")
 
 
@@ -1420,19 +1441,17 @@ def menu_level1():
         elif user_input == '4':
             dump_database(HOST_FILE)
         elif user_input == '5':
-            sys.stdout.write("\nNot Implemented\n")
-        elif user_input == '6':
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
                     new_host = view_config(selected_du)
-        elif user_input == '7':
+        elif user_input == '6':
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
                     host_entries = get_hosts(selected_du['url'])
                     new_host = view_inventory(selected_du, host_entries)
-        elif user_input == '8':
+        elif user_input == '7':
             log_files = get_logs()
             if len(log_files) == 0:
                 sys.stdout.write("\nNo Logs Found")
