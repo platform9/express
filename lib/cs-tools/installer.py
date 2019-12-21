@@ -477,6 +477,25 @@ def credsmanager_is_responding(du_url, project_id, token):
     return False
 
 
+def get_du_type(du_url, project_id, token):
+    region_type = "-"
+    qbert_status = qbert_is_responding(du_url, project_id, token)
+    if qbert_status == True:
+        region_type = "Kubernetes"
+        credsmanager_status = credsmanager_is_responding(du_url, project_id, token)
+        if credsmanager_status == True:
+            region_type = "KVM/Kubernetes"
+        else:
+            region_type = "VMware"
+    else:
+        credsmanager_status = credsmanager_is_responding(du_url, project_id, token)
+        if credsmanager_status == True:
+            region_type = "KVM"
+        else:
+            region_type = "VMware"
+    return(region_type)
+
+
 def discover_du_hosts(du_url, du_type, project_id, token):
     discovered_hosts = []
     try:
@@ -1016,7 +1035,9 @@ def add_region(existing_du_url):
 
     # check for sub-regions
     sub_regions, du_type_list = get_sub_dus(du)
-    if sub_regions:
+    if not sub_regions:
+        discover_targets.append(du)
+    else:
         sys.stdout.write("\nThe Following Sub-Regions Have Been Detected:\n\n")
         cnt = 1
         for sub_region in sub_regions:
@@ -1049,19 +1070,24 @@ def add_region(existing_du_url):
             discover_targets.append(du)
 
     # create region (and sub-regions)
-    sys.stdout.write("\nCreating Regions:\n")
+    sys.stdout.write("\nCreating Region(s):\n")
     for discover_target in discover_targets:
-        sys.stdout.write("--> Adding region: {}\n".format(discover_target['url']))
-        write_config(discover_target)
+        project_id, token = login_du(discover_target['url'],discover_target['username'],discover_target['password'],discover_target['tenant'])
+        if project_id:
+            region_type = get_du_type(discover_target['url'], project_id, token)
+            discover_target['du_type'] = region_type
+            sys.stdout.write("--> Adding region: {} (detected region type = {})\n".format(discover_target['url'],region_type))
+            write_config(discover_target)
 
     # perform host discovery
     sys.stdout.write("\nPerforming Host Discovery\n")
     for discover_target in discover_targets:
         sys.stdout.write("--> Discovering hosts for region: {}\n".format(discover_target['url']))
         project_id, token = login_du(discover_target['url'],discover_target['username'],discover_target['password'],discover_target['tenant'])
-        discoverd_hosts = discover_du_hosts(discover_target['url'], discover_target['du_type'], project_id, token)
-        for host in discoverd_hosts:
-            write_host(host)
+        if project_id:
+            discoverd_hosts = discover_du_hosts(discover_target['url'], discover_target['du_type'], project_id, token)
+            for host in discoverd_hosts:
+                write_host(host)
     sys.stdout.write("\n")
 
     # return
@@ -1184,7 +1210,7 @@ def build_express_inventory(du, host_entries):
         cnt = 0
         for host in host_entries:
             if host['glance'] == "y":
-                if cnt < 1:
+                if cnt == 0:
                     express_inventory_fh.write("{} glance_ip={} glance_public_endpoint=True\n".format(host['hostname'],host['ip']))
                 else:
                     express_inventory_fh.write("{} glance_ip={}\n".format(host['hostname'],host['ip']))
@@ -1561,10 +1587,6 @@ def menu_level0():
                     target_du = selected_du
                 new_du_list = add_region(target_du)
                 report_du_info(new_du_list)
-                #if new_du:
-                #    new_du_list = []
-                #    new_du_list.append(new_du)
-                #    report_du_info(new_du_list)
         elif user_input == '2':
             selected_du = select_du()
             if selected_du:
