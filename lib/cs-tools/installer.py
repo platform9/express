@@ -1033,6 +1033,15 @@ def add_region(existing_du_url):
     # initialize list of regions to be descovered
     discover_targets = []
 
+    # define valid region types
+    region_types = [
+        "q",
+        "KVM",
+        "Kubernetes",
+        "KVM/Kubernetes",
+        "VMware"
+    ]
+
     # check for sub-regions
     sub_regions, du_type_list = get_sub_dus(du)
     if not sub_regions:
@@ -1074,9 +1083,10 @@ def add_region(existing_du_url):
     for discover_target in discover_targets:
         project_id, token = login_du(discover_target['url'],discover_target['username'],discover_target['password'],discover_target['tenant'])
         if project_id:
+            sys.stdout.write("--> Adding region: {}\n".format(discover_target['url']))
             region_type = get_du_type(discover_target['url'], project_id, token)
+            confirmed_region_type = read_kbd("    Confirm region type ['KVM','Kubernetes','KVM/Kubernetes','VMware']", region_types, region_type, True, True)
             discover_target['du_type'] = region_type
-            sys.stdout.write("--> Adding region: {} (detected region type = {})\n".format(discover_target['url'],region_type))
             write_config(discover_target)
 
     # perform host discovery
