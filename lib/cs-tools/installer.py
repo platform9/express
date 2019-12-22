@@ -225,7 +225,7 @@ def get_host_metadata(du, project_id, token):
         host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], host_node_type, True, True)
         if host_metadata['node_type'] == "q":
             return({})
-        host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], host_cluster_name, True, True)
+        host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], host_cluster_name, True, False)
         if host_metadata['cluster_name'] == "q":
             return({})
 
@@ -1386,13 +1386,13 @@ def invoke_express(express_config, express_inventory, target_inventory, role_fla
 
 
 def run_express(du, host_entries):
-    sys.stdout.write("\nPF9-Express Inventory\n")
+    sys.stdout.write("\nPF9-Express Inventory (region type = {})\n".format(du['du_type']))
     if du['du_type'] == "Kubernetes":
         express_inventories = [
             'k8s_master',
             'k8s_worker'
         ]
-    if du['du_type'] == "KVM":
+    elif du['du_type'] == "KVM":
         express_inventories = [
             'all',
             'hypervisors',
@@ -1614,6 +1614,7 @@ def menu_level0():
                 new_du_list = add_region(target_du)
                 report_du_info(new_du_list)
         elif user_input == '2':
+            sys.stdout.write("\nSelect Region to add Host to:")
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
@@ -1628,6 +1629,7 @@ def menu_level0():
                     host_entries = get_hosts(selected_du['url'])
                     report_host_info(host_entries)
         elif user_input == '5':
+            sys.stdout.write("\nSelect Region to Run PF9-Express againgst:")
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
