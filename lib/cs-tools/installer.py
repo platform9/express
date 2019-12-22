@@ -29,6 +29,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 def _parse_args():
     ap = argparse.ArgumentParser(sys.argv[0],formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     ap.add_argument("--init", "-i", help="Initialize Configuration (delete all regions/hosts)", action="store_true")
+    ap.add_argument("--region", "-r", required=False, help="import region from JSON file")
     return ap.parse_args()
 
 def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True, disallow_null=True):
@@ -124,13 +125,13 @@ def get_sub_dus(du):
                             try:
                                 json_subresponse = json.loads(pf9_subresponse.text)
                                 url_list = []
-                                du_type_list = []
+                                du_name_list = []
                                 for ep in json_subresponse['endpoints']:
                                     baseurl = ep['url'].replace('https://','').split('/')[0]
                                     if not baseurl in url_list:
                                         url_list.append(baseurl)
-                                        du_type_list.append(ep['region'])
-                                return(url_list,du_type_list)
+                                        du_name_list.append(ep['region'])
+                                return(url_list,du_name_list)
                             except:
                                 return(None,None)
                     except:
@@ -249,45 +250,46 @@ def get_du_creds(existing_du_url):
         user_url = existing_du_url
 
     du_metadata['du_url'] = user_url
+    print("calling get_du_metadata({})".format(du_metadata['du_url']))
     du_settings = get_du_metadata(du_metadata['du_url'])
 
     # define du types
     du_types = [
         'KVM',
         'Kubernetes',
-        'KVM/Kubernetes'
+        'KVM/Kubernetes',
+        'VMware'
     ]
 
     if du_settings:
+        selected_du_type = du_settings['du_type']
         du_user = du_settings['username']
         du_password = du_settings['password']
         du_tenant = du_settings['tenant']
         git_branch = du_settings['git_branch']
-        selected_du_type = du_settings['du_type']
-        du_type = du_settings['du_type']
         region_name = du_settings['region']
         region_proxy = du_settings['region_proxy']
         region_dns = du_settings['dns_list']
         region_auth_type = du_settings['auth_type']
-        auth_username = du_settings['auth_username']
-        auth_password = du_settings['auth_password']
         auth_ssh_key = du_settings['auth_ssh_key']
+        auth_password = du_settings['auth_password']
+        auth_username = du_settings['auth_username']
         region_bond_if_name = du_settings['bond_ifname']
         region_bond_mode = du_settings['bond_mode']
         region_bond_mtu = du_settings['bond_mtu']
     else:
+        selected_du_type = ""
         du_user = "pf9-kubeheat"
         du_password = ""
         du_tenant = "svc-pmo"
         git_branch = "master"
-        selected_du_type = ""
         region_name = ""
         region_proxy = "-"
         region_dns = "8.8.8.8,8.8.4.4"
         region_auth_type = "sshkey"
-        auth_username = "centos"
-        auth_password = ""
         auth_ssh_key = "~/.ssh/id_rsa"
+        auth_password = ""
+        auth_username = "centos"
         region_bond_if_name = "bond0"
         region_bond_mode = "1"
         region_bond_mtu = "9000"
@@ -303,7 +305,10 @@ def get_du_creds(existing_du_url):
     if user_input == 'q':
         return({})
     else:
-        idx = int(user_input) - 1
+        if type(user_input) is unicode:
+            idx = du_types.index(selected_du_type)
+        else:
+            idx = int(user_input) - 1
         selected_du_type = du_types[idx]
 
     # set du type
@@ -1007,6 +1012,7 @@ def add_region(existing_du_url):
     else:
         sys.stdout.write("\nUpdate Region:\n")
 
+    # du_metadata is created by create_du_entry() - and initialized or populated from existing du record
     du_metadata = get_du_creds(existing_du_url)
     if not du_metadata:
         return(du_metadata)
@@ -1043,8 +1049,9 @@ def add_region(existing_du_url):
     ]
 
     # check for sub-regions
-    sub_regions, du_type_list = get_sub_dus(du)
+    sub_regions, du_name_list = get_sub_dus(du)
     if not sub_regions:
+        du['region'] = du_name_list[sub_regions.index(du_metadata['du_url'].replace('https://',''))]
         discover_targets.append(du)
     else:
         sys.stdout.write("\nThe Following Sub-Regions Have Been Detected:\n\n")
@@ -1061,7 +1068,7 @@ def add_region(existing_du_url):
                 sub_du = create_du_entry()
                 sub_du['url'] = "https://{}".format(sub_region)
                 sub_du['du_type'] = "KVM/Kubernetes"
-                sub_du['region'] = du_type_list[sub_regions.index(sub_region)]
+                sub_du['region'] = du_name_list[sub_regions.index(sub_region)]
                 sub_du['username'] = du_metadata['du_user']
                 sub_du['password'] = du_metadata['du_password']
                 sub_du['tenant'] = du_metadata['du_tenant']
@@ -1076,6 +1083,7 @@ def add_region(existing_du_url):
                 sub_du['bond_mtu'] = "9000"
                 discover_targets.append(sub_du)
         else:
+            du['region'] = du_name_list[sub_regions.index(du_metadata['du_url'].replace('https://',''))]
             discover_targets.append(du)
 
     # create region (and sub-regions)
@@ -1085,8 +1093,11 @@ def add_region(existing_du_url):
         if project_id:
             sys.stdout.write("--> Adding region: {}\n".format(discover_target['url']))
             region_type = get_du_type(discover_target['url'], project_id, token)
-            confirmed_region_type = read_kbd("    Confirm region type ['KVM','Kubernetes','KVM/Kubernetes','VMware']", region_types, region_type, True, True)
-            discover_target['du_type'] = region_type
+            if discover_target['url'] == du_metadata['du_url']:
+                confirmed_region_type = read_kbd("    Confirm region type ['KVM','Kubernetes','KVM/Kubernetes','VMware']", region_types, du_metadata['du_type'], True, True)
+            else:
+                confirmed_region_type = read_kbd("    Confirm region type ['KVM','Kubernetes','KVM/Kubernetes','VMware']", region_types, region_type, True, True)
+            discover_target['du_type'] = confirmed_region_type
             write_config(discover_target)
 
     # perform host discovery
@@ -1435,6 +1446,11 @@ def run_express(du, host_entries):
                 invoke_express(express_config, express_inventory, target_inventory, role_flag)
 
 
+def import_region(region_json):
+    sys.stdout.write("\nImporting Region\n")
+    sys.stdout.write("--> specification file: {}\n".format(region_json))
+
+
 def dump_text_file(target_file):
     BAR = "======================================================================================================"
     try:
@@ -1648,6 +1664,10 @@ if args.init:
         os.remove(HOST_FILE)
     if os.path.isfile(CONFIG_FILE):
         os.remove(CONFIG_FILE)
+
+# perform functions from commandline
+if args.region:
+    import_region(args.region)
 
 # main menu loop
 menu_level0()
