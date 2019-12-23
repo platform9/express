@@ -1,3 +1,7 @@
+####################################################################################################
+## PF9-Wizard
+## Onboarding Tool for Platform9 
+####################################################################################################
 import os
 import sys
 from os.path import expanduser
@@ -305,6 +309,7 @@ def get_du_creds(existing_du_url):
     if user_input == 'q':
         return({})
     else:
+        print("user_input = {}".format(user_input))
         if type(user_input) is unicode:
             idx = du_types.index(selected_du_type)
         else:
@@ -1359,6 +1364,12 @@ def tail_log(p):
 
 
 def invoke_express(express_config, express_inventory, target_inventory, role_flag):
+    # manage '--pmk' flag (for pf9-express invocation)
+    if target_inventory in ['k8s_master','ks8_worker']:
+        flags = "--pmk"
+    else:
+        flags = ""
+
     user_input = read_kbd("--> Installing PF9-Express Prerequisites, do you want to tail the log", ['q','y','n'], 'n', True, True)
     if user_input == 'q':
         return()
@@ -1373,10 +1384,10 @@ def invoke_express(express_config, express_inventory, target_inventory, role_fla
     if user_input == 'q':
         return()
     if role_flag == 1:
-        sys.stdout.write("Running: {} -a -b -c {} -v {} {}\n".format(PF9_EXPRESS,express_config,express_inventory,target_inventory))
+        sys.stdout.write("Running: {} {} -a -b -c {} -v {} {}\n".format(PF9_EXPRESS,flags,express_config,express_inventory,target_inventory))
         p = subprocess.Popen([PF9_EXPRESS,'-a','-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     else:
-        sys.stdout.write("Running: {} -b -c {} -v {} {}\n".format(PF9_EXPRESS,express_config,express_inventory,target_inventory))
+        sys.stdout.write("Running: {} {} -b -c {} -v {} {}\n".format(PF9_EXPRESS,flags,express_config,express_inventory,target_inventory))
         p = subprocess.Popen([PF9_EXPRESS,'-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     if user_input == 'y':
         sys.stdout.write("----------------------------------- Start Log -----------------------------------\n")
@@ -1531,6 +1542,15 @@ def run_cmd(cmd):
     return cmd_exitcode, cmd_stdout
 
 
+def display_menu2():
+    sys.stdout.write("\n*****************************************\n")
+    sys.stdout.write("**            CS Tools Menu            **\n")
+    sys.stdout.write("*****************************************\n")
+    sys.stdout.write("1. PF9-Audit Tool\n")
+    sys.stdout.write("2. 4.0 DU Prereqisite Validation\n")
+    sys.stdout.write("*****************************************\n")
+
+
 def display_menu1():
     sys.stdout.write("\n*****************************************\n")
     sys.stdout.write("**         Maintenance Menu            **\n")
@@ -1556,7 +1576,25 @@ def display_menu0():
     sys.stdout.write("4. Show Hosts\n")
     sys.stdout.write("5. Attach Hosts to Region (PF9-Express)\n")
     sys.stdout.write("6. Maintenance\n")
+    sys.stdout.write("7. CS Tools\n")
     sys.stdout.write("*****************************************\n")
+
+
+def menu_level2():
+    user_input = ""
+    while not user_input in ['q','Q']:
+        display_menu2()
+        user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True, True)
+        if user_input == '1':
+            selected_du = select_du()
+            if selected_du:
+                if selected_du != "q":
+                    sys.stdout.write("\nNot Implemented\n")
+        elif user_input == '2':
+            sys.stdout.write("\nNot Implemented\n")
+        else:
+            sys.stdout.write("ERROR: Invalid Selection\n")
+        sys.stdout.write("\n")
 
 
 def menu_level1():
@@ -1637,6 +1675,8 @@ def menu_level0():
                     run_express(selected_du, host_entries)
         elif user_input == '6':
             menu_level1()
+        elif user_input == '7':
+            menu_level2()
         elif user_input in ['q','Q']:
             None
         else:
