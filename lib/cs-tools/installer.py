@@ -150,6 +150,70 @@ def get_sub_dus(du):
 
 
 ################################################################################
+# cluster functions
+def get_cluster_metadata(du, project_id, token):
+    if du['du_type'] in ['KVM','VMware']:
+        sys.stdout.write("Invalid region type for adding cluster ({})\n".format(du['du_type']))
+        return({})
+
+    # initialize cluster record
+    cluster_metadata = {}
+    cluster_metadata['record_source'] = "User-Defined"
+    cluster_metadata['name'] = read_kbd("--> Cluster Name", [], '', True, True)
+    if cluster_metadata['name'] == "q":
+        return({})
+
+    # get current cluster settings (if already defined)
+    cluster_settings = get_cluster_record(du['url'], cluster_metadata['name'])
+    if cluster_settings:
+        name = cluster_settings['name']
+        containers_cidr = cluster_settings['containers_cidr']
+        services_cidr = cluster_settings['services_cidr']
+        master_vip_ipv4 = cluster_settings['master_vip_ipv4']
+        master_vip_iface = cluster_settings['master_vip_iface']
+        metallb_cidr = cluster_settings['metallb_cidr']
+        privileged = cluster_settings['privileged']
+        app_catalog_enabled = cluster_settings['app_catalog_enabled']
+        allow_workloads_on_master = cluster_settings['allow_workloads_on_master']
+    else:
+        containers_cidr = "192.168.0.0/16"
+        services_cidr = "192.169.0.0/16"
+        master_vip_ipv4 = ""
+        master_vip_iface = "eth0"
+        metallb_cidr = ""
+        privileged = "True"
+        app_catalog_enabled = "False"
+        allow_workloads_on_master = "False"
+
+    cluster_metadata['containers_cidr'] = read_kbd("--> Containers CIDR", [], containers_cidr, True, True)
+    if cluster_metadata['containers_cidr'] == "q":
+        return({})
+    cluster_metadata['services_cidr'] = read_kbd("--> Services CIDR", [], services_cidr, True, True)
+    if cluster_metadata['services_cidr'] == "q":
+        return({})
+    cluster_metadata['master_vip_ipv4'] = read_kbd("--> Master VIP", [], master_vip_ipv4, True, True)
+    if cluster_metadata['master_vip_ipv4'] == "q":
+        return({})
+    cluster_metadata['master_vip_iface'] = read_kbd("--> Interface Name for VIP", [], master_vip_iface, True, True)
+    if cluster_metadata['master_vip_iface'] == "q":
+        return({})
+    cluster_metadata['metallb_cidr'] = read_kbd("--> IP Range for MetalLB", [], metallb_cidr, True, True)
+    if cluster_metadata['metallb_cidr'] == "q":
+        return({})
+    cluster_metadata['privileged'] = read_kbd("--> Privileged API Mode", [], privileged, True, True)
+    if cluster_metadata['privileged'] == "q":
+        return({})
+    cluster_metadata['app_catalog_enabled'] = read_kbd("--> Enable Helm Application Catalog", [], app_catalog_enabled, True, True)
+    if cluster_metadata['app_catalog_enabled'] == "q":
+        return({})
+    cluster_metadata['allow_workloads_on_master'] = read_kbd("--> Enable Workloads on Master Nodes", [], allow_workloads_on_master, True, True)
+    if cluster_metadata['allow_workloads_on_master'] == "q":
+        return({})
+
+    return(cluster_metadata)
+
+
+################################################################################
 # host functions
 def get_host_metadata(du, project_id, token):
     if du['du_type'] == "KVM":
@@ -819,6 +883,19 @@ def get_configs():
     return(du_configs)
 
 
+def get_cluster_record(du_url, cluster_name):
+    cluster_metadata = {}
+    if os.path.isfile(CLUSTER_FILE):
+        with open(CLUSTER_FILE) as json_file:
+            cluster_configs = json.load(json_file)
+        for cluster in cluster_configs:
+            if cluster['du_url'] == du_url and cluster['name'] == cluster_name:
+                cluster_metadata = dict(cluster)
+                break
+
+    return(cluster_metadata)
+
+
 def get_host_record(du_url, hostname):
     host_metadata = {}
     if os.path.isfile(HOST_FILE):
@@ -866,6 +943,23 @@ def get_du_metadata(du_url):
     return(du_config)
 
 
+def get_clusters(du_url):
+    du_clusters = []
+    if os.path.isfile(CLUSTER_FILE):
+        with open(CLUSTER_FILE) as json_file:
+            du_clusters = json.load(json_file)
+
+    if du_url == None:
+        filtered_clusters = list(du_clusters)
+    else:
+        filtered_clusters = []
+        for cluster in du_clusters:
+            if cluster['du_url'] == du_url:
+                filtered_clusters.append(cluster)
+
+    return(filtered_clusters)
+
+
 def get_hosts(du_url):
     du_hosts = []
     if os.path.isfile(HOST_FILE):
@@ -881,6 +975,33 @@ def get_hosts(du_url):
                 filtered_hosts.append(du)
 
     return(filtered_hosts)
+
+
+def write_cluster(cluster):
+    if not os.path.isdir(CONFIG_DIR):
+        try:
+            os.mkdir(CONFIG_DIR)
+        except:
+            fail("failed to create directory: {}".format(CONFIG_DIR))
+
+    current_clusters = get_clusters(None)
+    if len(current_clusters) == 0:
+        current_clusters.append(cluster)
+        with open(CLUSTER_FILE, 'w') as outfile:
+            json.dump(current_clusters, outfile)
+    else:
+        update_clusters = []
+        flag_found = False
+        for c in current_clusters:
+            if c['name'] == cluster['name']:
+                update_clusters.append(cluster)
+                flag_found = True
+            else:
+                update_clusters.append(c)
+        if not flag_found:
+            update_clusters.append(cluster)
+        with open(CLUSTER_FILE, 'w') as outfile:
+            json.dump(update_clusters, outfile)
 
 
 def write_host(host):
@@ -937,6 +1058,32 @@ def write_config(du):
             json.dump(update_config, outfile)
 
 
+def add_cluster(du):
+    sys.stdout.write("\nAdding Cluster to Region: {}\n".format(du['url']))
+    project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
+    if token == None:
+        sys.stdout.write("--> failed to login to region")
+    else:
+        cluster_metadata = get_cluster_metadata(du, project_id, token)
+        if cluster_metadata:
+            cluster = create_cluster_entry()
+            cluster['name'] = cluster_metadata['name']
+            cluster['containers_cidr'] = cluster_metadata['containers_cidr']
+            cluster['services_cidr'] = cluster_metadata['services_cidr']
+            cluster['master_vip_ipv4'] = cluster_metadata['master_vip_ipv4']
+            cluster['master_vip_iface'] = cluster_metadata['master_vip_iface']
+            cluster['metallb_cidr'] = cluster_metadata['metallb_cidr']
+            cluster['privileged'] = cluster_metadata['privileged']
+            cluster['app_catalog_enabled'] = cluster_metadata['app_catalog_enabled']
+            cluster['allow_workloads_on_master'] = cluster_metadata['allow_workloads_on_master']
+
+            # persist configurtion
+            print("-----------------------------------")
+            print(cluster)
+            print("-----------------------------------")
+            write_cluster(cluster)
+
+
 def add_host(du):
     sys.stdout.write("\nAdding Host to Region: {}\n".format(du['url']))
     project_id, token = login_du(du['url'],du['username'],du['password'],du['tenant'])
@@ -986,6 +1133,14 @@ def create_du_entry():
         'bond_mtu': ""
     }
     return(du_record)
+
+
+def create_cluster_entry():
+    cluster_record = {
+        'du_url': "",
+        'name': ""
+    }
+    return(cluster_record)
 
 
 def create_host_entry():
@@ -1557,11 +1712,11 @@ def display_menu1():
     sys.stdout.write("*****************************************\n")
     sys.stdout.write("1. Delete Region\n")
     sys.stdout.write("2. Delete Host\n")
-    sys.stdout.write("3. Display Region Database (raw dump)\n")
-    sys.stdout.write("4. Display Host Database (raw dump)\n")
+    sys.stdout.write("3. Display Region Database\n")
+    sys.stdout.write("4. Display Host Database\n")
     sys.stdout.write("5. View Configuration File\n")
     sys.stdout.write("6. View Inventory File\n")
-    sys.stdout.write("7. View Last Log (from last run of PF9-Express)\n")
+    sys.stdout.write("7. View Logs\n")
     sys.stdout.write("*****************************************\n")
 
 
@@ -1572,11 +1727,12 @@ def display_menu0():
     sys.stdout.write("*****************************************\n")
     sys.stdout.write("1. Add/Edit Region\n")
     sys.stdout.write("2. Add/Edit Hosts\n")
-    sys.stdout.write("3. Show Region\n")
-    sys.stdout.write("4. Show Hosts\n")
-    sys.stdout.write("5. Attach Hosts to Region (PF9-Express)\n")
-    sys.stdout.write("6. Maintenance\n")
-    sys.stdout.write("7. CS Tools\n")
+    sys.stdout.write("3. Add/Edit Cluster\n")
+    sys.stdout.write("4. Show Region\n")
+    sys.stdout.write("5. Show Hosts\n")
+    sys.stdout.write("6. Attach Hosts to Regions\n")
+    sys.stdout.write("7. Maintenance Tools\n")
+    sys.stdout.write("8. CS Tools\n")
     sys.stdout.write("*****************************************\n")
 
 
@@ -1584,7 +1740,7 @@ def menu_level2():
     user_input = ""
     while not user_input in ['q','Q']:
         display_menu2()
-        user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True, True)
+        user_input = read_kbd("Enter Selection", [], '', True, True)
         if user_input == '1':
             selected_du = select_du()
             if selected_du:
@@ -1593,7 +1749,7 @@ def menu_level2():
         elif user_input == '2':
             sys.stdout.write("\nNot Implemented\n")
         else:
-            sys.stdout.write("ERROR: Invalid Selection\n")
+            sys.stdout.write("ERROR: Invalid Selection (enter 'q' to quit)\n")
         sys.stdout.write("\n")
 
 
@@ -1601,7 +1757,7 @@ def menu_level1():
     user_input = ""
     while not user_input in ['q','Q']:
         display_menu1()
-        user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True, True)
+        user_input = read_kbd("Enter Selection", [], '', True, True)
         if user_input == '1':
             selected_du = select_du()
             if selected_du:
@@ -1633,7 +1789,7 @@ def menu_level1():
         elif user_input in ['q','Q']:
             None
         else:
-            sys.stdout.write("ERROR: Invalid Selection\n")
+            sys.stdout.write("ERROR: Invalid Selection (enter 'q' to quit)\n")
         sys.stdout.write("\n")
 
 
@@ -1641,7 +1797,7 @@ def menu_level0():
     user_input = ""
     while not user_input in ['q','Q']:
         display_menu0()
-        user_input = read_kbd("Enter Selection ('q' to quit)", [], '', True, True)
+        user_input = read_kbd("Enter Selection", [], '', True, True)
         if user_input == '1':
             selected_du = add_edit_du()
             if selected_du != None:
@@ -1658,29 +1814,35 @@ def menu_level0():
                 if selected_du != "q":
                     new_host = add_host(selected_du)
         elif user_input == '3':
+            sys.stdout.write("\nSelect Region to add Cluster to:")
+            selected_du = select_du()
+            if selected_du:
+                if selected_du != "q":
+                    new_cluster = add_cluster(selected_du)
+        elif user_input == '4':
             du_entries = get_configs()
             report_du_info(du_entries)
-        elif user_input == '4':
+        elif user_input == '5':
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
                     host_entries = get_hosts(selected_du['url'])
                     report_host_info(host_entries)
-        elif user_input == '5':
+        elif user_input == '6':
             sys.stdout.write("\nSelect Region to Run PF9-Express againgst:")
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
                     host_entries = get_hosts(selected_du['url'])
                     run_express(selected_du, host_entries)
-        elif user_input == '6':
-            menu_level1()
         elif user_input == '7':
+            menu_level1()
+        elif user_input == '8':
             menu_level2()
         elif user_input in ['q','Q']:
             None
         else:
-            sys.stdout.write("ERROR: Invalid Selection\n")
+            sys.stdout.write("ERROR: Invalid Selection (enter 'q' to quit)\n")
 
         if user_input != '6':
             sys.stdout.write("\n")
@@ -1694,6 +1856,7 @@ HOME_DIR = expanduser("~")
 CONFIG_DIR = "{}/.pf9-wizard".format(HOME_DIR)
 CONFIG_FILE = "{}/du.conf".format(CONFIG_DIR)
 HOST_FILE = "{}/hosts.conf".format(CONFIG_DIR)
+CLUSTER_FILE = "{}/clusters.conf".format(CONFIG_DIR)
 EXPRESS_REPO = "https://github.com/platform9/express.git"
 EXPRESS_INSTALL_DIR = "{}/.pf9-wizard/pf9-express".format(HOME_DIR)
 EXPRESS_LOG_DIR = "{}/.pf9-wizard/pf9-express/log".format(HOME_DIR)
@@ -1713,3 +1876,6 @@ if args.region:
 
 # main menu loop
 menu_level0()
+
+# exit cleanly
+sys.exit(0)
