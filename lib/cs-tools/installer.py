@@ -159,6 +159,7 @@ def get_cluster_metadata(du, project_id, token):
     # initialize cluster record
     cluster_metadata = {}
     cluster_metadata['record_source'] = "User-Defined"
+    cluster_metadata['du_url'] = du['url']
     cluster_metadata['name'] = read_kbd("--> Cluster Name", [], '', True, True)
     if cluster_metadata['name'] == "q":
         return({})
@@ -318,7 +319,6 @@ def get_du_creds(existing_du_url):
         user_url = existing_du_url
 
     du_metadata['du_url'] = user_url
-    print("calling get_du_metadata({})".format(du_metadata['du_url']))
     du_settings = get_du_metadata(du_metadata['du_url'])
 
     # define du types
@@ -373,7 +373,6 @@ def get_du_creds(existing_du_url):
     if user_input == 'q':
         return({})
     else:
-        print("user_input = {}".format(user_input))
         if type(user_input) is unicode:
             idx = du_types.index(selected_du_type)
         else:
@@ -668,6 +667,43 @@ def get_du_hosts(du_url, project_id, token):
     return(num_hosts)
 
 
+def report_cluster_info(cluster_entries):
+    from prettytable import PrettyTable
+
+    if not os.path.isfile(CLUSTER_FILE):
+        sys.stdout.write("\nNo clusrters have been defined yet (run 'Add/Update Cluster')\n")
+        return()
+
+    du_table = PrettyTable()
+    du_table.field_names = ["Cluster Name","Containers CIDR","Services CIDR","Master VIP","VIP Interface","MetalLB IP Range","Privileged Mode","App Catalog","Master Workloads"]
+    du_table.align["Cluster Name"] = "l"
+    du_table.align["Containers CIDR"] = "l"
+    du_table.align["Services CIDR"] = "l"
+    du_table.align["Master VIP"] = "l"
+    du_table.align["VIP Interface"] = "l"
+    du_table.align["MetalLB IP Range"] = "l"
+    du_table.align["Privileged Mode"] = "l"
+    du_table.align["App Catalog"] = "l"
+    du_table.align["Master Workloads"] = "l"
+
+    for cluster in cluster_entries:
+        table_row = [
+            cluster['name'],
+            cluster['containers_cidr'],
+            cluster['services_cidr'],
+            cluster['master_vip_ipv4'],
+            cluster['master_vip_iface'],
+            cluster['metallb_cidr'],
+            cluster['privileged'],
+            cluster['app_catalog_enabled'],
+            cluster['allow_workloads_on_master']
+        ]
+        du_table.add_row(table_row)
+
+    sys.stdout.write("\nKubernetes Clusters\n")
+    print(du_table)
+
+
 def report_du_info(du_entries):
     from prettytable import PrettyTable
 
@@ -746,11 +782,11 @@ def report_host_info(host_entries):
     from prettytable import PrettyTable
 
     if not os.path.isfile(HOST_FILE):
-        sys.stdout.write("\nNo hosts have been defined yet (run 'Add/Update Host')\n")
+        sys.stdout.write("\nNo hosts have been defined yet (run 'Add/Update Hosts')\n")
         return()
 
     if len(host_entries) == 0:
-        sys.stdout.write("\nNo hosts have been defined yet (run 'Add/Update Host')\n")
+        sys.stdout.write("\nNo hosts have been defined yet (run 'Add/Update Hosts')\n")
         return()
     
     du_metadata = get_du_metadata(host_entries[0]['du_url'])
@@ -816,7 +852,7 @@ def report_host_info(host_entries):
         if num_k8s_rows > 0:
             if num_k8s_rows > 0:
                 sys.stdout.write("\n")
-            sys.stdout.write("Kubernetes Hosts\n")
+            sys.stdout.write("Kubernetes Nodes\n")
             print(host_table)
 
 def add_edit_du():
@@ -874,13 +910,20 @@ def select_du():
         return({})
 
 
-def get_configs():
+def get_configs(du_url=None):
     du_configs = []
     if os.path.isfile(CONFIG_FILE):
         with open(CONFIG_FILE) as json_file:
             du_configs = json.load(json_file)
 
-    return(du_configs)
+    if not du_url:
+        return(du_configs)
+    else:
+        filtered_du_configs = []
+        for du in du_configs:
+            if du['url'] == du_url:
+                filtered_du_configs.append(du)
+        return(filtered_du_configs)
 
 
 def get_cluster_record(du_url, cluster_name):
@@ -1067,6 +1110,7 @@ def add_cluster(du):
         cluster_metadata = get_cluster_metadata(du, project_id, token)
         if cluster_metadata:
             cluster = create_cluster_entry()
+            cluster['du_url'] = cluster_metadata['du_url']
             cluster['name'] = cluster_metadata['name']
             cluster['containers_cidr'] = cluster_metadata['containers_cidr']
             cluster['services_cidr'] = cluster_metadata['services_cidr']
@@ -1078,9 +1122,6 @@ def add_cluster(du):
             cluster['allow_workloads_on_master'] = cluster_metadata['allow_workloads_on_master']
 
             # persist configurtion
-            print("-----------------------------------")
-            print(cluster)
-            print("-----------------------------------")
             write_cluster(cluster)
 
 
@@ -1697,15 +1738,6 @@ def run_cmd(cmd):
     return cmd_exitcode, cmd_stdout
 
 
-def display_menu2():
-    sys.stdout.write("\n*****************************************\n")
-    sys.stdout.write("**            CS Tools Menu            **\n")
-    sys.stdout.write("*****************************************\n")
-    sys.stdout.write("1. PF9-Audit Tool\n")
-    sys.stdout.write("2. 4.0 DU Prereqisite Validation\n")
-    sys.stdout.write("*****************************************\n")
-
-
 def display_menu1():
     sys.stdout.write("\n*****************************************\n")
     sys.stdout.write("**         Maintenance Menu            **\n")
@@ -1725,32 +1757,13 @@ def display_menu0():
     sys.stdout.write("**          Platform9 Wizard           **\n")
     sys.stdout.write("**              Main Menu              **\n")
     sys.stdout.write("*****************************************\n")
-    sys.stdout.write("1. Add/Edit Region\n")
-    sys.stdout.write("2. Add/Edit Hosts\n")
-    sys.stdout.write("3. Add/Edit Cluster\n")
+    sys.stdout.write("1. Add/Update Regions\n")
+    sys.stdout.write("2. Add/Update Hosts\n")
+    sys.stdout.write("3. Add/Update Clusters\n")
     sys.stdout.write("4. Show Region\n")
-    sys.stdout.write("5. Show Hosts\n")
-    sys.stdout.write("6. Attach Hosts to Regions\n")
-    sys.stdout.write("7. Maintenance Tools\n")
-    sys.stdout.write("8. CS Tools\n")
+    sys.stdout.write("5. Attach Host(s) to Region\n")
+    sys.stdout.write("6. Maintenance\n")
     sys.stdout.write("*****************************************\n")
-
-
-def menu_level2():
-    user_input = ""
-    while not user_input in ['q','Q']:
-        display_menu2()
-        user_input = read_kbd("Enter Selection", [], '', True, True)
-        if user_input == '1':
-            selected_du = select_du()
-            if selected_du:
-                if selected_du != "q":
-                    sys.stdout.write("\nNot Implemented\n")
-        elif user_input == '2':
-            sys.stdout.write("\nNot Implemented\n")
-        else:
-            sys.stdout.write("ERROR: Invalid Selection (enter 'q' to quit)\n")
-        sys.stdout.write("\n")
 
 
 def menu_level1():
@@ -1820,31 +1833,31 @@ def menu_level0():
                 if selected_du != "q":
                     new_cluster = add_cluster(selected_du)
         elif user_input == '4':
-            du_entries = get_configs()
-            report_du_info(du_entries)
-        elif user_input == '5':
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
+                    du_entries = get_configs(selected_du['url'])
+                    report_du_info(du_entries)
                     host_entries = get_hosts(selected_du['url'])
                     report_host_info(host_entries)
-        elif user_input == '6':
-            sys.stdout.write("\nSelect Region to Run PF9-Express againgst:")
+                    if selected_du['du_type'] in ['Kubernetes','KVM/Kubernetes']:
+                        cluster_entries = get_clusters(selected_du['url'])
+                        report_cluster_info(cluster_entries)
+        elif user_input == '5':
+            sys.stdout.write("\nSelect Region to Run PF9-Express against:")
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
                     host_entries = get_hosts(selected_du['url'])
                     run_express(selected_du, host_entries)
-        elif user_input == '7':
+        elif user_input == '6':
             menu_level1()
-        elif user_input == '8':
-            menu_level2()
         elif user_input in ['q','Q']:
             None
         else:
             sys.stdout.write("ERROR: Invalid Selection (enter 'q' to quit)\n")
 
-        if user_input != '6':
+        if user_input != '7':
             sys.stdout.write("\n")
 
 
@@ -1869,6 +1882,8 @@ if args.init:
         os.remove(HOST_FILE)
     if os.path.isfile(CONFIG_FILE):
         os.remove(CONFIG_FILE)
+    if os.path.isfile(CLUSTER_FILE):
+        os.remove(CLUSTER_FILE)
 
 # perform functions from commandline
 if args.region:
