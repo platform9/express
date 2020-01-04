@@ -182,9 +182,9 @@ def get_cluster_metadata(du, project_id, token):
         master_vip_ipv4 = ""
         master_vip_iface = "eth0"
         metallb_cidr = ""
-        privileged = "True"
-        app_catalog_enabled = "False"
-        allow_workloads_on_master = "False"
+        privileged = "1"
+        app_catalog_enabled = "0"
+        allow_workloads_on_master = "0"
 
     cluster_metadata['containers_cidr'] = read_kbd("--> Containers CIDR", [], containers_cidr, True, True)
     if cluster_metadata['containers_cidr'] == "q":
@@ -201,13 +201,13 @@ def get_cluster_metadata(du, project_id, token):
     cluster_metadata['metallb_cidr'] = read_kbd("--> IP Range for MetalLB", [], metallb_cidr, True, True)
     if cluster_metadata['metallb_cidr'] == "q":
         return({})
-    cluster_metadata['privileged'] = read_kbd("--> Privileged API Mode", [], privileged, True, True)
+    cluster_metadata['privileged'] = read_kbd("--> Privileged API Mode", ['0','1'], privileged, True, True)
     if cluster_metadata['privileged'] == "q":
         return({})
-    cluster_metadata['app_catalog_enabled'] = read_kbd("--> Enable Helm Application Catalog", [], app_catalog_enabled, True, True)
+    cluster_metadata['app_catalog_enabled'] = read_kbd("--> Enable Helm Application Catalog", ['0','1'], app_catalog_enabled, True, True)
     if cluster_metadata['app_catalog_enabled'] == "q":
         return({})
-    cluster_metadata['allow_workloads_on_master'] = read_kbd("--> Enable Workloads on Master Nodes", [], allow_workloads_on_master, True, True)
+    cluster_metadata['allow_workloads_on_master'] = read_kbd("--> Enable Workloads on Master Nodes", ['0','1'], allow_workloads_on_master, True, True)
     if cluster_metadata['allow_workloads_on_master'] == "q":
         return({})
 
@@ -569,6 +569,41 @@ def get_du_type(du_url, project_id, token):
     return(region_type)
 
 
+def discover_du_clusters(du_url, du_type, project_id, token):
+    discovered_clusters = []
+    try:
+        api_endpoint = "qbert/v3/{}/clusters".format(project_id)
+        headers = { 'content-type': 'application/json', 'X-Auth-Token': token }
+        pf9_response = requests.get("{}/{}".format(du_url,api_endpoint), verify=False, headers=headers)
+        if pf9_response.status_code != 200:
+            return(discovered_clusters)
+    except:
+        return(discovered_clusters)
+
+    # parse resmgr response
+    try:
+        json_response = json.loads(pf9_response.text)
+    except:
+        return(discovered_clusters)
+
+    # process discovered clusters
+    for cluster in json_response:
+        cluster_record = create_cluster_entry()
+        cluster_record['du_url'] = du_url
+        cluster_record['name'] = cluster['name']
+        cluster_record['containers_cidr'] = cluster['containersCidr']
+        cluster_record['services_cidr'] = cluster['servicesCidr']
+        cluster_record['master_vip_ipv4'] = cluster['masterVipIpv4']
+        cluster_record['master_vip_iface'] = cluster['masterVipIface']
+        cluster_record['metallb_cidr'] = cluster['metallbCidr']
+        cluster_record['privileged'] = cluster['privileged']
+        cluster_record['app_catalog_enabled'] = cluster['appCatalogEnabled']
+        cluster_record['allow_workloads_on_master'] = cluster['allowWorkloadsOnMaster']
+        discovered_clusters.append(cluster_record)
+
+    return(discovered_clusters)
+
+
 def discover_du_hosts(du_url, du_type, project_id, token):
     discovered_hosts = []
     try:
@@ -671,7 +706,7 @@ def report_cluster_info(cluster_entries):
     from prettytable import PrettyTable
 
     if not os.path.isfile(CLUSTER_FILE):
-        sys.stdout.write("\nNo clusrters have been defined yet (run 'Add/Update Cluster')\n")
+        sys.stdout.write("\nNo clusters have been defined yet (run 'Add/Update Cluster')\n")
         return()
 
     du_table = PrettyTable()
@@ -1179,7 +1214,15 @@ def create_du_entry():
 def create_cluster_entry():
     cluster_record = {
         'du_url': "",
-        'name': ""
+        'name': "",
+        'containers_cidr': "",
+        'services_cidr': "",
+        'master_vip_ipv4': "",
+        'master_vip_iface': "",
+        'metallb_cidr': "",
+        'privileged': "",
+        'app_catalog_enabled': "",
+        'allow_workloads_on_master': ""
     }
     return(cluster_record)
 
@@ -1237,7 +1280,7 @@ def add_region(existing_du_url):
         du['bond_mode'] = du_metadata['region_bond_mode']
         du['bond_mtu'] = du_metadata['region_bond_mtu']
 
-    # initialize list of regions to be descovered
+    # initialize list of regions to be discovered
     discover_targets = []
 
     # define valid region types
@@ -1307,9 +1350,21 @@ def add_region(existing_du_url):
         sys.stdout.write("--> Discovering hosts for region: {}\n".format(discover_target['url']))
         project_id, token = login_du(discover_target['url'],discover_target['username'],discover_target['password'],discover_target['tenant'])
         if project_id:
-            discoverd_hosts = discover_du_hosts(discover_target['url'], discover_target['du_type'], project_id, token)
-            for host in discoverd_hosts:
+            discovered_hosts = discover_du_hosts(discover_target['url'], discover_target['du_type'], project_id, token)
+            for host in discovered_hosts:
                 write_host(host)
+    sys.stdout.write("\n")
+
+    # perform cluster discovery
+    sys.stdout.write("Performing Cluster Discovery\n")
+    for discover_target in discover_targets:
+        if discover_target['du_type'] in ['Kubernetes','KVM/Kubernetes']:
+            sys.stdout.write("--> Discovering clusters for region: {}\n".format(discover_target['url']))
+            project_id, token = login_du(discover_target['url'],discover_target['username'],discover_target['password'],discover_target['tenant'])
+            if project_id:
+                discovered_clusters = discover_du_clusters(discover_target['url'], discover_target['du_type'], project_id, token)
+                for cluster in discovered_clusters:
+                    write_cluster(cluster)
     sys.stdout.write("\n")
 
     # return
