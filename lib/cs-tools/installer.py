@@ -711,6 +711,7 @@ def report_cluster_info(cluster_entries):
 
     du_table = PrettyTable()
     du_table.field_names = ["Cluster Name","Containers CIDR","Services CIDR","Master VIP","VIP Interface","MetalLB IP Range","Privileged Mode","App Catalog","Master Workloads"]
+    du_table.title = "Kubernetes Clusters"
     du_table.align["Cluster Name"] = "l"
     du_table.align["Containers CIDR"] = "l"
     du_table.align["Services CIDR"] = "l"
@@ -735,8 +736,13 @@ def report_cluster_info(cluster_entries):
         ]
         du_table.add_row(table_row)
 
-    sys.stdout.write("\nKubernetes Clusters\n")
     print(du_table)
+
+
+def dump_var(target_var):
+    from inspect import getmembers
+    from pprint import pprint
+    pprint(getmembers(target_var))
 
 
 def report_du_info(du_entries):
@@ -748,6 +754,7 @@ def report_du_info(du_entries):
 
     du_table = PrettyTable()
     du_table.field_names = ["DU URL","DU Auth","Region Type","Region Name","Tenant","SSH Auth Type","SSH User","# Hosts"]
+    du_table.title = "Region Configuration"
     du_table.align["DU URL"] = "l"
     du_table.align["DU Auth"] = "l"
     du_table.align["Region Type"] = "l"
@@ -828,6 +835,7 @@ def report_host_info(host_entries):
     if du_metadata['du_type'] in ['KVM','KVM/Kubernetes']:
         host_table = PrettyTable()
         host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Nova","Glance","Cinder","Designate","Bond Config","IP Interfaces"]
+        host_table.title = "KVM Hosts"
         host_table.align["HOSTNAME"] = "l"
         host_table.align["Primary IP"] = "l"
         host_table.align["SSH Auth"] = "l"
@@ -854,12 +862,12 @@ def report_host_info(host_entries):
             num_kvm_rows += 1
 
         if num_kvm_rows > 0:
-            sys.stdout.write("KVM Hosts\n")
             print(host_table)
 
     if du_metadata['du_type'] in ['Kubernetes','KVM/Kubernetes']:
         host_table = PrettyTable()
         host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Node Type","Cluster Name","IP Interfaces"]
+        host_table.title = "Kubernetes Hosts"
         host_table.align["HOSTNAME"] = "l"
         host_table.align["Primary IP"] = "l"
         host_table.align["SSH Auth"] = "l"
@@ -885,9 +893,6 @@ def report_host_info(host_entries):
             host_table.add_row([host['hostname'], host['ip'], ssh_status, host['record_source'], host['node_type'], cluster_assigned, host['ip_interfaces']])
             num_k8s_rows += 1
         if num_k8s_rows > 0:
-            if num_k8s_rows > 0:
-                sys.stdout.write("\n")
-            sys.stdout.write("Kubernetes Nodes\n")
             print(host_table)
 
 def add_edit_du():
@@ -1892,7 +1897,7 @@ def menu_level0():
             if selected_du:
                 if selected_du != "q":
                     du_entries = get_configs(selected_du['url'])
-                    report_du_info(du_entries)
+                    width = report_du_info(du_entries)
                     host_entries = get_hosts(selected_du['url'])
                     report_host_info(host_entries)
                     if selected_du['du_type'] in ['Kubernetes','KVM/Kubernetes']:
@@ -1929,6 +1934,7 @@ EXPRESS_REPO = "https://github.com/platform9/express.git"
 EXPRESS_INSTALL_DIR = "{}/.pf9-wizard/pf9-express".format(HOME_DIR)
 EXPRESS_LOG_DIR = "{}/.pf9-wizard/pf9-express/log".format(HOME_DIR)
 PF9_EXPRESS = "{}/.pf9-wizard/pf9-express/pf9-express".format(HOME_DIR)
+MAX_WIDTH = 160
 
 # perform initialization (if invoked with '--init')
 if args.init:
