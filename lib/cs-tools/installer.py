@@ -588,9 +588,11 @@ def discover_du_clusters(du_url, du_type, project_id, token):
 
     # process discovered clusters
     for cluster in json_response:
+        print(cluster)
         cluster_record = create_cluster_entry()
         cluster_record['du_url'] = du_url
         cluster_record['name'] = cluster['name']
+        cluster_record['uuid'] = cluster['uuid']
         cluster_record['record_source'] = "Discovered"
         cluster_record['containers_cidr'] = cluster['containersCidr']
         cluster_record['services_cidr'] = cluster['servicesCidr']
@@ -711,23 +713,24 @@ def report_cluster_info(cluster_entries):
         return()
 
     du_table = PrettyTable()
-    du_table.field_names = ["Name","Source","Containers CIDR","Services CIDR","VIP","VIP Interface","MetalLB Range","Privileged","App Catalog","Master Workloads"]
+    du_table.field_names = ["Name","Containers","Services","VIP","Interface","MetalLB","Priv","Catalog","Taint","UUID"]
     du_table.title = "Kubernetes Clusters"
-    du_table.align["Cluster Name"] = "l"
-    du_table.align["Source"] = "l"
-    du_table.align["Containers CIDR"] = "l"
-    du_table.align["Services CIDR"] = "l"
-    du_table.align["Master VIP"] = "l"
-    du_table.align["VIP Interface"] = "l"
-    du_table.align["MetalLB IP Range"] = "l"
-    du_table.align["Privileged Mode"] = "l"
-    du_table.align["App Catalog"] = "l"
-    du_table.align["Master Workloads"] = "l"
+    du_table.header = True
+    du_table.align["Name"] = "l"
+    du_table.align["Containers"] = "l"
+    du_table.align["Services"] = "l"
+    du_table.align["VIP"] = "l"
+    du_table.align["Interface"] = "l"
+    du_table.align["MetalLB"] = "l"
+    du_table.align["Priv"] = "l"
+    du_table.align["Catalog"] = "l"
+    du_table.align["Taint"] = "l"
+    du_table.align["UUID"] = "l"
+    #dump_var(du_table)
 
     for cluster in cluster_entries:
         table_row = [
             cluster['name'],
-            cluster['record_source'],
             cluster['containers_cidr'],
             cluster['services_cidr'],
             cluster['master_vip_ipv4'],
@@ -735,7 +738,8 @@ def report_cluster_info(cluster_entries):
             cluster['metallb_cidr'],
             cluster['privileged'],
             cluster['app_catalog_enabled'],
-            cluster['allow_workloads_on_master']
+            cluster['allow_workloads_on_master'],
+            cluster['uuid']
         ]
         du_table.add_row(table_row)
 
@@ -897,6 +901,7 @@ def report_host_info(host_entries):
             num_k8s_rows += 1
         if num_k8s_rows > 0:
             print(host_table)
+
 
 def add_edit_du():
     if not os.path.isdir(CONFIG_DIR):
@@ -1225,6 +1230,7 @@ def create_cluster_entry():
         'du_url': "",
         'name': "",
         'record_source': "",
+        'uuid': "",
         'containers_cidr': "",
         'services_cidr': "",
         'master_vip_ipv4': "",
@@ -1310,13 +1316,16 @@ def create_cluster(du_url,project_id,token,cluster):
         pf9_response = requests.post("{}/{}".format(du_url,api_endpoint), verify=False, headers=headers, data=json.dumps(cluster_create_payload))
     except:
         sys.stdout.write("ERROR: failed to create cluster\n")
+        return(None)
 
     # parse resmgr response
+    cluster_uuid = None
     try:
         json_response = json.loads(pf9_response.text)
+        cluster_uuid = json_response['uuid']
     except:
-        sys.stdout.write("INFO: cluster created, but response did not include the cluster uuid\n")
-    sys.stdout.write("    cluster created successfully, uuid = {}\n".format(json_response['uuid']))
+        sys.stdout.write("INFO: failed to create cluster (failed to retrieve the uuid)\n")
+    return(cluster_uuid)
 
 
 def cluster_in_array(target_url,target_name,target_clusters):
@@ -1940,7 +1949,7 @@ def menu_level0():
             if selected_du:
                 if selected_du != "q":
                     du_entries = get_configs(selected_du['url'])
-                    width = report_du_info(du_entries)
+                    report_du_info(du_entries)
                     host_entries = get_hosts(selected_du['url'])
                     report_host_info(host_entries)
                     if selected_du['du_type'] in ['Kubernetes','KVM/Kubernetes']:
