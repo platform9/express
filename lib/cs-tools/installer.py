@@ -591,6 +591,7 @@ def discover_du_clusters(du_url, du_type, project_id, token):
         cluster_record = create_cluster_entry()
         cluster_record['du_url'] = du_url
         cluster_record['name'] = cluster['name']
+        cluster_record['record_source'] = "Discovered"
         cluster_record['containers_cidr'] = cluster['containersCidr']
         cluster_record['services_cidr'] = cluster['servicesCidr']
         cluster_record['master_vip_ipv4'] = cluster['masterVipIpv4']
@@ -710,9 +711,10 @@ def report_cluster_info(cluster_entries):
         return()
 
     du_table = PrettyTable()
-    du_table.field_names = ["Cluster Name","Containers CIDR","Services CIDR","Master VIP","VIP Interface","MetalLB IP Range","Privileged Mode","App Catalog","Master Workloads"]
+    du_table.field_names = ["Name","Source","Containers CIDR","Services CIDR","VIP","VIP Interface","MetalLB Range","Privileged","App Catalog","Master Workloads"]
     du_table.title = "Kubernetes Clusters"
     du_table.align["Cluster Name"] = "l"
+    du_table.align["Source"] = "l"
     du_table.align["Containers CIDR"] = "l"
     du_table.align["Services CIDR"] = "l"
     du_table.align["Master VIP"] = "l"
@@ -725,6 +727,7 @@ def report_cluster_info(cluster_entries):
     for cluster in cluster_entries:
         table_row = [
             cluster['name'],
+            cluster['record_source'],
             cluster['containers_cidr'],
             cluster['services_cidr'],
             cluster['master_vip_ipv4'],
@@ -1152,6 +1155,7 @@ def add_cluster(du):
             cluster = create_cluster_entry()
             cluster['du_url'] = cluster_metadata['du_url']
             cluster['name'] = cluster_metadata['name']
+            cluster['record_source'] = "User-Defined"
             cluster['containers_cidr'] = cluster_metadata['containers_cidr']
             cluster['services_cidr'] = cluster_metadata['services_cidr']
             cluster['master_vip_ipv4'] = cluster_metadata['master_vip_ipv4']
@@ -1220,6 +1224,7 @@ def create_cluster_entry():
     cluster_record = {
         'du_url': "",
         'name': "",
+        'record_source': "",
         'containers_cidr': "",
         'services_cidr': "",
         'master_vip_ipv4': "",
@@ -1253,6 +1258,72 @@ def create_host_entry():
         'cluster_uuid': ""
     }
     return(host_record)
+
+
+def get_nodepool_id(du_url,project_id,token):
+    try:
+        headers = { 'content-type': 'application/json', 'X-Auth-Token': token }
+        api_endpoint = "qbert/v3/{}/cloudProviders".format(project_id)
+        pf9_response = requests.get("{}/{}".format(du_url,api_endpoint), verify=False, headers=headers)
+        if pf9_response.status_code != 200:
+            return None
+
+        # parse resmgr response
+        try:
+            json_response = json.loads(pf9_response.text)
+        except:
+            return None
+
+        for item in json_response:
+            if item['type'] == 'local':
+                return(item['nodePoolUuid'])
+    except:
+        return None
+
+
+def create_cluster(du_url,project_id,token,cluster):
+    sys.stdout.write("--> Creating Cluster: {}\n".format(cluster['name']))
+    nodepool_id = get_nodepool_id(du_url,project_id,token)
+    if nodepool_id == None:
+        sys.stdout.write("ERROR: failed to get nodepool_id for cloud provider\n")
+        return(None)
+
+    # configure cluster
+    cluster_create_payload = {
+        "name": cluster['name'],
+        "nodePoolUuid": nodepool_id,
+        "containersCidr": cluster['containers_cidr'],
+        "servicesCidr": cluster['services_cidr'],
+        "masterVipIpv4": cluster['master_vip_ipv4'],
+        "masterVipIface": cluster['master_vip_iface'],
+        "metallbCidr": cluster['metallb_cidr'],
+        "privileged": cluster['privileged'],
+        "appCatalogEnabled": cluster['app_catalog_enabled'],
+        "allowWorkloadsOnMaster": cluster['allow_workloads_on_master'],
+        "enableMetallb": True
+    }
+
+    # create cluster
+    try:
+        api_endpoint = "qbert/v3/{}/clusters".format(project_id)
+        headers = { 'content-type': 'application/json', 'X-Auth-Token': token }
+        pf9_response = requests.post("{}/{}".format(du_url,api_endpoint), verify=False, headers=headers, data=json.dumps(cluster_create_payload))
+    except:
+        sys.stdout.write("ERROR: failed to create cluster\n")
+
+    # parse resmgr response
+    try:
+        json_response = json.loads(pf9_response.text)
+    except:
+        sys.stdout.write("INFO: cluster created, but response did not include the cluster uuid\n")
+    sys.stdout.write("    cluster created successfully, uuid = {}\n".format(json_response['uuid']))
+
+
+def cluster_in_array(target_url,target_name,target_clusters):
+    for cluster in target_clusters:
+        if cluster['du_url'] == target_url and cluster['name'] == target_name:
+            return(True)
+    return(False)
 
 
 def add_region(existing_du_url):
@@ -1361,58 +1432,30 @@ def add_region(existing_du_url):
     sys.stdout.write("\n")
 
     # perform cluster discovery
-    sys.stdout.write("Performing Cluster Discovery\n")
+    sys.stdout.write("Performing Cluster Discovery (and provisioning for user-defined clusters)\n")
     for discover_target in discover_targets:
         if discover_target['du_type'] in ['Kubernetes','KVM/Kubernetes']:
             sys.stdout.write("--> Discovering clusters for region: {}\n".format(discover_target['url']))
             project_id, token = login_du(discover_target['url'],discover_target['username'],discover_target['password'],discover_target['tenant'])
             if project_id:
+                # discover existing clusters
                 discovered_clusters = discover_du_clusters(discover_target['url'], discover_target['du_type'], project_id, token)
+
+                # get existing/user-defined clusters for region
+                defined_clusters = get_clusters(discover_target['url'])
+
+                # create any missing clusters
+                for cluster in defined_clusters:
+                    cluster_flag = cluster_in_array(cluster['du_url'],cluster['name'],discovered_clusters)
+                    if not cluster_in_array(cluster['du_url'],cluster['name'],discovered_clusters):
+                        create_cluster(discover_target['url'],project_id,token,cluster)
+
                 for cluster in discovered_clusters:
                     write_cluster(cluster)
     sys.stdout.write("\n")
 
     # return
     return(discover_targets)
-
-
-#######################################################################
-# data model
-#######################################################################
-# du = {
-#   "username": "admin@platform.net", 
-#   "auth_type": "sshkey", 
-#   "password": "", 
-#   "url": "",
-#   "region": "", 
-#   "dns_list": "", 
-#   "bond_ifname": "bond0", 
-#   "bond_mode": "1", 
-#   "proxy": "", 
-#   "auth_password": "", 
-#   "auth_username": "", 
-#   "auth_ssh_key": "", 
-#   "bond_mtu": "", 
-#   "tenant": "service"
-# }
-#######################################################################
-# host = {
-#   "pf9-kube": "", 
-#   "uuid": "", 
-#   "bond_config": "", 
-#   "ip": "", 
-#   "hostname": "", 
-#   "record_source": "User-Defined|Discovered", 
-#   "nova": "y", 
-#   "ip_interfaces": "", 
-#   "cluster_name": "", 
-#   "du_url": "",
-#   "node_type": "", 
-#   "cinder": "", 
-#   "glance": "", 
-#   "designate": ""
-# }
-#######################################################################
 
 
 def build_express_config(du):
