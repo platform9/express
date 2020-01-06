@@ -207,8 +207,6 @@ validate_platform() {
 banner() {
   echo "################################################################"
   echo "# Platform9 Express Utility"
-  echo "# Options:"
-  echo "# - flag_pmk_only = ${flag_pmk_only}"
   echo "################################################################"
 }
 
@@ -623,6 +621,7 @@ fi
 
 ## display banner
 banner
+echo "DBG: flag_pmk_only = ${flag_pmk_only}"
 
 # install prerequisite packages
 if [ ${flag_skip_prereqs} -eq 0 ]; then install_prereqs; fi
