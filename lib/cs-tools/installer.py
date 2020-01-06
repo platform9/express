@@ -1648,6 +1648,12 @@ def install_express(du):
         if (checkout_branch(du['git_branch'])) == False:
             sys.stdout.write("ERROR: failed to checkout git branch: {}\n".format(du['git_branch']))
             return(False)
+
+        cmd = "cd {}; git pull origin {}".format(du['git_branch'])
+        exit_status, stdout = run_cmd(cmd)
+        if exit_status != 0:
+            sys.stdout.write("ERROR: failed to pull latest code (git pull origin {})\n".format(du['git_branch']))
+            return(False)
  
     return(True)
 
