@@ -1,6 +1,6 @@
 ####################################################################################################
 ## PF9-Wizard | Onboarding Tool for Platform9 
-## Copyright(c) 2018 Platform9 Systems, Inc.
+## Copyright(c) 2019 Platform9 Systems, Inc.
 ####################################################################################################
 import os
 import sys
@@ -258,7 +258,7 @@ def get_host_metadata(du, project_id, token):
         host_designate = "n"
         host_node_type = ""
         host_pf9_kube = "n"
-        host_cluster_name = ""
+        host_cluster_name = "Unassigned"
         host_metadata['ip_interfaces'] = ""
         host_metadata['uuid'] = ""
 
@@ -294,9 +294,13 @@ def get_host_metadata(du, project_id, token):
         host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], host_node_type, True, True)
         if host_metadata['node_type'] == "q":
             return({})
-        host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], host_cluster_name, True, False)
+        #host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], host_cluster_name, True, False)
+        #if host_metadata['cluster_name'] == "q":
+        #    return({})
+        host_metadata['cluster_name'] = select_cluster(du['url'], host_cluster_name)
         if host_metadata['cluster_name'] == "q":
             return({})
+
 
     return(host_metadata)
 
@@ -910,6 +914,50 @@ def report_host_info(host_entries):
             print(host_table)
 
 
+def select_cluster(du_url, current_assigned_cluster):
+    selected_cluster = "Unassigned"
+    if not os.path.isdir(CONFIG_DIR):
+        return(selected_cluster)
+    elif not os.path.isfile(CLUSTER_FILE):
+        return(selected_cluster)
+    else:
+        defined_clusters = get_clusters(du_url)
+        if len(defined_clusters) == 0:
+            return(selected_cluster)
+        else:
+            cnt = 1
+            allowed_values = ['q','n']
+            sys.stdout.write("    Available Clusters:\n")
+            for cluster in defined_clusters:
+                if cluster['name'] == current_assigned_cluster:
+                    current_assigned_cluster = cnt
+                sys.stdout.write("    {}. {}\n".format(cnt,cluster['name']))
+                allowed_values.append(str(cnt))
+                cnt += 1
+
+            # manage unassigned option
+            if current_assigned_cluster == "Unassigned":
+                current_assigned_cluster = cnt
+            allowed_values.append(str(cnt))
+            sys.stdout.write("    {}. Unassigned\n".format(cnt))
+
+            user_input = read_kbd("--> Select Cluster", allowed_values, current_assigned_cluster, True, True)
+            if user_input == "q":
+                return(selected_cluster)
+            else:
+                if sys.version_info[0] == 2:
+                    idx = int(user_input)
+                else:
+                    idx = int(user_input)
+
+                if (int(user_input)) == cnt:
+                    return(selected_cluster)
+                idx = int(user_input) - 1
+                selected_cluster = defined_clusters[idx]['name']
+
+        return(selected_cluster)
+
+
 def add_edit_du():
     if not os.path.isdir(CONFIG_DIR):
         return(None)
@@ -1219,7 +1267,7 @@ def create_du_entry():
         'tenant': "",
         'git_branch': "",
         'region': "",
-        'region_proxy': "",
+        'region_proxy': "-",
         'dns_list': "",
         'auth_type': "",
         'auth_ssh_key': "",
@@ -1490,7 +1538,7 @@ def build_express_config(du):
         express_config_fh.write("os_username|{}\n".format(du['username']))
         express_config_fh.write("os_password|{}\n".format(du['password']))
         express_config_fh.write("os_region|{}\n".format(du['region']))
-        express_config_fh.write("proxy_url|{}\n".format(du['region_proxy']))
+        express_config_fh.write("proxy_url|-\n".format(du['region_proxy']))
         express_config_fh.close()
     except:
         sys.stdout.write("ERROR: failed to build configuration file: {}\n{}\n".format(express_config,sys.exc_info()))
@@ -1637,6 +1685,7 @@ def install_express(du):
             sys.stdout.write("ERROR: failed to clone PF9-Express Repository\n")
             return(False)
 
+    sys.stdout.write("--> refreshing repository (git fetch -a)\n")
     cmd = "cd {}; git fetch -a".format(EXPRESS_INSTALL_DIR)
     exit_status, stdout = run_cmd(cmd)
     if exit_status != 0:
@@ -1644,7 +1693,9 @@ def install_express(du):
         return(False)
 
     current_branch = get_express_branch(du['git_branch'])
+    sys.stdout.write("--> current branch: {}\n".format(current_branch))
     if current_branch != du['git_branch']:
+        sys.stdout.write("--> switching branches: {}\n".format(du['git_branch']))
         if (checkout_branch(du['git_branch'])) == False:
             sys.stdout.write("ERROR: failed to checkout git branch: {}\n".format(du['git_branch']))
             return(False)
