@@ -1522,6 +1522,14 @@ def add_region(existing_du_url):
     return(discover_targets)
 
 
+def get_cluster_uuid(du_url, cluster_name):
+    cluster_settings = get_cluster_record(du_url, cluster_name)
+    if cluster_settings:
+        return(cluster_settings['uuid'])
+
+    return(none)
+
+
 def build_express_config(du):
     express_config = "{}/{}.conf".format(CONFIG_DIR, "{}".format(du['url'].replace('https://','')))
     sys.stdout.write("--> Building configuration file: {}\n".format(express_config))
@@ -1629,7 +1637,10 @@ def build_express_inventory(du, host_entries):
                 if host['cluster_name'] == "":
                     express_inventory_fh.write("{} ansible_host={}\n".format(host['hostname'],host['ip']))
                 else:
-                    express_inventory_fh.write("{} ansible_host={} cluster_uuid={}\n".format(host['hostname'],host['ip'],host['cluster_uuid']))
+                    cluster_uuid = get_cluster_uuid(du['url'], host['cluster_name'])
+                    if cluster_uuid == None:
+                        return(None)
+                    express_inventory_fh.write("{} ansible_host={} cluster_uuid={}\n".format(host['hostname'],host['ip'],cluster_uuid))
 
         # manage K8s_worker stanza
         express_inventory_fh.write("[k8s_worker]\n")
@@ -1638,7 +1649,10 @@ def build_express_inventory(du, host_entries):
                 if host['cluster_name'] == "":
                     express_inventory_fh.write("{} ansible_host={}\n".format(host['hostname'],host['ip']))
                 else:
-                    express_inventory_fh.write("{} ansible_host={} cluster_uuid={}\n".format(host['hostname'],host['ip'],host['cluster_uuid']))
+                    cluster_uuid = get_cluster_uuid(du['url'], host['cluster_name'])
+                    if cluster_uuid == None:
+                        return(None)
+                    express_inventory_fh.write("{} ansible_host={} cluster_uuid={}\n".format(host['hostname'],host['ip'],cluster_uuid))
   
         # close inventory file
         express_inventory_fh.close()
