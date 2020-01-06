@@ -1,6 +1,6 @@
 ####################################################################################################
-## PF9-Wizard
-## Onboarding Tool for Platform9 
+## PF9-Wizard | Onboarding Tool for Platform9 
+## Copyright(c) 2018 Platform9 Systems, Inc.
 ####################################################################################################
 import os
 import sys
@@ -1628,9 +1628,10 @@ def get_express_branch(git_branch):
     
 
 def install_express(du):
+    sys.stdout.write("\nInstalling PF9-Express (branch = {})\n".format(du['git_branch']))
     if not os.path.isdir(EXPRESS_INSTALL_DIR):
         cmd = "git clone {} {}".format(EXPRESS_REPO, EXPRESS_INSTALL_DIR)
-        sys.stdout.write("--> {}\n".format(cmd))
+        sys.stdout.write("--> cloning repository ({})\n".format(cmd))
         exit_status, stdout = run_cmd(cmd)
         if not os.path.isdir(EXPRESS_INSTALL_DIR):
             sys.stdout.write("ERROR: failed to clone PF9-Express Repository\n")
@@ -1638,20 +1639,18 @@ def install_express(du):
 
     cmd = "cd {}; git fetch -a".format(EXPRESS_INSTALL_DIR)
     exit_status, stdout = run_cmd(cmd)
-    sys.stdout.write("--> {}\n".format(cmd))
     if exit_status != 0:
         sys.stdout.write("ERROR: failed to fetch branches (git fetch -)\n")
         return(False)
 
     current_branch = get_express_branch(du['git_branch'])
-    sys.stdout.write("--> current branch: {}\n".format(current_branch))
     if current_branch != du['git_branch']:
         if (checkout_branch(du['git_branch'])) == False:
             sys.stdout.write("ERROR: failed to checkout git branch: {}\n".format(du['git_branch']))
             return(False)
 
     cmd = "cd {}; git pull origin {}".format(EXPRESS_INSTALL_DIR,du['git_branch'])
-    sys.stdout.write("--> git pull origin {}\n".format(du['git_branch']))
+    sys.stdout.write("--> pulling latest code (git pull origin {})\n".format(du['git_branch']))
     exit_status, stdout = run_cmd(cmd)
     if exit_status != 0:
         sys.stdout.write("ERROR: failed to pull latest code (git pull origin {})\n".format(du['git_branch']))
@@ -1704,6 +1703,7 @@ def invoke_express(express_config, express_inventory, target_inventory, role_fla
     else:
         flags = ""
 
+    sys.stdout.write("\nRunning PF9-Express\n")
     user_input = read_kbd("--> Installing PF9-Express Prerequisites, do you want to tail the log (enter 's' to skip)", ['q','y','n','s'], 'n', True, True)
     if user_input == 'q':
         return()
@@ -1782,16 +1782,14 @@ def run_express(du, host_entries):
         else:
             role_flag = 0
 
-    sys.stdout.write("\nConfiguring PF9-Express\n")
-    express_config = build_express_config(du)
-    if express_config:
-        express_inventory = build_express_inventory(du, host_entries)
-        if express_inventory:
-            sys.stdout.write("\nRunning PF9-Express\n")
-            flag_installed = install_express(du)
-            if flag_installed == True:
+    flag_installed = install_express(du)
+    if flag_installed == True:
+        express_config = build_express_config(du)
+        if express_config:
+            express_inventory = build_express_inventory(du, host_entries)
+            if express_inventory:
                 invoke_express(express_config, express_inventory, target_inventory, role_flag)
-
+    
 
 def import_region(region_json):
     sys.stdout.write("\nImporting Region\n")
