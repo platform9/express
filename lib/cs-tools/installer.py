@@ -594,7 +594,6 @@ def discover_du_clusters(du_url, du_type, project_id, token):
 
     # process discovered clusters
     for cluster in json_response:
-        print(cluster)
         cluster_record = create_cluster_entry()
         cluster_record['du_url'] = du_url
         cluster_record['name'] = cluster['name']
@@ -1637,6 +1636,12 @@ def install_express(du):
         if not os.path.isdir(EXPRESS_INSTALL_DIR):
             sys.stdout.write("ERROR: failed to clone PF9-Express Repository\n")
             return(False)
+
+    cmd = "cd {}; git fetch -a".format(EXPRESS_INSTALL_DIR)
+    exit_status, stdout = run_cmd(cmd)
+    if exit_status != 0:
+        sys.stdout.write("ERROR: failed to fetch branches (git fetch -)\n")
+        return(False)
 
     current_branch = get_express_branch(du['git_branch'])
     if current_branch != du['git_branch']:
