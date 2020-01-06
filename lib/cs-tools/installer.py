@@ -373,10 +373,16 @@ def get_du_creds(existing_du_url):
     if user_input == 'q':
         return({})
     else:
-        if type(user_input) is unicode:
-            idx = du_types.index(selected_du_type)
+        if sys.version_info[0] == 2:
+            if type(user_input) is unicode:
+                idx = du_types.index(selected_du_type)
+            else:
+                idx = int(user_input) - 1
         else:
-            idx = int(user_input) - 1
+            if type(user_input) == str:
+                idx = du_types.index(selected_du_type)
+            else:
+                idx = int(user_input) - 1
         selected_du_type = du_types[idx]
 
     # set du type
@@ -760,8 +766,8 @@ def report_du_info(du_entries):
         return()
 
     du_table = PrettyTable()
-    du_table.field_names = ["DU URL","DU Auth","Region Type","Region Name","Tenant","SSH Auth Type","SSH User","# Hosts"]
     du_table.title = "Region Configuration"
+    du_table.field_names = ["DU URL","DU Auth","Region Type","Region Name","Tenant","SSH Auth Type","SSH User","# Hosts"]
     du_table.align["DU URL"] = "l"
     du_table.align["DU Auth"] = "l"
     du_table.align["Region Type"] = "l"
@@ -784,11 +790,15 @@ def report_du_info(du_entries):
             else:
                 ssh_keypass = "********"
             num_discovered_hosts = get_du_hosts(du['url'], project_id, token)
+            print("INFO: num_discovered_hosts={}".format(num_discovered_hosts))
             num_defined_hosts = get_defined_hosts(du['url'])
+            print("INFO: num_defined_hosts={}".format(num_defined_hosts))
             num_hosts = num_discovered_hosts + num_defined_hosts
 
         du_table.add_row([du['url'], auth_status, du['du_type'], du['region'], du['tenant'], du['auth_type'], du['auth_username'], num_hosts])
 
+    if str(sys.version_info[0]) == "2":
+        sys.stdout.write("------ {} ------\n".format(du_table.title))
     print(du_table)
 
 
@@ -1663,7 +1673,10 @@ def tail_log(p):
     last_line = None
     while True:
         current_line = p.stdout.readline()
-        sys.stdout.write(current_line)
+        if sys.version_info[0] == 2:
+            sys.stdout.write(current_line)
+        else:
+            sys.stdout.write(str(current_line))
         if p.poll() != None:
             if current_line == last_line:
                 sys.stdout.write("-------------------- PROCESS COMPETE --------------------\n")
