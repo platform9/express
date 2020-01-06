@@ -207,6 +207,8 @@ validate_platform() {
 banner() {
   echo "################################################################"
   echo "# Platform9 Express Utility"
+  echo "# Options:"
+  echo "# - flag_pmk_only = ${flag_pmk_only}"
   echo "################################################################"
 }
 
@@ -671,9 +673,6 @@ else
   autoreg="off"
 fi
 
-## inform user of Ansible command being run
-echo -e "\n[Executing: ansible-playbook ${express_script}]"
-
 ## deauth host
 if [ ${flag_deauth} -eq 1 ]; then
   display_warning
@@ -687,6 +686,7 @@ fi
 
 ## Do stuff for PMK only
 if [ ${flag_pmk_only} -eq 1 ]; then
+  echo -e "Note: running PMK-specific playbook"
   # Fail if ansible errors out.
   set -euo pipefail
   extra_vars="${extra_vars} k8s_only=1"
@@ -710,6 +710,9 @@ if [ -z "${tags}" ]; then
 else
   role_tags="--tags ${tags}"
 fi
+
+## inform user of Ansible command being run
+echo -e "\n[Executing: ansible-playbook ${express_script}]"
 
 ## call pf9-express
 sudo ansible-playbook -i ${inventory} -l ${target} ${role_tags} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${express_script} 2>&1 | tee ${install_log}
