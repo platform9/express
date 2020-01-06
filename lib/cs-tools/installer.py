@@ -1628,10 +1628,9 @@ def get_express_branch(git_branch):
     
 
 def install_express(du):
-    sys.stdout.write("\n[Install/Update PF9-Express]\n")
     if not os.path.isdir(EXPRESS_INSTALL_DIR):
         cmd = "git clone {} {}".format(EXPRESS_REPO, EXPRESS_INSTALL_DIR)
-        sys.stdout.write("--> running: {}\n".format(cmd))
+        sys.stdout.write("--> {}\n".format(cmd))
         exit_status, stdout = run_cmd(cmd)
         if not os.path.isdir(EXPRESS_INSTALL_DIR):
             sys.stdout.write("ERROR: failed to clone PF9-Express Repository\n")
@@ -1639,7 +1638,7 @@ def install_express(du):
 
     cmd = "cd {}; git fetch -a".format(EXPRESS_INSTALL_DIR)
     exit_status, stdout = run_cmd(cmd)
-    sys.stdout.write("--> running: {}\n".format(cmd))
+    sys.stdout.write("--> {}\n".format(cmd))
     if exit_status != 0:
         sys.stdout.write("ERROR: failed to fetch branches (git fetch -)\n")
         return(False)
@@ -1652,7 +1651,7 @@ def install_express(du):
             return(False)
 
     cmd = "cd {}; git pull origin {}".format(EXPRESS_INSTALL_DIR,du['git_branch'])
-    sys.stdout.write("--> running: {}\n".format(cmd))
+    sys.stdout.write("--> git pull origin {}\n".format(du['git_branch']))
     exit_status, stdout = run_cmd(cmd)
     if exit_status != 0:
         sys.stdout.write("ERROR: failed to pull latest code (git pull origin {})\n".format(du['git_branch']))

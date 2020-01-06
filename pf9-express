@@ -512,7 +512,6 @@ while [ $# -gt 0 ]; do
     flag_k8s_upgrade=1
     ;;
   --pmk)
-echo "************* SETTING PMK FLAG *************"
     flag_pmk_only=1
     ;;
   -f|--csvFile)
@@ -622,7 +621,6 @@ fi
 
 ## display banner
 banner
-echo "DBG: flag_pmk_only = ${flag_pmk_only}"
 
 # install prerequisite packages
 if [ ${flag_skip_prereqs} -eq 0 ]; then install_prereqs; fi
