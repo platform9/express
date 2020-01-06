@@ -789,9 +789,7 @@ def report_du_info(du_entries):
             else:
                 ssh_keypass = "********"
             num_discovered_hosts = get_du_hosts(du['url'], project_id, token)
-            print("INFO: num_discovered_hosts={}".format(num_discovered_hosts))
             num_defined_hosts = get_defined_hosts(du['url'])
-            print("INFO: num_defined_hosts={}".format(num_defined_hosts))
             num_hosts = num_discovered_hosts + num_defined_hosts
 
         du_table.add_row([du['url'], auth_status, du['du_type'], du['region'], du['tenant'], du['auth_type'], du['auth_username'], num_hosts])
@@ -1653,8 +1651,8 @@ def install_express(du):
             sys.stdout.write("ERROR: failed to checkout git branch: {}\n".format(du['git_branch']))
             return(False)
 
-    sys.stdout.write("--> running: {}\n".format(cmd))
     cmd = "cd {}; git pull origin {}".format(EXPRESS_INSTALL_DIR,du['git_branch'])
+    sys.stdout.write("--> running: {}\n".format(cmd))
     exit_status, stdout = run_cmd(cmd)
     if exit_status != 0:
         sys.stdout.write("ERROR: failed to pull latest code (git pull origin {})\n".format(du['git_branch']))
@@ -1718,16 +1716,15 @@ def invoke_express(express_config, express_inventory, target_inventory, role_fla
         else:
             wait_for_job(p)
 
-    print("INFO: flags = {}".format(flags))
     user_input = read_kbd("--> Running PF9-Express, do you want to tail the log", ['q','y','n'], 'n', True, True)
     if user_input == 'q':
         return()
     if role_flag == 1:
         sys.stdout.write("Running: {} {} -a -b -c {} -v {} {}\n".format(PF9_EXPRESS,flags,express_config,express_inventory,target_inventory))
-        p = subprocess.Popen([PF9_EXPRESS,'-a','-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        p = subprocess.Popen([PF9_EXPRESS,flags,'-a','-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     else:
         sys.stdout.write("Running: {} {} -b -c {} -v {} {}\n".format(PF9_EXPRESS,flags,express_config,express_inventory,target_inventory))
-        p = subprocess.Popen([PF9_EXPRESS,'-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        p = subprocess.Popen([PF9_EXPRESS,flags,'-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 
     if user_input == 'y':
         sys.stdout.write("----------------------------------- Start Log -----------------------------------\n")
