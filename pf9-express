@@ -512,6 +512,7 @@ while [ $# -gt 0 ]; do
     flag_k8s_upgrade=1
     ;;
   --pmk)
+echo "************* SETTING PMK FLAG *************"
     flag_pmk_only=1
     ;;
   -f|--csvFile)
