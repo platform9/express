@@ -40,12 +40,12 @@ def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True, disallo
     input_is_valid = False
     while not input_is_valid:
         if sys.version_info[0] == 3:
-            if flag_echo == True:
+            if flag_echo:
                 user_input = input("{} [{}]: ".format(user_prompt,default_value))
             else:
                 user_input = getpass.getpass(prompt="{}: ".format(user_prompt), stream=None)
         if sys.version_info[0] == 2:
-            if flag_echo == True:
+            if flag_echo:
                 user_input = raw_input("{} [{}]: ".format(user_prompt,default_value))
             else:
                 user_input = getpass.getpass(prompt="{}: ".format(user_prompt), stream=None)
@@ -400,7 +400,7 @@ def get_du_creds(existing_du_url):
     du_metadata['du_user'] = read_kbd("--> DU Username", [], du_user, True, True)
     if du_metadata['du_user'] == 'q':
         return({})
-    du_metadata['du_password'] = read_kbd("--> DU Password", [], du_password, False, True)
+    du_metadata['du_password'] = read_kbd("--> DU Password", [], '', False, True)
     if du_metadata['du_password'] == 'q':
         return({})
     du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], du_tenant, True, True)
@@ -756,10 +756,11 @@ def discover_du_hosts(du_url, du_type, project_id, token):
         host_record['glance'] = role_glance
         host_record['cinder'] = role_cinder
         host_record['designate'] = role_designate
-        host_record['node_type'] = qbert_nodetype
-        host_record['cluster_name'] = qbert_cluster_name
-        host_record['cluster_uuid'] = qbert_cluster_uuid
-        host_record['cluster_attach_status'] = qbert_attach_status
+        if flag_kubernetes:
+            host_record['node_type'] = qbert_nodetype
+            host_record['cluster_name'] = qbert_cluster_name
+            host_record['cluster_uuid'] = qbert_cluster_uuid
+            host_record['cluster_attach_status'] = qbert_attach_status
         discovered_hosts.append(host_record)
 
     return(discovered_hosts)
