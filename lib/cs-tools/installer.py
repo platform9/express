@@ -230,7 +230,7 @@ def get_host_metadata(du, project_id, token):
             return({})
 
     # initialize host record
-    host_metadata = {}
+    host_metadata = create_host_entry()
     host_metadata['record_source'] = "User-Defined"
     host_metadata['du_host_type'] = du_host_type
     host_metadata['hostname'] = read_kbd("--> Hostname", [], '', True, True)
@@ -297,13 +297,9 @@ def get_host_metadata(du, project_id, token):
         host_metadata['node_type'] = read_kbd("--> Node Type [master, worker]", ['master','worker'], host_node_type, True, True)
         if host_metadata['node_type'] == "q":
             return({})
-        #host_metadata['cluster_name'] = read_kbd("--> Cluster to Attach To", [], host_cluster_name, True, False)
-        #if host_metadata['cluster_name'] == "q":
-        #    return({})
         host_metadata['cluster_name'] = select_cluster(du['url'], host_cluster_name)
         if host_metadata['cluster_name'] == "q":
             return({})
-
 
     return(host_metadata)
 
@@ -400,7 +396,6 @@ def get_du_creds(existing_du_url):
     du_metadata['du_user'] = read_kbd("--> DU Username", [], du_user, True, True)
     if du_metadata['du_user'] == 'q':
         return({})
-# fred
     du_metadata['du_password'] = read_kbd("--> DU Password", [], du_password, False, True)
     if du_metadata['du_password'] == 'q':
         return({})
@@ -513,6 +508,35 @@ def qbert_get_primary_ip(du_url, project_id, token, node_uuid):
         return primary_ip
 
     return primary_ip
+
+
+def qbert_get_cluster_attach_status(du_url, project_id, token, node_uuid):
+    attach_status = "Unattached"
+    try:
+        api_endpoint = "qbert/v3/{}/nodes/{}".format(project_id, node_uuid)
+        headers = { 'content-type': 'application/json', 'X-Auth-Token': token }
+        pf9_response = requests.get("{}/{}".format(du_url,api_endpoint), verify=False, headers=headers)
+        if pf9_response.status_code == 200:
+            try:
+                json_response = json.loads(pf9_response.text)
+                if json_response['clusterName']:
+                    if json_response['status'] == "OK":
+                        attach_status = "Attached"
+                    else:
+                        attach_status = json_response['status']
+                return(attach_status)
+            except:
+                return(attach_status)
+    except:
+        return(attach_status)
+
+    return(attach_status)
+
+#{u'status': u'converging', u'cloudProviderType': u'local', u'isMaster': 1, u'nodePoolUuid': u'14e360b7-8409-41f3-91ab-1f710d95d3a1', u'clusterUuid': u'f1aae3a5-e87d-40e4-8124-be7837e15a50', u'name': u'linux-centos-node-0', u'clusterName': u'c4', u'projectId': u'', u'masterless': 0, u'api_responding': 0, u'startKube': 1, u'nodePoolName': u'defaultPool', u'primaryIp': u'10.128.229.36', u'uuid': u'42e61cfb-9630-4736-9f0f-0d5824fc47bf'}
+
+#{u'status': u'ok', u'cloudProviderType': u'local', u'isMaster': 0, u'nodePoolUuid': u'14e360b7-8409-41f3-91ab-1f710d95d3a1', u'clusterUuid': None, u'name': u'linux-centos-node-1', u'clusterName': None, u'projectId': u'', u'masterless': 0, u'api_responding': 0, u'startKube': 1, u'nodePoolName': u'defaultPool', u'primaryIp': u'10.128.229.10', u'uuid': u'31ab6802-0a67-40ab-9cef-ad5ae4e2102f'}
+
+#{u'status': u'ok', u'cloudProviderType': u'local', u'isMaster': 0, u'nodePoolUuid': u'14e360b7-8409-41f3-91ab-1f710d95d3a1', u'clusterUuid': None, u'name': u'linux-centos-node-2', u'clusterName': None, u'projectId': u'', u'masterless': 0, u'api_responding': 0, u'startKube': 1, u'nodePoolName': u'defaultPool', u'primaryIp': u'10.128.229.7', u'uuid': u'57dc2523-8c02-4f83-9bd5-d4f4a98bb9d6'}
 
 
 def qbert_get_cluster_uuid(du_url, project_id, token, node_uuid):
@@ -668,10 +692,25 @@ def discover_du_hosts(du_url, du_type, project_id, token):
         qbert_primary_ip = qbert_get_primary_ip(du_url, project_id, token, host['id'])
         qbert_cluster_uuid = qbert_get_cluster_uuid(du_url, project_id, token, host['id'])
         qbert_cluster_name = qbert_get_cluster_name(du_url, project_id, token, qbert_cluster_uuid)
+        qbert_attach_status = qbert_get_cluster_attach_status(du_url, project_id, token, host['id'])
         if role_kube == "y":
             host_type = "kubernetes"
         else:
             host_type = "kvm"
+
+        # validate ssh connectivity
+        if qbert_primary_ip == "":
+            ssh_status = "No Primary IP"
+        else:
+            du_metadata = get_du_metadata(du_url)
+            if du_metadata:
+                ssh_status = ssh_validate_login(du_metadata, qbert_primary_ip)
+                if ssh_status == True:
+                    ssh_status = "OK"
+                else:
+                    ssh_status = "Failed"
+            else:
+                ssh_status = "Unvalidated"
 
         host_record = create_host_entry()
         host_record['du_url'] = du_url
@@ -682,6 +721,7 @@ def discover_du_hosts(du_url, du_type, project_id, token):
         host_record['du_host_type'] = host_type
         host_record['hostname'] = host['info']['hostname']
         host_record['record_source'] = "Discovered"
+        host_record['ssh_status'] = ssh_status
         host_record['bond_config'] = ""
         host_record['pf9-kube'] = role_kube
         host_record['nova'] = role_nova
@@ -691,6 +731,7 @@ def discover_du_hosts(du_url, du_type, project_id, token):
         host_record['node_type'] = qbert_nodetype
         host_record['cluster_name'] = qbert_cluster_name
         host_record['cluster_uuid'] = qbert_cluster_uuid
+        host_record['cluster_attach_status'] = qbert_attach_status
         discovered_hosts.append(host_record)
 
     return(discovered_hosts)
@@ -873,15 +914,7 @@ def report_host_info(host_entries):
         for host in host_entries:
             if host['du_host_type'] != "kvm":
                 continue
-            if host['ip'] == "":
-                ssh_status = "No Primary IP"
-            else:
-                ssh_status = ssh_validate_login(du_metadata, host['ip'])
-                if ssh_status == True:
-                    ssh_status = "OK"
-                else:
-                    ssh_status = "Failed"
-            host_table.add_row([host['hostname'],host['ip'], ssh_status, host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config'],host['ip_interfaces']])
+            host_table.add_row([host['hostname'],host['ip'], host['ssh_status'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config'],host['ip_interfaces']])
             num_kvm_rows += 1
 
         if num_kvm_rows > 0:
@@ -889,31 +922,26 @@ def report_host_info(host_entries):
 
     if du_metadata['du_type'] in ['Kubernetes','KVM/Kubernetes']:
         host_table = PrettyTable()
-        host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Node Type","Cluster Name","IP Interfaces"]
+        host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Node Type","Cluster Name","Attached","IP Interfaces"]
         host_table.title = "Kubernetes Hosts"
         host_table.align["HOSTNAME"] = "l"
         host_table.align["Primary IP"] = "l"
         host_table.align["SSH Auth"] = "l"
-        host_table.align["IP Interfaces"] = "l"
         host_table.align["Source"] = "l"
         host_table.align["Node Type"] = "l"
         host_table.align["Cluster Name"] = "l"
+        host_table.align["Attached"] = "l"
+        host_table.align["IP Interfaces"] = "l"
         num_k8s_rows = 0
         for host in host_entries:
             if host['du_host_type'] != "kubernetes":
                 continue
-            ssh_status = ssh_validate_login(du_metadata, host['ip'])
-            if ssh_status == True:
-                ssh_status = "OK"
-            else:
-                ssh_status = "Failed"
-
             if host['cluster_name'] == "":
                 cluster_assigned = "Unassigned"
             else:
                 cluster_assigned = host['cluster_name']
 
-            host_table.add_row([host['hostname'], host['ip'], ssh_status, host['record_source'], host['node_type'], cluster_assigned, host['ip_interfaces']])
+            host_table.add_row([host['hostname'], host['ip'], host['ssh_status'], host['record_source'], host['node_type'], cluster_assigned, host['cluster_attach_status'], host['ip_interfaces']])
             num_k8s_rows += 1
         if num_k8s_rows > 0:
             print(host_table)
@@ -1313,6 +1341,7 @@ def create_host_entry():
         'du_host_type': "",
         'hostname': "",
         'record_source': "",
+        'ssh_status': "",
         'bond_config': "",
         'pf9-kube': "",
         'nova': "",
