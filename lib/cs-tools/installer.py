@@ -37,32 +37,35 @@ def _parse_args():
     return ap.parse_args()
 
 def read_kbd(user_prompt, allowed_values, default_value, flag_echo=True, disallow_null=True):
-    if flag_echo == True:
-        input_is_valid = False
-        while not input_is_valid:
-            if sys.version_info[0] == 3:
+    input_is_valid = False
+    while not input_is_valid:
+        if sys.version_info[0] == 3:
+            if flag_echo == True:
                 user_input = input("{} [{}]: ".format(user_prompt,default_value))
-            if sys.version_info[0] == 2:
+            else:
+                user_input = getpass.getpass(prompt="{}: ".format(user_prompt), stream=None)
+        if sys.version_info[0] == 2:
+            if flag_echo == True:
                 user_input = raw_input("{} [{}]: ".format(user_prompt,default_value))
+            else:
+                user_input = getpass.getpass(prompt="{}: ".format(user_prompt), stream=None)
 
-            if user_input == "":
-                if disallow_null == True:
-                    if default_value != "":
-                        user_input = default_value
-                        input_is_valid = True
-                    else:
-                        input_is_valid = False
-                else:
+        if user_input == "":
+            if disallow_null == True:
+                if default_value != "":
                     user_input = default_value
                     input_is_valid = True
-            else:
-                if len(allowed_values) == 0:
-                    input_is_valid = True
                 else:
-                    if user_input in allowed_values:
-                        input_is_valid = True
-    else:
-        user_input = getpass.getpass(prompt="{}: ".format(user_prompt), stream=None)
+                    input_is_valid = False
+            else:
+                user_input = default_value
+                input_is_valid = True
+        else:
+            if len(allowed_values) == 0:
+                input_is_valid = True
+            else:
+                if user_input in allowed_values:
+                    input_is_valid = True
 
     return(user_input)
 
@@ -397,6 +400,7 @@ def get_du_creds(existing_du_url):
     du_metadata['du_user'] = read_kbd("--> DU Username", [], du_user, True, True)
     if du_metadata['du_user'] == 'q':
         return({})
+# fred
     du_metadata['du_password'] = read_kbd("--> DU Password", [], du_password, False, True)
     if du_metadata['du_password'] == 'q':
         return({})
@@ -717,8 +721,9 @@ def get_du_hosts(du_url, project_id, token):
 def report_cluster_info(cluster_entries):
     from prettytable import PrettyTable
 
+    sys.stdout.write("\n------ Cluster Database ------\n")
     if not os.path.isfile(CLUSTER_FILE):
-        sys.stdout.write("\nNo clusters have been defined yet (run 'Add/Update Cluster')\n")
+        sys.stdout.write("No clusters have been defined yet (run 'Add/Update Cluster')\n")
         return()
 
     du_table = PrettyTable()
@@ -735,7 +740,6 @@ def report_cluster_info(cluster_entries):
     du_table.align["Catalog"] = "l"
     du_table.align["Taint"] = "l"
     du_table.align["UUID"] = "l"
-    #dump_var(du_table)
 
     for cluster in cluster_entries:
         table_row = [
@@ -764,8 +768,9 @@ def dump_var(target_var):
 def report_du_info(du_entries):
     from prettytable import PrettyTable
 
+    sys.stdout.write("\n------ Region Database ------\n")
     if not os.path.isfile(CONFIG_FILE):
-        sys.stdout.write("\nNo regions have been defined yet (run 'Add/Update Region')\n")
+        sys.stdout.write("No regions have been defined yet (run 'Add/Update Region')\n")
         return()
 
     du_table = PrettyTable()
@@ -798,8 +803,6 @@ def report_du_info(du_entries):
 
         du_table.add_row([du['url'], auth_status, du['du_type'], du['region'], du['tenant'], du['auth_type'], du['auth_username'], num_hosts])
 
-    if str(sys.version_info[0]) == "2":
-        sys.stdout.write("------ {} ------\n".format(du_table.title))
     print(du_table)
 
 
@@ -810,6 +813,7 @@ def map_yn(map_key):
         return("Disabled")
     else:
         return("failed-to-map")
+
 
 def ssh_validate_login(du_metadata, host_ip):
     if du_metadata['auth_type'] == "simple":
@@ -841,16 +845,17 @@ def get_defined_hosts(du_url):
 def report_host_info(host_entries):
     from prettytable import PrettyTable
 
+    sys.stdout.write("\n------ Host Database ------\n")
     if not os.path.isfile(HOST_FILE):
-        sys.stdout.write("\nNo hosts have been defined yet (run 'Add/Update Hosts')\n")
+        sys.stdout.write("No hosts have been defined yet (run 'Add/Update Hosts')\n")
         return()
 
     if len(host_entries) == 0:
-        sys.stdout.write("\nNo hosts have been defined yet (run 'Add/Update Hosts')\n")
+        sys.stdout.write("No hosts have been defined yet (run 'Add/Update Hosts')\n")
         return()
     
     du_metadata = get_du_metadata(host_entries[0]['du_url'])
-    if du_metadata['du_type'] in ['KVM','KVM/Kubernetes']:
+    if du_metadata['du_type'] in ['KVM','KVM/Kubernetes','VMware']:
         host_table = PrettyTable()
         host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Nova","Glance","Cinder","Designate","Bond Config","IP Interfaces"]
         host_table.title = "KVM Hosts"
@@ -1435,7 +1440,7 @@ def add_region(existing_du_url):
     # check for sub-regions
     sub_regions, du_name_list = get_sub_dus(du)
     if not sub_regions:
-        du['region'] = du_name_list[sub_regions.index(du_metadata['du_url'].replace('https://',''))]
+        sys.stdout.write("\nINFO: No Sub-Regions Have Been Detected\n\n")
         discover_targets.append(du)
     else:
         sys.stdout.write("\nThe Following Sub-Regions Have Been Detected:\n\n")
@@ -1482,7 +1487,7 @@ def add_region(existing_du_url):
             else:
                 confirmed_region_type = read_kbd("    Confirm region type ['KVM','Kubernetes','KVM/Kubernetes','VMware']", region_types, region_type, True, True)
             discover_target['du_type'] = confirmed_region_type
-            write_config(discover_target)
+        write_config(discover_target)
 
     # perform host discovery
     sys.stdout.write("\nPerforming Host Discovery\n")
@@ -1493,7 +1498,6 @@ def add_region(existing_du_url):
             discovered_hosts = discover_du_hosts(discover_target['url'], discover_target['du_type'], project_id, token)
             for host in discovered_hosts:
                 write_host(host)
-    sys.stdout.write("\n")
 
     # perform cluster discovery
     sys.stdout.write("Performing Cluster Discovery (and provisioning for user-defined clusters)\n")
@@ -1516,7 +1520,6 @@ def add_region(existing_du_url):
 
                 for cluster in discovered_clusters:
                     write_cluster(cluster)
-    sys.stdout.write("\n")
 
     # return
     return(discover_targets)
@@ -1941,6 +1944,10 @@ def run_cmd(cmd):
     return cmd_exitcode, cmd_stdout
 
 
+def action_header(title):
+    title = "  {}  ".format(title)
+    sys.stdout.write("\n{}".format(title.center(MAX_WIDTH,'*')))
+
 def display_menu1():
     sys.stdout.write("\n*****************************************\n")
     sys.stdout.write("**         Maintenance Menu            **\n")
@@ -2015,6 +2022,7 @@ def menu_level0():
         display_menu0()
         user_input = read_kbd("Enter Selection", [], '', True, True)
         if user_input == '1':
+            action_header("MANAGE REGIONS")
             selected_du = add_edit_du()
             if selected_du != None:
                 if selected_du == "define-new-du":
@@ -2023,19 +2031,27 @@ def menu_level0():
                     target_du = selected_du
                 new_du_list = add_region(target_du)
                 report_du_info(new_du_list)
+
+                host_entries = get_hosts(target_du)
+                report_host_info(host_entries)
+                cluster_entries = get_clusters(target_du)
+                report_cluster_info(cluster_entries)
         elif user_input == '2':
+            action_header("MANAGE HOSTS")
             sys.stdout.write("\nSelect Region to add Host to:")
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
                     new_host = add_host(selected_du)
         elif user_input == '3':
+            action_header("MANAGE CLUSTERS")
             sys.stdout.write("\nSelect Region to add Cluster to:")
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
                     new_cluster = add_cluster(selected_du)
         elif user_input == '4':
+            action_header("SHOW REGION")
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
@@ -2047,7 +2063,7 @@ def menu_level0():
                         cluster_entries = get_clusters(selected_du['url'])
                         report_cluster_info(cluster_entries)
         elif user_input == '5':
-            sys.stdout.write("\nSelect Region to Run PF9-Express against:")
+            action_header("ONBOARD HOSTS")
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
@@ -2077,7 +2093,7 @@ EXPRESS_REPO = "https://github.com/platform9/express.git"
 EXPRESS_INSTALL_DIR = "{}/.pf9-wizard/pf9-express".format(HOME_DIR)
 EXPRESS_LOG_DIR = "{}/.pf9-wizard/pf9-express/log".format(HOME_DIR)
 PF9_EXPRESS = "{}/.pf9-wizard/pf9-express/pf9-express".format(HOME_DIR)
-MAX_WIDTH = 160
+MAX_WIDTH = 132
 
 # perform initialization (if invoked with '--init')
 if args.init:
