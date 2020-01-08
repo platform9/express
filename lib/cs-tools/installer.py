@@ -1865,9 +1865,9 @@ def tail_log(p):
 def invoke_express(express_config, express_inventory, target_inventory, role_flag):
     # manage '--pmk' flag (for pf9-express invocation)
     if target_inventory in ['k8s_master','ks8_worker']:
-        flags = "--pmk"
+        flags = "-b --pmk"
     else:
-        flags = ""
+        flags = "-b"
 
     sys.stdout.write("\nRunning PF9-Express\n")
     user_input = read_kbd("--> Installing PF9-Express Prerequisites, do you want to tail the log (enter 's' to skip)", ['q','y','n','s'], 'n', True, True)
@@ -1885,10 +1885,10 @@ def invoke_express(express_config, express_inventory, target_inventory, role_fla
     if user_input == 'q':
         return()
     if role_flag == 1:
-        sys.stdout.write("Running: {} {} -a -b -c {} -v {} {}\n".format(PF9_EXPRESS,flags,express_config,express_inventory,target_inventory))
+        sys.stdout.write("Running: {} {} -a -c {} -v {} {}\n".format(PF9_EXPRESS,flags,express_config,express_inventory,target_inventory))
         p = subprocess.Popen([PF9_EXPRESS,flags,'-a','-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     else:
-        sys.stdout.write("Running: {} {} -b -c {} -v {} {}\n".format(PF9_EXPRESS,flags,express_config,express_inventory,target_inventory))
+        sys.stdout.write("Running: {} {} -c {} -v {} {}\n".format(PF9_EXPRESS,flags,express_config,express_inventory,target_inventory))
         p = subprocess.Popen([PF9_EXPRESS,flags,'-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 
     if user_input == 'y':
