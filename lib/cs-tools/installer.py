@@ -18,7 +18,7 @@ if not sys.version_info[0] in (2,3):
 ################################################################################
 # module imports
 try:
-    import requests,urllib3,json,argparse,prettytable,signal,getpass,argparse,subprocess,time
+    import requests,urllib3,json,argparse,prettytable,signal,getpass,argparse,subprocess,time,pprint
 except:
     except_str = str(sys.exc_info()[1])
     module_name = except_str.split(' ')[-1]
@@ -797,17 +797,14 @@ def report_cluster_info(cluster_entries):
         return()
 
     du_table = PrettyTable()
-    du_table.field_names = ["Name","Containers","Services","VIP","Interface","MetalLB","Priv","Catalog","Taint","UUID"]
+    du_table.field_names = ["Name","Containers","Services","VIP","MetalLB","Taint","UUID"]
     du_table.title = "Kubernetes Clusters"
     du_table.header = True
     du_table.align["Name"] = "l"
     du_table.align["Containers"] = "l"
     du_table.align["Services"] = "l"
     du_table.align["VIP"] = "l"
-    du_table.align["Interface"] = "l"
     du_table.align["MetalLB"] = "l"
-    du_table.align["Priv"] = "l"
-    du_table.align["Catalog"] = "l"
     du_table.align["Taint"] = "l"
     du_table.align["UUID"] = "l"
 
@@ -817,10 +814,7 @@ def report_cluster_info(cluster_entries):
             cluster['containers_cidr'],
             cluster['services_cidr'],
             cluster['master_vip_ipv4'],
-            cluster['master_vip_iface'],
             cluster['metallb_cidr'],
-            cluster['privileged'],
-            cluster['app_catalog_enabled'],
             cluster['allow_workloads_on_master'],
             cluster['uuid']
         ]
@@ -922,35 +916,55 @@ def report_host_info(host_entries):
         return()
     
     du_metadata = get_du_metadata(host_entries[0]['du_url'])
-    #if du_metadata['du_type'] in ['KVM','KVM/Kubernetes','VMware']:
 
     # display KVM hosts
-    host_table = PrettyTable()
-    host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Nova","Glance","Cinder","Designate","Bond Config","IP Interfaces"]
-    host_table.title = "KVM Hosts"
-    host_table.align["HOSTNAME"] = "l"
-    host_table.align["Primary IP"] = "l"
-    host_table.align["SSH Auth"] = "l"
-    host_table.align["IP Interfaces"] = "l"
-    host_table.align["Source"] = "l"
-    host_table.align["Nova"] = "l"
-    host_table.align["Glance"] = "l"
-    host_table.align["Cinder"] = "l"
-    host_table.align["Designate"] = "l"
-    host_table.align["Bond Config"] = "l"
-    num_kvm_rows = 0
-    for host in host_entries:
-        if host['du_host_type'] != "kvm":
-            continue
-        host_table.add_row([host['hostname'],host['ip'], host['ssh_status'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['bond_config'],host['ip_interfaces']])
-        num_kvm_rows += 1
-    if num_kvm_rows > 0:
-        sys.stdout.write("\n------ KVM Hosts ------\n")
-        print(host_table)
+    if du_metadata['du_type'] == "KVM":
+        host_table = PrettyTable()
+        host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Nova","Glance","Cinder","Designate"]
+        host_table.title = "KVM Hosts"
+        host_table.align["HOSTNAME"] = "l"
+        host_table.align["Primary IP"] = "l"
+        host_table.align["SSH Auth"] = "l"
+        host_table.align["Source"] = "l"
+        host_table.align["Nova"] = "l"
+        host_table.align["Glance"] = "l"
+        host_table.align["Cinder"] = "l"
+        host_table.align["Designate"] = "l"
+        num_kvm_rows = 0
+        for host in host_entries:
+            if host['du_host_type'] != "kvm":
+                continue
+            host_table.add_row([host['hostname'],host['ip'], host['ssh_status'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate'])])
+            num_kvm_rows += 1
+        if num_kvm_rows > 0:
+            sys.stdout.write("\n------ KVM Hosts ------\n")
+            print(host_table)
+
+    if du_metadata['du_type'] == "VMware":
+        host_table = PrettyTable()
+        host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Nova","Glance","Cinder","Designate"]
+        host_table.title = "KVM Hosts"
+        host_table.align["HOSTNAME"] = "l"
+        host_table.align["Primary IP"] = "l"
+        host_table.align["SSH Auth"] = "l"
+        host_table.align["Source"] = "l"
+        host_table.align["Nova"] = "l"
+        host_table.align["Glance"] = "l"
+        host_table.align["Cinder"] = "l"
+        host_table.align["Designate"] = "l"
+        num_kvm_rows = 0
+        for host in host_entries:
+            if host['du_host_type'] != "kvm":
+                continue
+            host_table.add_row([host['hostname'],host['ip'], host['ssh_status'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate'])])
+            num_kvm_rows += 1
+        if num_kvm_rows > 0:
+            sys.stdout.write("\n------ VMware Gateways ------\n")
+            print(host_table)
 
     # print K8s nodes
     host_table = PrettyTable()
-    host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Node Type","Cluster Name","Attached","IP Interfaces"]
+    host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Node Type","Cluster Name","Attached"]
     host_table.title = "Kubernetes Hosts"
     host_table.align["HOSTNAME"] = "l"
     host_table.align["Primary IP"] = "l"
@@ -959,7 +973,6 @@ def report_host_info(host_entries):
     host_table.align["Node Type"] = "l"
     host_table.align["Cluster Name"] = "l"
     host_table.align["Attached"] = "l"
-    host_table.align["IP Interfaces"] = "l"
     num_k8s_rows = 0
     for host in host_entries:
         if host['du_host_type'] != "kubernetes":
@@ -969,7 +982,7 @@ def report_host_info(host_entries):
         else:
             cluster_assigned = host['cluster_name']
 
-        host_table.add_row([host['hostname'], host['ip'], host['ssh_status'], host['record_source'], host['node_type'], cluster_assigned, host['cluster_attach_status'], host['ip_interfaces']])
+        host_table.add_row([host['hostname'], host['ip'], host['ssh_status'], host['record_source'], host['node_type'], cluster_assigned, host['cluster_attach_status']])
         num_k8s_rows += 1
     if num_k8s_rows > 0:
         sys.stdout.write("\n------ Kubernetes Nodes ------\n")
@@ -1239,6 +1252,7 @@ def write_host(host):
         except:
             fail("failed to create directory: {}".format(CONFIG_DIR))
 
+    # get all hosts
     current_hosts = get_hosts(None)
     if len(current_hosts) == 0:
         current_hosts.append(host)
@@ -1248,7 +1262,7 @@ def write_host(host):
         update_hosts = []
         flag_found = False
         for h in current_hosts:
-            if h['hostname'] == host['hostname']:
+            if h['hostname'] == host['hostname'] and h['uuid'] == host['uuid']:
                 update_hosts.append(host)
                 flag_found = True
             else:
@@ -1554,7 +1568,7 @@ def add_region(existing_du_url):
             discover_targets.append(du)
 
     # create region (and sub-regions)
-    sys.stdout.write("\nCreating Region(s):\n")
+    sys.stdout.write("\nCreating Regions:\n")
     for discover_target in discover_targets:
         project_id, token = login_du(discover_target['url'],discover_target['username'],discover_target['password'],discover_target['tenant'])
         if project_id:
@@ -2009,7 +2023,8 @@ def dump_database(db_file):
     if os.path.isfile(db_file):
         with open(db_file) as json_file:
             db_json = json.load(json_file)
-        print(db_json)
+        pprint.pprint(db_json)
+
 
 def run_cmd(cmd):
     cmd_stdout = ""
@@ -2049,7 +2064,6 @@ def display_menu1():
 def display_menu0():
     sys.stdout.write("*****************************************\n")
     sys.stdout.write("**          Platform9 Wizard           **\n")
-    sys.stdout.write("**              Main Menu              **\n")
     sys.stdout.write("*****************************************\n")
     sys.stdout.write("1. Discover/Add Regions\n")
     sys.stdout.write("2. Discover/Add Hosts\n")
