@@ -354,9 +354,9 @@ def get_du_creds(existing_du_url):
         region_bond_mtu = du_settings['bond_mtu']
     else:
         selected_du_type = ""
-        du_user = "pf9-kubeheat"
+        du_user = "admin@platform9.net"
         du_password = ""
-        du_tenant = "svc-pmo"
+        du_tenant = "service"
         git_branch = "master"
         region_name = ""
         region_proxy = "-"
@@ -920,7 +920,7 @@ def report_host_info(host_entries):
     # display KVM hosts
     if du_metadata['du_type'] == "KVM":
         host_table = PrettyTable()
-        host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Nova","Glance","Cinder","Designate"]
+        host_table.field_names = ["HOSTNAME","Primary IP","SSH Auth","Source","Nova","Glance","Cinder","Designate","IP Interfaces"]
         host_table.title = "KVM Hosts"
         host_table.align["HOSTNAME"] = "l"
         host_table.align["Primary IP"] = "l"
@@ -930,11 +930,12 @@ def report_host_info(host_entries):
         host_table.align["Glance"] = "l"
         host_table.align["Cinder"] = "l"
         host_table.align["Designate"] = "l"
+        host_table.align["IP Interfaces"] = "l"
         num_kvm_rows = 0
         for host in host_entries:
             if host['du_host_type'] != "kvm":
                 continue
-            host_table.add_row([host['hostname'],host['ip'], host['ssh_status'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate'])])
+            host_table.add_row([host['hostname'],host['ip'], host['ssh_status'], host['record_source'], map_yn(host['nova']), map_yn(host['glance']), map_yn(host['cinder']), map_yn(host['designate']), host['ip_interfaces']])
             num_kvm_rows += 1
         if num_kvm_rows > 0:
             sys.stdout.write("\n------ KVM Hosts ------\n")
@@ -1350,6 +1351,21 @@ def add_host(du):
             host['node_type'] = host_metadata['node_type']
             host['cluster_name'] = host_metadata['cluster_name']
 
+            # validate ssh connectivity
+            if host['ip'] == "":
+                ssh_status = "No Primary IP"
+            else:
+                du_metadata = get_du_metadata(du['url'])
+                if du_metadata:
+                    ssh_status = ssh_validate_login(du_metadata, host['ip'])
+                    if ssh_status == True:
+                        ssh_status = "OK"
+                    else:
+                        ssh_status = "Failed"
+                else:
+                    ssh_status = "Unvalidated"
+            host['ssh_status'] = ssh_status
+
             # persist configurtion
             write_host(host)
 
@@ -1413,6 +1429,7 @@ def create_host_entry():
         'designate': "",
         'node_type': "",
         'cluster_name': "",
+        'cluster_attach_status': "",
         'cluster_uuid': ""
     }
     return(host_record)
@@ -1628,7 +1645,7 @@ def get_cluster_uuid(du_url, cluster_name):
     if cluster_settings:
         return(cluster_settings['uuid'])
 
-    return(none)
+    return(None)
 
 
 def build_express_config(du):
@@ -1735,11 +1752,12 @@ def build_express_inventory(du, host_entries):
         express_inventory_fh.write("[k8s_master]\n")
         for host in host_entries:
             if host['pf9-kube'] == "y" and host['node_type'] == "master":
-                if host['cluster_name'] == "":
+                if host['cluster_name'] == "Unassigned":
                     express_inventory_fh.write("{} ansible_host={}\n".format(host['hostname'],host['ip']))
                 else:
                     cluster_uuid = get_cluster_uuid(du['url'], host['cluster_name'])
                     if cluster_uuid == None:
+                        sys.stdout.write("ERROR: failed to lookup cluster UUID for {}\n".format(host['cluster_name']))
                         return(None)
                     express_inventory_fh.write("{} ansible_host={} cluster_uuid={}\n".format(host['hostname'],host['ip'],cluster_uuid))
 
@@ -1747,17 +1765,19 @@ def build_express_inventory(du, host_entries):
         express_inventory_fh.write("[k8s_worker]\n")
         for host in host_entries:
             if host['pf9-kube'] == "y" and host['node_type'] == "worker":
-                if host['cluster_name'] == "":
+                if host['cluster_name'] == "Unassigned":
                     express_inventory_fh.write("{} ansible_host={}\n".format(host['hostname'],host['ip']))
                 else:
                     cluster_uuid = get_cluster_uuid(du['url'], host['cluster_name'])
                     if cluster_uuid == None:
+                        sys.stdout.write("ERROR: failed to lookup cluster UUID for {}\n".format(host['cluster_name']))
                         return(None)
                     express_inventory_fh.write("{} ansible_host={} cluster_uuid={}\n".format(host['hostname'],host['ip'],cluster_uuid))
   
         # close inventory file
         express_inventory_fh.close()
-    except:
+    except Exception as ex:
+        sys.stdout.write("ERROR: faild to write inventory file: {}\n".format(ex.message))
         return(None)
 
     # validate inventory was written
@@ -1785,7 +1805,7 @@ def get_express_branch(git_branch):
     cmd = "cd {} && git symbolic-ref --short -q HEAD".format(EXPRESS_INSTALL_DIR)
     exit_status, stdout = run_cmd(cmd)
     if exit_status != 0:
-        return(none)
+        return(None)
 
     return(stdout[0].strip())
     
@@ -1863,12 +1883,6 @@ def tail_log(p):
 
 
 def invoke_express(express_config, express_inventory, target_inventory, role_flag):
-    # manage '--pmk' flag (for pf9-express invocation)
-    if target_inventory in ['k8s_master','ks8_worker']:
-        flags = "-b --pmk"
-    else:
-        flags = "-b"
-
     sys.stdout.write("\nRunning PF9-Express\n")
     user_input = read_kbd("--> Installing PF9-Express Prerequisites, do you want to tail the log (enter 's' to skip)", ['q','y','n','s'], 'n', True, True)
     if user_input == 'q':
@@ -1885,11 +1899,20 @@ def invoke_express(express_config, express_inventory, target_inventory, role_fla
     if user_input == 'q':
         return()
     if role_flag == 1:
-        sys.stdout.write("Running: {} {} -a -c {} -v {} {}\n".format(PF9_EXPRESS,flags,express_config,express_inventory,target_inventory))
-        p = subprocess.Popen([PF9_EXPRESS,flags,'-a','-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        if target_inventory in ['k8s_master','ks8_worker']:
+            sys.stdout.write("Running: {} -a -b --pmk -c {} -v {} {}\n".format(PF9_EXPRESS,express_config,express_inventory,target_inventory))
+            p = subprocess.Popen([PF9_EXPRESS,'-a','-b','--pmk','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        else:
+            sys.stdout.write("Running: {} -a -b -c {} -v {} {}\n".format(PF9_EXPRESS,express_config,express_inventory,target_inventory))
+            p = subprocess.Popen([PF9_EXPRESS,'-a','-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     else:
-        sys.stdout.write("Running: {} {} -c {} -v {} {}\n".format(PF9_EXPRESS,flags,express_config,express_inventory,target_inventory))
-        p = subprocess.Popen([PF9_EXPRESS,flags,'-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        # install pf9-hostagent (skip role assignment)
+        if target_inventory in ['k8s_master','ks8_worker']:
+            sys.stdout.write("Running: {} -b --pmk -c {} -v {} {}\n".format(PF9_EXPRESS,express_config,express_inventory,target_inventory))
+            p = subprocess.Popen([PF9_EXPRESS,'-b','--pmk','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+        else:
+            sys.stdout.write("Running: {} -b -c {} -v {} {}\n".format(PF9_EXPRESS,express_config,express_inventory,target_inventory))
+            p = subprocess.Popen([PF9_EXPRESS,'-b','-c',express_config,'-v',express_inventory,target_inventory],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 
     if user_input == 'y':
         sys.stdout.write("----------------------------------- Start Log -----------------------------------\n")
@@ -1930,11 +1953,18 @@ def run_express(du, host_entries):
         sys.stdout.write("    {}. {}\n".format(cnt,inventory))
         allowed_values.append(str(cnt))
         cnt += 1
+    custom_idx = cnt
+    sys.stdout.write("    {}. custom inventory\n".format(cnt))
+    allowed_values.append(str(cnt))
     user_input = read_kbd("\nSelect Inventory (to run PF9-Express against)", allowed_values, '', True, True)
     if user_input == "q":
         return()
-    idx = int(user_input) - 1
-    target_inventory = express_inventories[idx]
+    if int(user_input) != custom_idx:
+        idx = int(user_input) - 1
+        target_inventory = express_inventories[idx]
+    else:
+        user_input = read_kbd("\nInventory Targets (comma/space-delimitted list of hostnames)", [], '', True, True)
+        target_inventory = user_input
 
     sys.stdout.write("\nPF9-Express Role Assignment\n")
     sys.stdout.write("    1. Install Hostagent\n")
@@ -2136,7 +2166,12 @@ def menu_level0():
             selected_du = select_du()
             if selected_du:
                 if selected_du != "q":
-                    new_host = add_host(selected_du)
+                    flag_more_hosts = True
+                    while flag_more_hosts:
+                        new_host = add_host(selected_du)
+                        user_input = read_kbd("\nAdd Another Host?", ['y','n'], 'n', True, True)
+                        if user_input == "n":
+                            flag_more_hosts = False
         elif user_input == '3':
             action_header("MANAGE CLUSTERS")
             sys.stdout.write("\nSelect Region to add Cluster to:")
