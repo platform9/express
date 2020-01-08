@@ -5,6 +5,7 @@
 # To-Do:
 # 1. Call Express CLI for PMK
 # 2. Hierarchical/Scalable Data Model
+# 3. Add Region : Improve error recovery when DU auth fails
 ####################################################################################################
 import os
 import sys
@@ -1076,7 +1077,7 @@ def add_edit_du():
                 allowed_values.append(str(cnt))
                 cnt += 1
             sys.stdout.write("\n")
-            user_input = read_kbd("Select Region (enter 'n' to create a New Region)", allowed_values, '', True, True)
+            user_input = read_kbd("Select Region to Update/Rediscover (enter 'n' to create a New Region)", allowed_values, '', True, True)
             if user_input == "q":
                 return(None)
             elif user_input == "n":
