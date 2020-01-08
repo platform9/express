@@ -2,6 +2,10 @@
 ## PF9-Wizard | Onboarding Tool for Platform9 
 ## Copyright(c) 2019 Platform9 Systems, Inc.
 ####################################################################################################
+# To-Do:
+# 1. Call Express CLI for PMK
+# 2. Hierarchical/Scalable Data Model
+####################################################################################################
 import os
 import sys
 from os.path import expanduser
@@ -315,7 +319,7 @@ def get_du_creds(existing_du_url):
     du_metadata = create_du_entry()
 
     if existing_du_url == None:
-        user_url = read_kbd("--> DU URL", [], '', True, True)
+        user_url = read_kbd("--> Region URL", [], '', True, True)
         if user_url == 'q':
             return({})
         if user_url.startswith('http://'):
@@ -397,13 +401,13 @@ def get_du_creds(existing_du_url):
     du_metadata['region_name'] = ""
 
     # get common du parameters
-    du_metadata['du_user'] = read_kbd("--> DU Username", [], du_user, True, True)
+    du_metadata['du_user'] = read_kbd("--> Region Username", [], du_user, True, True)
     if du_metadata['du_user'] == 'q':
         return({})
-    du_metadata['du_password'] = read_kbd("--> DU Password", [], '', False, True)
+    du_metadata['du_password'] = read_kbd("--> Region Password", [], '', False, True)
     if du_metadata['du_password'] == 'q':
         return({})
-    du_metadata['du_tenant'] = read_kbd("--> DU Tenant", [], du_tenant, True, True)
+    du_metadata['du_tenant'] = read_kbd("--> Region Tenant", [], du_tenant, True, True)
     if du_metadata['du_tenant'] == 'q':
         return({})
     du_metadata['git_branch'] = read_kbd("--> GIT Branch (for PF9-Express)", [], git_branch, True, True)
@@ -839,9 +843,9 @@ def report_du_info(du_entries):
 
     du_table = PrettyTable()
     du_table.title = "Region Configuration"
-    du_table.field_names = ["DU URL","DU Auth","Region Type","Region Name","Tenant","SSH Auth Type","SSH User","# Hosts"]
-    du_table.align["DU URL"] = "l"
-    du_table.align["DU Auth"] = "l"
+    du_table.field_names = ["Region URL","Region Auth","Region Type","Region Name","Tenant","SSH Auth Type","SSH User","# Hosts"]
+    du_table.align["Region URL"] = "l"
+    du_table.align["Region Auth"] = "l"
     du_table.align["Region Type"] = "l"
     du_table.align["Region Name"] = "l"
     du_table.align["Tenant"] = "l"
@@ -1158,18 +1162,18 @@ def delete_du(target_du):
             du_configs = json.load(json_file)
         for du in du_configs:
             if du['url'] == target_du['url']:
-                sys.stdout.write("--> found target DU\n")
+                sys.stdout.write("--> found target Region\n")
             else:
                 new_du_list.append(du)
     else:
-        sys.stdout.write("\nERROR: failed to open DU database: {}".format(CONFIG_FILE))
+        sys.stdout.write("\nERROR: failed to open Region database: {}".format(CONFIG_FILE))
 
     # update DU database
     try:
         with open(CONFIG_FILE, 'w') as outfile:
             json.dump(new_du_list, outfile)
     except:
-        sys.stdout.write("\nERROR: failed to update DU database: {}".format(CONFIG_FILE))
+        sys.stdout.write("\nERROR: failed to update Region database: {}".format(CONFIG_FILE))
 
 
 def get_du_metadata(du_url):
@@ -2078,9 +2082,10 @@ def action_header(title):
     sys.stdout.write("\n{}".format(title.center(MAX_WIDTH,'*')))
 
 def display_menu1():
-    sys.stdout.write("\n*****************************************\n")
-    sys.stdout.write("**         Maintenance Menu            **\n")
-    sys.stdout.write("*****************************************\n")
+    sys.stdout.write("***************************************************\n")
+    sys.stdout.write("**           Platform9 Express Wizard            **\n")
+    sys.stdout.write("**            -- Maintenance Menu --             **\n")
+    sys.stdout.write("***************************************************\n")
     sys.stdout.write("1. Delete Region\n")
     sys.stdout.write("2. Delete Host\n")
     sys.stdout.write("3. Display Region Database\n")
@@ -2088,20 +2093,21 @@ def display_menu1():
     sys.stdout.write("5. View Configuration File\n")
     sys.stdout.write("6. View Inventory File\n")
     sys.stdout.write("7. View Logs\n")
-    sys.stdout.write("*****************************************\n")
+    sys.stdout.write("***************************************************\n")
 
 
 def display_menu0():
-    sys.stdout.write("*****************************************\n")
-    sys.stdout.write("**          Platform9 Wizard           **\n")
-    sys.stdout.write("*****************************************\n")
+    sys.stdout.write("***************************************************\n")
+    sys.stdout.write("**           Platform9 Express Wizard            **\n")
+    sys.stdout.write("**               -- Main Menu --                 **\n")
+    sys.stdout.write("***************************************************\n")
     sys.stdout.write("1. Discover/Add Regions\n")
     sys.stdout.write("2. Discover/Add Hosts\n")
     sys.stdout.write("3. Discover/Add Clusters\n")
     sys.stdout.write("4. Show Region\n")
     sys.stdout.write("5. Onboard Host to Region\n")
     sys.stdout.write("6. Maintenance\n")
-    sys.stdout.write("*****************************************\n")
+    sys.stdout.write("***************************************************\n")
 
 
 def menu_level1():
