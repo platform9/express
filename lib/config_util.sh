@@ -226,7 +226,7 @@ build_config() {
   echo "" >> ${pf9_group_vars}
   echo "# These variables are required to be filled in for the end-user's environment" >> ${pf9_group_vars}
   echo "os_username: ${os_username}" >> ${pf9_group_vars}
-  echo "os_password: ${os_password}" >> ${pf9_group_vars}
+  echo "os_password: '${os_password}'" >> ${pf9_group_vars}
   echo "os_region: ${os_region}" >> ${pf9_group_vars}
   echo "os_tenant: ${os_tenant}" >> ${pf9_group_vars}
   echo "du_url: ${du_url}" >> ${pf9_group_vars}
