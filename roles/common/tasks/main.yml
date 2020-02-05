@@ -1,19 +1,4 @@
 ---
-- name: Check for hardware virtualization support
-  # svm - AMD SVM
-  # vmx - Intel VT-x
-  command: "grep -Eiq '(svm|vmx)' /proc/cpuinfo"
-  ignore_errors: True
-  changed_when: hw_virt.rc != 0
-  register: hw_virt
-  when: inventory_hostname in groups.hypervisors
-
-- name: Quitting if hardware virtualization is not enabled
-  fail:
-    msg: "Hardware virtualization is not present, or not enabled."
-  when: hw_virt is failed and
-        inventory_hostname in groups.hypervisors
-
 - block:
   - name: Set system hostname
     hostname:
@@ -87,8 +72,8 @@
     when: pf9_uid is defined
   when: pf9_account_status is defined and pf9_account_status.stdout.strip() == "not-exist"
 
-- include: redhat.yml
+- include_tasks: redhat.yml
   when: ansible_os_family == "RedHat"
 
-- include: ubuntu.yml
+- include_tasks: ubuntu.yml
   when: ansible_distribution == "Ubuntu"

@@ -1,20 +1,9 @@
 ---
-- name: Install curl
+- name: Install curl, uuid-runtime, software-properties-common, logrotate
   apt:
-    name: curl
-    state: present
-
-- name: Install uuid-runtime
-  apt:
-    name: uuid-runtime
-    state: present
-
-- name: Install software-properties-common
-  apt:
-    name: software-properties-common
-    state: present
-
-- name: Install logrotate
-  apt:
-    name: logrotate
+    pkg:
+    - curl
+    - uuid-runtime
+    - software-properties-common
+    - logrotate
     state: present

@@ -5,33 +5,31 @@
 ## This playbook can be used to deploy and manage Platform9's PMK product.
 ##
 
-# Pre-tasks
+# All Kubernetes Nodes
 - hosts:
     - k8s_master
     - k8s_worker
-  become: true
-  gather_facts: False
-  pre_tasks:
-    - debug: var=autoreg
-    - name: install python2 on Ubuntu to enable running Ansible on Ubuntu hosts
-      raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt-get -y update && apt-get install -y python-minimal); fi
-
-# Run pre_flight_checks
-- hosts:
-    - k8s_master
-    - k8s_worker
-  become: true
-  roles:
-    - pf9-auth
+  tasks:
+    - include_role:
+        name: pf9-auth
+        public: yes
+      when: (os_auth_token is not defined) or (os_auth_token|length == 0)
+    - include_role:
+        name: "{{ role }}" 
+        public: yes
+        apply: {become: "true"}
+      with_items:
+        - common
+        - ntp
+        - disable-swap
+        - pf9-hostagent
+      loop_control: 
+        loop_var: role
 
 # Kubernetes Master Nodes
 - hosts: k8s_master
   become: true
   roles:
-    - common
-    - ntp
-    - disable-swap
-    - pf9-hostagent
     - { role: "wait-for-convergence", flags: "k8s", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
@@ -41,10 +39,6 @@
 - hosts: k8s_worker
   become: true
   roles:
-    - common
-    - ntp
-    - disable-swap
-    - pf9-hostagent
     - { role: "wait-for-convergence", flags: "k8s", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }

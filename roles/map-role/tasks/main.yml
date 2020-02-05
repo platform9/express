@@ -128,9 +128,11 @@
 - name: read role json
   shell: "cat {{role_metadata}}"
   register: role_json
-- name: read api token
-  shell: "cat /tmp/keystone-token.txt"
-  register: api_token
+- set_fact:
+    api_token: "{{ os_auth_token if os_auth_token is defined and != '' | default lookup('file', '/tmp/keystone-token.txt' )}}"
+#- name: read api token
+#  shell: "cat /tmp/keystone-token.txt"
+#  register: api_token
 
 - name: "Assigning Role - {{rolename}}"
   uri:
