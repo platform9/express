@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import getpass
 import json
 import optparse

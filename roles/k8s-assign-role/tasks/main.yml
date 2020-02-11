@@ -1,4 +1,6 @@
 ---
+# Assign pf9-kube in resmgr
+
 # Get hostid 
 - name: validate pf9/host_id.conf
   stat:
@@ -14,19 +16,19 @@
   set_fact:
     host_id: "{{ host_id_raw.stdout.strip() }}"
 
-################################################################################
-# Attach to Cluster
-################################################################################
-- name: "Attaching to Cluster : UUID = {{cluster_uuid}}"
+# Role Assignment 
+- name: "Assigning Role - {{rolename}}"
   uri:
-    url: "https://{{du_fqdn}}/qbert/v1/clusters/{{cluster_uuid}}/attach"
-    method: POST
-    body: "['{{host_id}}']"
-    body_format: json
+    url: "https://{{du_fqdn}}/resmgr/v1/hosts/{{host_id}}/roles/{{rolename}}"
+    method: PUT
     validate_certs: False
     headers:
       Content-Type: "application/json"
       X-Auth-Token: "{{ os_auth_token }}"
-  register: cluster_attach_result 
-  ignore_errors: true
-  when: cluster_uuid is defined
+  register: assign_role_result
+  #delegate_to: localhost
+
+- name: DEBUGGING assign_role_result
+  debug:
+    var: assign_role_result
+    verbosity: 1

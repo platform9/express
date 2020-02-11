@@ -1,5 +1,4 @@
 ---
-
 - name: validate pf9/host_id.conf
   stat:
     path: /etc/pf9/host_id.conf
@@ -20,8 +19,6 @@
 
 - name: wait for pf9-hostagent to converge
   script: "files/wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{flags}}"
-  script: "files/wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} {{du_username}} \'{{du_password}}\' {{flags}}"
   register: waitfor_agent
 
 - debug: var=waitfor_agent
-

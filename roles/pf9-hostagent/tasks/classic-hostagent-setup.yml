@@ -1,21 +1,15 @@
 ---
-- name: stage agent download script
-  template:
-    src: files/pf9_get_hostagent.py.j2
-    dest: /tmp/pf9_get_hostagent.py
-    mode: 0755
-
 - name: Download Platform9 installers
-  shell: "./pf9_get_hostagent.py --account_endpoint {{du_fqdn}} --region {{os_region}} --user {{os_username}} --password '{{os_password}}' --tenant {{os_tenant}} --platform {{ansible_os_family|lower}}"
+  script: files/pf9_get_hostagent.py --account_endpoint "{{du_fqdn}}" --region "{{os_region}}" --user "{{os_username}}" --password "{{os_password}}" --tenant "{{os_tenant}}" --platform "{{ansible_os_family|lower}}"
   args:
-    chdir: "/tmp"
+    chdir: /tmp
     executable: "{{ ansible_python.executable }}"
   when: proxy_url is undefined
 
 - name: Download Platform9 installers
-  shell: "./pf9_get_hostagent.py --account_endpoint {{du_fqdn}} --region {{os_region}} --user {{os_username}} --password '{{os_password}}' --tenant {{os_tenant}} --proxy {{proxy_url}} --platform {{ansible_os_family|lower}}"
+  script: files/pf9_get_hostagent.py --account_endpoint "{{du_fqdn}}" --region "{{os_region}}" --user "{{os_username}}" --password "{{os_password}}" --tenant "{{os_tenant}}" --proxy "{{proxy_url}}" --platform "{{ansible_os_family|lower}}"
   args:
-    chdir: "/tmp"
+    chdir: /tmp
     executable: "{{ ansible_python.executable }}"
   when: proxy_url is defined
 

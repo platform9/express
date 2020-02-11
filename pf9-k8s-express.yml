@@ -31,7 +31,7 @@
   become: true
   roles:
     - { role: "wait-for-convergence", flags: "k8s", when: autoreg == "on" }
-    - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
+    - { role: "k8s-assign-role", rolename: "pf9-kube", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "k8s-cluster-attach", k8s_node_type: "master", when: autoreg == "on" }
 
@@ -40,6 +40,6 @@
   become: true
   roles:
     - { role: "wait-for-convergence", flags: "k8s", when: autoreg == "on" }
-    - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
+    - { role: "k8s-assign-role", rolename: "pf9-kube", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "k8s-cluster-attach", k8s_node_type: "worker", when: autoreg == "on" }

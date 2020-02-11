@@ -1,5 +1,4 @@
 ---
-
 - name: Check if the certless installer is available
   uri:
     url: "https://{{du_fqdn}}/clarity/platform9-install-{{ansible_os_family|lower}}.sh"
