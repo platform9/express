@@ -1,16 +1,18 @@
 ---
 - name: Download Platform9 installers
-  script: files/pf9_get_hostagent.py --account_endpoint "{{du_fqdn}}" --region "{{os_region}}" --user "{{os_username}}" --password "{{os_password}}" --tenant "{{os_tenant}}" --platform "{{ansible_os_family|lower}}"
+  script: files/pf9_get_hostagent.py --account_endpoint "{{du_fqdn}}" --region "{{du_region}}" --token "{{du_token}}" --platform "{{ansible_os_family|lower}}"
   args:
     chdir: /tmp
     executable: "{{ ansible_python.executable }}"
+    register: agent_install
   when: proxy_url is undefined
 
 - name: Download Platform9 installers
-  script: files/pf9_get_hostagent.py --account_endpoint "{{du_fqdn}}" --region "{{os_region}}" --user "{{os_username}}" --password "{{os_password}}" --tenant "{{os_tenant}}" --proxy "{{proxy_url}}" --platform "{{ansible_os_family|lower}}"
+  script: files/pf9_get_hostagent.py --account_endpoint "{{du_fqdn}}" --region "{{du_region}}" --token "{{du_token}}" --proxy "{{proxy_url}}" --platform "{{ansible_os_family|lower}}"
   args:
     chdir: /tmp
     executable: "{{ ansible_python.executable }}"
+    register: agent_install
   when: proxy_url is defined
 
 - include: classic-packages.yml

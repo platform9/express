@@ -8,7 +8,7 @@ TIMEOUT=900
 flag_k8s=0
 
 usage() {
-  echo -e "usage: `basename $0` <du_fqdn> <host_id> <admin_user> <admin_password>"
+  echo -e "usage: `basename $0` <du_fqdn> <host_id> <du_token>"
   exit 1
 }
 
@@ -18,27 +18,17 @@ assert() {
 }
 
 ## validate commandline
-if [ $# -lt 4 ]; then usage; fi
+if [ $# -lt 3 ]; then usage; fi
 du_fqdn=${1}
 host_id=${2}
-admin_user=${3}
-admin_password=${4}
+token=${3}
 
 # check for flags (optional parameters)
-if [ $# -eq 5 -a "${5}" == "k8s" ]; then
-  flag_k8s=1
-  sleep 120
-  exit 0
+if [ $# -eq 4 -a "${4}" == "k8s" ]; then
+  role_filter="python -c 'import sys, json; print json.load(sys.stdin)[\"extensions\"][\"ip_address\"][\"status\"]'"
+else
+  role_filter="python -c 'import sys, json; print json.load(sys.stdin)[\"role_status\"]'"
 fi
-
-## set auth url
-auth_url=https://${du_fqdn}/keystone/v3
-
-####################################################################################################
-# Get Keystone Token
-####################################################################################################
-token=`curl -k -i -H "Content-Type: application/json" ${auth_url}/auth/tokens?nocatalog \
-    -d "{ \"auth\": { \"identity\": { \"methods\": [\"password\"], \"password\": { \"user\": { \"name\": \"${admin_user}\", \"domain\": {\"id\": \"default\"}, \"password\": \"${admin_password}\" } } }, \"scope\": { \"project\": { \"name\": \"service\", \"domain\": {\"id\": \"default\"}}}}}" 2>/dev/null | grep -i ^X-Subject-Token | awk -F : '{print $2}' | sed -e 's/ //g' | sed -e 's/\r//g'`
 
 ####################################################################################################
 # Wait for Host Agent to Register
@@ -50,14 +40,10 @@ echo "--> flag_k8s=${flag_k8s}"
 start_time=`date +%s`
 elapsedTime=0
 while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
-  role_status=$(curl -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
-      https://${du_fqdn}/resmgr/v1/hosts/${host_id} 2>/dev/null | python -m json.tool | grep role_status)
-  if [ -n "${role_status}" ]; then
-    role_status=$(echo ${role_status} | cut -d : -f2 | sed -e 's/\"//g' | sed -e 's/,//g' | sed -e 's/ //g')
-  fi
+  role_status=$(curl -s -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
+      https://${du_fqdn}/resmgr/v1/hosts/${host_id} | eval "${role_filter}")
 
   if [ "${role_status}" == "ok" ]; then break; fi
-
   # update elapsed time
   current_t=`date +%s`; elapsedTime=$((current_t - start_time))
   sleep 5

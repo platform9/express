@@ -66,41 +66,6 @@ def download_installer(url, token, cookie, installer_name, proxyHost="", proxyPo
     conn.close()
 
 
-def get_token_v3(host, username, password, tenant, proxyHost="", proxyPort=""):
-    headers = {"Content-Type": "application/json"}
-    body = {
-        "auth": {
-            "identity": {
-                "methods": ["password"],
-                "password": {
-                    "user": {
-                        "name": username,
-                        "domain": {"id": "default"},
-                        "password": password
-                    }
-                }
-            },
-            "scope": {
-                "project": {
-                    "name": tenant,
-                    "domain": {"id": "default"}
-                }
-            }
-        }
-    }
-    conn, response = do_request("POST", host,
-                                "/keystone/v3/auth/tokens?nocatalog",
-                                headers, body, proxyHost, proxyPort)
-
-    if response.status not in (200, 201):
-        print("{0}: {1}".format(response.status, response.reason))
-        exit(1)
-
-    token = response.getheader('X-Subject-Token')
-    conn.close()
-    return token
-
-
 def get_package_info_from_token(host, token, region, proxyHost="", proxyPort=""):
 
     out = {}
@@ -185,29 +150,21 @@ def get_package_info_from_token(host, token, region, proxyHost="", proxyPort="")
 
 
 def get_installer(options, proxyHost="", proxyPort=""):
-    token = get_token_v3(options.endpoint, options.user,
-                         options.pw, options.tenant, proxyHost, proxyPort)
 
-    info = get_package_info_from_token(options.endpoint, token, options.region, proxyHost, proxyPort)
+    info = get_package_info_from_token(options.endpoint, options.token, options.region, proxyHost, proxyPort)
     if options.platform == 'debian':
         package_url = info['deb_installer']
     elif options.platform == 'redhat':
         package_url = info['rpm_installer']
 
     installer_name = package_url.rsplit('/', 1)[1]
-    download_installer(package_url, 'token', info['cookie'], installer_name, proxyHost, proxyPort)
-
-
-def validate_password(options):
-    if not options.pw:
-        options.pw = getpass.getpass()
+    download_installer(package_url, options.token, info['cookie'], installer_name, proxyHost, proxyPort)
 
 
 def main():
     parser = optparse.OptionParser(
-        usage="%prog --account_endpoint <endpoint> "
-        "--region <region> --user <user> [--password <password>]"
-        " [--tenant <tenant>] --platform <redhat|debian> [--proxy <proxy>]")
+        usage="%prog --account_endpoint <endpoint> --region <region>"
+        " --token <token>] --platform <redhat|debian> [--proxy <proxy>]")
     parser.add_option(
         '--account_endpoint',
         dest="endpoint",
@@ -219,23 +176,10 @@ def main():
         action="store",
         help="Region from where the installer needs to be downloaded")
     parser.add_option(
-        '--user',
-        dest="user",
+        '--token',
+        dest="token",
         action="store",
-        help="Platform9 user account to use to retrieve the installer")
-    parser.add_option(
-        '--password',
-        dest="pw",
-        action="store",
-        default=None,
-        help="User account password. Will be prompted, if not provided during "
-        "script invocation")
-    parser.add_option(
-        '--tenant',
-        dest="tenant",
-        action="store",
-        default="service", help="Tenant to use for the user account. Defaults "
-        "to 'service' tenant")
+        help="Token to use for authentication.")
     parser.add_option(
         '--platform',
         dest="platform",
@@ -249,8 +193,7 @@ def main():
         default="", help="Proxy to reach internet. Example: http://proxy.company.com:80")
 
     options, _ = parser.parse_args()
-    if not (options.endpoint and options.region and
-            options.user and options.tenant):
+    if not (options.endpoint and options.region and options.token):
         print("ERROR: Missing arguments")
         parser.print_usage()
         sys.exit(1)
@@ -279,8 +222,6 @@ def main():
     else:
         proxyHost = ""
         proxyPort = ""
-
-    validate_password(options)
 
     get_installer(options, proxyHost, proxyPort)
 

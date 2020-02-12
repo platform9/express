@@ -26,7 +26,7 @@
     validate_certs: False
     headers:
       Content-Type: "application/json"
-      X-Auth-Token: "{{ os_auth_token }}"
+      X-Auth-Token: "{{ du_token }}"
   register: cluster_attach_result 
   ignore_errors: true
   when: cluster_uuid is defined

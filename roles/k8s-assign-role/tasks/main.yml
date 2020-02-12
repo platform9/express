@@ -24,7 +24,7 @@
     validate_certs: False
     headers:
       Content-Type: "application/json"
-      X-Auth-Token: "{{ os_auth_token }}"
+      X-Auth-Token: "{{ du_token }}"
   register: assign_role_result
   #delegate_to: localhost
 

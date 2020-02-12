@@ -10,10 +10,11 @@
     - k8s_master
     - k8s_worker
   tasks:
-    - include_role:
+    - name: get auth token if not provided
+      include_role:
         name: pf9-auth
         public: yes
-      when: (os_auth_token is not defined) or (os_auth_token|length == 0)
+      when: (du_token is not defined) or (du_token|length == 0)
     - include_role:
         name: "{{ role }}" 
         public: yes

@@ -3,9 +3,7 @@
   stat:
     path: /etc/pf9/host_id.conf
   register: stat_hostid
-
-- fail: msg="failed to open /etc/pf9/host_id.conf"
-  when: stat_hostid.stat.exists == false
+  failed_when: stat_hostid.stat.exists == false
 
 - name: get host_id
   shell: cat /etc/pf9/host_id.conf | grep ^host_id | cut -d = -f2 | cut -d ' ' -f2
@@ -14,11 +12,11 @@
 - set_fact:
     flags: ""
   when: flags is undefined
-- debug: var=flags
-- debug: msg="running wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} {{du_username}} ******** <{{flags}}>"
+
+- name: INFO starting wait_for_agent_convergence
+  debug: 
+    msg: "running wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} <{{flags}}>"
 
 - name: wait for pf9-hostagent to converge
-  script: "files/wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} {{du_username}} {{du_password}} {{flags}}"
+  script: "files/wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} {{du_token}} {{flags}}"
   register: waitfor_agent
-
-- debug: var=waitfor_agent
