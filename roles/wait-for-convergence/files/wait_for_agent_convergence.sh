@@ -46,7 +46,7 @@ while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
   if [ "${role_status}" == "ok" ]; then break; fi
   # update elapsed time
   current_t=`date +%s`; elapsedTime=$((current_t - start_time))
-  sleep 5
+  sleep 3
 done
 
 # display timeout message

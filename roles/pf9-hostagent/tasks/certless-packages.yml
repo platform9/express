@@ -25,7 +25,6 @@
     shell: "/tmp/platform9-install-{{ansible_os_family|lower}}.sh --controller={{du_fqdn}} --project-name={{du_tenant}} --username={{du_username}} --password='{{du_password}}' --proxy={{proxy_url}} --no-ntpd --skip-os-check"
     register: agent_install
     when: pkg_state_redhat.stdout is defined and pkg_state_redhat.stdout.strip() == "not-installed"
-  - debug: var=agent_install
 
   - name: Install pf9-hostagent on hypervisor/containervisor (Ubuntu)
     shell: "/tmp/platform9-install-{{ansible_os_family|lower}}.sh --controller={{du_fqdn}} --project-name={{du_tenant}} --username={{du_username}} --password='{{du_password}}' --proxy={{proxy_url}} --no-ntpd --skip-os-check"
