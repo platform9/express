@@ -12,8 +12,8 @@
     is_certless_installer: "true"
   when: result.status == 200
 
-- include: classic-hostagent-setup.yml
+- include_tasks: classic-hostagent-setup.yml
   when: is_certless_installer is undefined
 
-- include: certless-hostinstaller-setup.yml
+- include_tasks: certless-hostinstaller-setup.yml
   when: is_certless_installer is defined
