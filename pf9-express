@@ -397,7 +397,7 @@ install_prereqs() {
     fi
 
     ## install additional pip-based packages
-    for pkg in shade docker-py; do
+    for pkg in shade; do
       echo -n "${pkg} "
       sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -449,7 +449,7 @@ install_prereqs() {
     fi
 
     ## install additional pip-based packages
-    for pkg in shade docker-py; do
+    for pkg in shade; do
       echo -n "${pkg} "
       sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
