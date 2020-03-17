@@ -25,8 +25,8 @@
     with_items: "{{bond_sub_interfaces|list}}"
   when: bond_sub_interfaces is defined
 
-- name: restart network service
-  service:
-    name: network
-    state: restarted
-  when: bond_members is defined or bond_sub_interfaces is defined
+#- name: restart network service
+#  service:
+#    name: network
+#    state: restarted
+#  when: bond_members is defined or bond_sub_interfaces is defined
