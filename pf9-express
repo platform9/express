@@ -1,3 +1,4 @@
+
 #!/bin/bash
 ################################################################################
 ## Platform9 Assimilation Utility
@@ -10,6 +11,7 @@ min_ansible_version="2.2"
 oscli_version=pike
 oscli_rc_file=${basedir}/pf9-openstack.rc
 inventory=${basedir}/inventory/hosts
+ceph_inventory=${basedir}/../../../inventory/ceph_nodes
 express_script=${basedir}/pf9-express.yml
 deauth_script=${basedir}/pf9-deauth.yml
 k8s_upgrade_script=${basedir}/pf9-k8s-upgrade.yml
@@ -44,6 +46,7 @@ awx_pf9_password="Pl@tform9"
 awx_pf9_email="user@company.com"
 awx_db_export=awx-db-backup-v0.2.sql
 tags=""
+ceph_cluster=0
 IFS_orig="${IFS}"
 
 # functions
@@ -63,6 +66,7 @@ usage() {
   echo "-v|--inventory <file>      : use alternate inventory file for Ansible"
   echo "-f|--csvFile <file>        : import CSV file"
   echo "-t|--tag <tag[,<tag>]>     : available tags = [live-migration, image-import]"
+  echo "-S|--ceph                  : Setup a Ceph cluster by providing information about Data and Control Plane nodes"
   echo -e "-h|--help                  : display this message\n"
   if [ $# -eq 1 -a "${1}" == "-q" ]; then
     :
@@ -397,7 +401,7 @@ install_prereqs() {
     fi
 
     ## install additional pip-based packages
-    for pkg in shade docker-py; do
+    for pkg in shade docker-py netaddr; do
       echo -n "${pkg} "
       sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -449,7 +453,7 @@ install_prereqs() {
     fi
 
     ## install additional pip-based packages
-    for pkg in shade docker-py; do
+    for pkg in shade docker-py netaddr; do
       echo -n "${pkg} "
       sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -493,6 +497,9 @@ while [ $# -gt 0 ]; do
     ;;
   -o|--oscli)
     flag_oscli=1
+    ;;
+  -S|--ceph)
+    ceph_cluster=1
     ;;
   -a|--autoRegister)
     flag_autoregister=1
@@ -556,6 +563,9 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+
+
+
 # validate platform (CentOS 7.4, Ubuntu 16.04, or Ubuntu 18.04)
 validate_platform
 
@@ -565,6 +575,13 @@ if [ $? -ne 200 ]; then assert "you need sudo privilidges to run this script - p
 
 ## enforce setup/custom-config mutual exclusivity
 if [ ${flag_setup} -eq 1 -a -n "${pf9_custom_configFile}" ]; then assert "'-s' and '-c' are mutually exclusive"; fi
+
+
+if [ ${ceph_cluster} -eq 1 ]; then
+install_prereqs; echo
+cd /root/express/roles/ceph/ceph-ansible && sudo ansible-playbook -i ${ceph_inventory} site.yml
+ exit 0
+fi
 
 ## run setup
 if [ ${flag_setup} -eq 1 ]; then
