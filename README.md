@@ -193,6 +193,56 @@ If you want to control the UID and GID values for the Platform9 service account 
 If these variables are not defined, the Host Agent Installer will allow the system to auto-assign the UID and GID.
 
 NOTE: This feature is not idempotent.  If the 'pf9' user had not been created yet, Platform9 Express will create the 'pf9' user and 'pf9group' group based on the values of pf9_uid and pf9_gid.  If the 'pf9' user already exists, Platform9 Express will skip the user/group management section; it will not attempt to alter the UID/GID settings.
+```
+################################################################################################
+## Ceph
+################################################################################################
+
+You can setup a HA Ceph cluster using pf9-express. 
+
+## Prerequisites
+
+  IPs/hostnames of Control Plane Nodes (Monitoring nodes) and Data Plane nodes should be accessible from the machine where pf9-express is triggered. 
+
+  Ceph inventory file should be present at <express_path>/inventory/ceph_nodes file 
+
+##  Sample Ceph inventory
+
+[all]
+[all:vars]
+
+ansible_user=ansible_user
+ansible_sudo_pass=<REDACTED>
+ansible_ssh_pass=<REDACTED>
+
+[mons]
+mon1
+mon2
+mon3
+
+[osds]
+osd1
+osd2
+osd3
+
+[mgrs]
+mon1
+mon2
+mon3
+
+[mdss]
+mon1
+mon2
+mon3
+
+[grafana-server]
+mon1
+```
+
+Here's an example of invoking Platform9 Express against a number of hosts without registering them automatically to the management plane:
+```
+# ./pf9-express -S
+```
 
 ## Running Platform9 Express
 The basic syntax for starting Platform9 Express includes a target (host group, individual host, comma-delimited list of hosts, or "all" to run all groups) and an optional flag ('-a') that instructs it to perform role deployment.
