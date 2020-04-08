@@ -1,0 +1,156 @@
+---
+- name: set_fact keys_tmp - preserve backward compatibility after the introduction of the ceph_keys module
+  set_fact:
+    keys_tmp: "{{ keys_tmp|default([]) + [ { 'key': item.key, 'name': item.name, 'caps': { 'mon': item.mon_cap, 'osd': item.osd_cap|default(''), 'mds': item.mds_cap|default(''), 'mgr': item.mgr_cap|default('') } , 'mode': item.mode } ] }}"
+  when: item.get('mon_cap', None) # it's enough to assume we are running an old-fashionned syntax simply by checking the presence of mon_cap since every key needs this cap
+  with_items: "{{ keys }}"
+
+- name: set_fact keys - override keys_tmp with keys
+  set_fact:
+    keys: "{{ keys_tmp }}"
+  when: keys_tmp is defined
+
+# dummy container setup is only supported on x86_64
+# when running with containerized_deployment: true this task
+# creates a group that contains only x86_64 hosts.
+# when running with containerized_deployment: false this task
+# will add all client hosts to the group (and not filter).
+- name: create filtered clients group
+  add_host:
+    name: "{{ item }}"
+    groups: _filtered_clients
+  with_items: "{{ groups[client_group_name] | intersect(ansible_play_batch) }}"
+  when: (hostvars[item]['ansible_architecture'] == 'x86_64') or (not containerized_deployment | bool)
+
+- name: set_fact delegated_node
+  set_fact:
+    delegated_node: "{{ groups[mon_group_name][0] if groups.get(mon_group_name, []) | length > 0 else inventory_hostname }}"
+
+- name: set_fact condition_copy_admin_key
+  set_fact:
+    condition_copy_admin_key: "{{ True if groups.get(mon_group_name, []) | length > 0 else copy_admin_key }}"
+
+- name: create cephx key(s)
+  ceph_key:
+    state: present
+    name: "{{ item.name }}"
+    caps: "{{ item.caps }}"
+    secret: "{{ item.key | default('') }}"
+    cluster: "{{ cluster }}"
+    dest: "{{ ceph_conf_key_directory }}"
+    import_key: "{{ condition_copy_admin_key }}"
+    mode: "{{ item.mode|default(omit) }}"
+    owner: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    group: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+  environment:
+    CEPH_CONTAINER_IMAGE: "{{ ceph_docker_registry + '/' + ceph_docker_image + ':' + ceph_docker_image_tag if containerized_deployment else None }}"
+    CEPH_CONTAINER_BINARY: "{{ container_binary }}"
+  with_items:
+    - "{{ keys }}"
+  delegate_to: "{{ delegated_node }}"
+  when:
+    - cephx | bool
+    - keys | length > 0
+    - inventory_hostname == groups.get('_filtered_clients') | first
+
+- name: slurp client cephx key(s)
+  slurp:
+    src: "{{ ceph_conf_key_directory }}/{{ cluster }}.{{ item.name }}.keyring"
+  with_items: "{{ keys }}"
+  register: slurp_client_keys
+  delegate_to: "{{ delegated_node }}"
+  when:
+    - cephx | bool
+    - keys | length > 0
+    - inventory_hostname == groups.get('_filtered_clients') | first
+
+- name: pool related tasks
+  when:
+    - condition_copy_admin_key | bool
+    - inventory_hostname == groups.get('_filtered_clients', []) | first
+  block:
+    - name: list existing pool(s)
+      command: >
+        {{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }}
+        osd pool get {{ item.name }} size
+      with_items: "{{ pools }}"
+      register: created_pools
+      failed_when: false
+      delegate_to: "{{ delegated_node }}"
+
+    - name: create ceph pool(s)
+      command: >
+        {{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }}
+        osd pool create {{ item.0.name }}
+        {{ item.0.pg_num | default(osd_pool_default_pg_num) if not item.0.pg_autoscale_mode | default(False) | bool else 16 }}
+        {{ item.0.pgp_num | default(item.0.pg_num) | default(osd_pool_default_pg_num) if not item.0.pg_autoscale_mode | default(False) | bool else '' }}
+        {%- if item.0.type | default(1) | int == 1 or item.0.type | default('replicated') == 'replicated' %}
+        replicated
+        {{ item.0.rule_name | default(osd_pool_default_crush_rule) }}
+        {{ item.0.expected_num_objects | default(0) }}
+        {%- else %}
+        erasure
+        {{ item.0.erasure_profile }}
+        {%- endif %}
+      with_together:
+        - "{{ pools }}"
+        - "{{ created_pools.results }}"
+      changed_when: false
+      delegate_to: "{{ delegated_node }}"
+      when:
+        - pools | length > 0
+        - item.1.rc != 0
+
+    - name: set the target ratio on pool(s)
+      command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} osd pool set {{ item.name }} target_size_ratio {{ item.target_size_ratio }}"
+      with_items: "{{ pools | unique }}"
+      delegate_to: "{{ delegated_node }}"
+      when: item.pg_autoscale_mode | default(False) | bool
+
+    - name: set pg_autoscale_mode value on pool(s)
+      command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} osd pool set {{ item.name }} pg_autoscale_mode {{ item.pg_autoscale_mode | default(False) | ternary('on', 'warn') }}"
+      delegate_to: "{{ delegated_node }}"
+      with_items: "{{ pools | unique }}"
+
+    - name: customize pool size
+      command: >
+        {{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }}
+        osd pool set {{ item.name }} size {{ item.size | default(osd_pool_default_size) }}
+      with_items: "{{ pools | unique }}"
+      delegate_to: "{{ delegated_node }}"
+      changed_when: false
+      when:
+        - pools | length > 0
+        - item.type | default(1) | int != 3
+        - item.type | default('replicated') != 'erasure'
+        - item.size | default(osd_pool_default_size) != ceph_osd_pool_default_size
+
+    - name: customize pool min_size
+      command: >
+        {{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }}
+        osd pool set {{ item.name }} min_size {{ item.min_size | default(osd_pool_default_min_size) }}
+      with_items: "{{ pools | unique }}"
+      delegate_to: "{{ delegated_node }}"
+      changed_when: false
+      when:
+        - pools | length > 0
+        - (item.min_size | default(osd_pool_default_min_size))|int > ceph_osd_pool_default_min_size
+        - item.type | default(1) | int != 3
+        - item.type | default('replicated') != 'erasure'
+
+    - name: assign application to pool(s)
+      command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} osd pool application enable {{ item.name }} {{ item.application }}"
+      with_items: "{{ pools | unique }}"
+      changed_when: false
+      delegate_to: "{{ delegated_node }}"
+      when: item.application is defined
+
+- name: get client cephx keys
+  copy:
+    dest: "{{ item.source }}"
+    content: "{{ item.content | b64decode }}"
+    mode: "{{ item.item.get('mode', '0600') }}"
+    owner: "{{ ceph_uid }}"
+    group: "{{ ceph_uid }}"
+  with_items: "{{ hostvars[groups['_filtered_clients'][0]]['slurp_client_keys']['results'] }}"
+  when: not item.get('skipped', False)

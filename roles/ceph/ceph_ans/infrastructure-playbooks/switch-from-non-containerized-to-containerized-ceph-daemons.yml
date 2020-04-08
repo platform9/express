@@ -1,0 +1,513 @@
+---
+# This playbook switches from non-containerized to containerized Ceph daemons
+
+- name: confirm whether user really meant to switch from non-containerized to containerized ceph daemons
+
+  hosts: localhost
+
+  gather_facts: false
+
+  vars_prompt:
+    - name: ireallymeanit
+      prompt: Are you sure you want to switch from non-containerized to containerized ceph daemons?
+      default: 'no'
+      private: no
+
+  tasks:
+    - name: exit playbook, if user did not mean to switch from non-containerized to containerized daemons?
+      fail:
+        msg: >
+          "Exiting switch-from-non-containerized-to-containerized-ceph-daemons.yml playbook,
+           cluster did not switch from non-containerized to containerized ceph daemons.
+           To switch from non-containerized to containerized ceph daemons, either say 'yes' on the prompt or
+           or use `-e ireallymeanit=yes` on the command line when
+           invoking the playbook"
+      when: ireallymeanit != 'yes'
+
+
+- name: gather facts
+
+  hosts:
+    - "{{ mon_group_name|default('mons') }}"
+    - "{{ mgr_group_name|default('mgrs') }}"
+    - "{{ osd_group_name|default('osds') }}"
+    - "{{ mds_group_name|default('mdss') }}"
+    - "{{ rgw_group_name|default('rgws') }}"
+    - "{{ rbdmirror_group_name|default('rbdmirrors') }}"
+    - "{{ nfs_group_name|default('nfss') }}"
+
+  become: true
+
+  vars:
+    delegate_facts_host: True
+
+  tasks:
+    - import_role:
+        name: ceph-defaults
+
+    - name: gather and delegate facts
+      setup:
+      delegate_to: "{{ item }}"
+      delegate_facts: True
+      with_items: "{{ groups['all'] | difference(groups.get(client_group_name, [])) }}"
+      run_once: true
+      when: delegate_facts_host | bool
+      tags: always
+
+- name: switching from non-containerized to containerized ceph mon
+  vars:
+    containerized_deployment: true
+    switch_to_containers: True
+    mon_group_name:       mons
+  hosts: "{{ mon_group_name|default('mons') }}"
+  serial: 1
+  become: true
+  pre_tasks:
+    - name: select a running monitor
+      set_fact: mon_host={{ item }}
+      with_items: "{{ groups[mon_group_name] }}"
+      when: item != inventory_hostname
+
+    - name: stop non-containerized ceph mon
+      service:
+        name: "ceph-mon@{{ ansible_hostname }}"
+        state: stopped
+        enabled: no
+
+    - name: remove old systemd unit files
+      file:
+        path: /usr/lib/systemd/system/{{ item }}
+        state: absent
+      with_items:
+        - ceph-mon@.service
+        - ceph-mon.target
+
+    - import_role:
+        name: ceph-defaults
+
+    - import_role:
+        name: ceph-facts
+
+    # NOTE: changed from file module to raw find command for performance reasons
+    # The file module has to run checks on current ownership of all directories and files. This is unnecessary
+    # as in this case we know we want all owned by ceph user
+    - name: set proper ownership on ceph directories
+      command: "find /var/lib/ceph /etc/ceph -not -( -user {{ ceph_uid }} -or -group {{ ceph_uid }} -) -execdir chown {{ ceph_uid }}:{{ ceph_uid }} {} +"
+      changed_when: false
+
+    - name: check for existing old leveldb file extension (ldb)
+      shell: stat /var/lib/ceph/mon/*/store.db/*.ldb
+      changed_when: false
+      failed_when: false
+      register: ldb_files
+
+    - name: rename leveldb extension from ldb to sst
+      shell: rename -v .ldb .sst /var/lib/ceph/mon/*/store.db/*.ldb
+      changed_when: false
+      failed_when: false
+      when: ldb_files.rc == 0
+
+    - name: copy mon initial keyring in /etc/ceph to satisfy fetch config task in ceph-container-common
+      command: cp /var/lib/ceph/mon/{{ cluster }}-{{ ansible_hostname }}/keyring /etc/ceph/{{ cluster }}.mon.keyring
+      args:
+        creates: /etc/ceph/{{ cluster }}.mon.keyring
+      changed_when: false
+      failed_when: false
+
+  tasks:
+    - import_role:
+        name: ceph-handler
+
+    - import_role:
+        name: ceph-container-engine
+
+    - import_role:
+        name: ceph-container-common
+
+    - import_role:
+        name: ceph-mon
+
+  post_tasks:
+    - name: waiting for the monitor to join the quorum...
+      command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} -s --format json"
+      register: ceph_health_raw
+      until: >
+        hostvars[mon_host]['ansible_hostname'] in (ceph_health_raw.stdout | from_json)["quorum_names"]
+      retries: "{{ health_mon_check_retries }}"
+      delay: "{{ health_mon_check_delay }}"
+
+- name: switching from non-containerized to containerized ceph mgr
+
+  hosts: "{{ mgr_group_name|default('mgrs') }}"
+
+  vars:
+    containerized_deployment: true
+    mgr_group_name: mgrs
+
+  serial: 1
+  become: true
+  pre_tasks:
+    # failed_when: false is here because if we're
+    # working with a jewel cluster then ceph mgr
+    # will not exist
+    - name: stop non-containerized ceph mgr(s)
+      service:
+        name: "ceph-mgr@{{ ansible_hostname }}"
+        state: stopped
+        enabled: no
+      failed_when: false
+
+    - name: remove old systemd unit files
+      file:
+        path: /usr/lib/systemd/system/{{ item }}
+        state: absent
+      with_items:
+        - ceph-mgr@.service
+        - ceph-mgr.target
+
+    - import_role:
+        name: ceph-defaults
+
+    - import_role:
+        name: ceph-facts
+
+    # NOTE: changed from file module to raw find command for performance reasons
+    # The file module has to run checks on current ownership of all directories and files. This is unnecessary
+    # as in this case we know we want all owned by ceph user
+    - name: set proper ownership on ceph directories
+      command: "find /var/lib/ceph /etc/ceph -not -( -user {{ ceph_uid }} -or -group {{ ceph_uid }} -) -execdir chown {{ ceph_uid }}:{{ ceph_uid }} {} +"
+      changed_when: false
+
+  tasks:
+    - import_role:
+        name: ceph-handler
+
+    - import_role:
+        name: ceph-container-engine
+
+    - import_role:
+        name: ceph-container-common
+
+    - import_role:
+        name: ceph-mgr
+
+
+- name: switching from non-containerized to containerized ceph osd
+
+  vars:
+    containerized_deployment: true
+    osd_group_name: osds
+
+  hosts: "{{ osd_group_name|default('osds') }}"
+
+  serial: 1
+  become: true
+  pre_tasks:
+
+    - import_role:
+        name: ceph-defaults
+
+    - name: collect running osds
+      shell: |
+        systemctl list-units | grep "loaded active" | grep -Eo 'ceph-osd@[0-9]+.service|ceph-volume|ceph\.target'
+      register: running_osds
+      changed_when: false
+      failed_when: false
+
+    - name: stop/disable/mask non-containerized ceph osd(s) (if any)
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      with_items: "{{ running_osds.stdout_lines | default([])}}"
+      when: running_osds != []
+
+    - name: remove old ceph-osd systemd units
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /usr/lib/systemd/system/ceph-osd.target
+        - /usr/lib/systemd/system/ceph-osd@.service
+        - /usr/lib/systemd/system/ceph-volume@.service
+
+    - import_role:
+        name: ceph-facts
+
+    # NOTE: changed from file module to raw find command for performance reasons
+    # The file module has to run checks on current ownership of all directories and files. This is unnecessary
+    # as in this case we know we want all owned by ceph user
+    - name: set proper ownership on ceph directories
+      command: "find /var/lib/ceph /etc/ceph -not -( -user {{ ceph_uid }} -or -group {{ ceph_uid }} -) -execdir chown {{ ceph_uid }}:{{ ceph_uid }} {} +"
+      changed_when: false
+
+    - name: check for existing old leveldb file extension (ldb)
+      shell: stat /var/lib/ceph/osd/*/current/omap/*.ldb
+      changed_when: false
+      failed_when: false
+      register: ldb_files
+
+    - name: rename leveldb extension from ldb to sst
+      shell: rename -v .ldb .sst /var/lib/ceph/osd/*/current/omap/*.ldb
+      changed_when: false
+      failed_when: false
+      when: ldb_files.rc == 0
+
+    - name: check if containerized osds are already running
+      command: >
+        {{ container_binary }} ps -q --filter='name=ceph-osd'
+      changed_when: false
+      failed_when: false
+      register: osd_running
+
+    - name: get osd directories
+      command: >
+        find /var/lib/ceph/osd {% if dmcrypt | bool %}/var/lib/ceph/osd-lockbox{% endif %} -maxdepth 1 -mindepth 1 -type d
+      register: osd_dirs
+      changed_when: false
+      failed_when: false
+
+    - name: unmount all the osd directories
+      command: >
+        umount {{ item }}
+      changed_when: false
+      failed_when: false
+      with_items: "{{ osd_dirs.stdout_lines }}"
+      when: osd_running.rc != 0 or osd_running.stdout_lines | length == 0
+
+  tasks:
+    - import_role:
+        name: ceph-handler
+
+    - import_role:
+        name: ceph-container-engine
+
+    - import_role:
+        name: ceph-container-common
+
+    - import_role:
+        name: ceph-osd
+
+  post_tasks:
+    - name: get num_pgs
+      command: >
+        {{ container_binary }} exec ceph-mon-{{ hostvars[groups[mon_group_name][0]]['ansible_hostname'] }} ceph --cluster {{ cluster }} -s --format json
+      register: ceph_pgs
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+
+    - name: container - waiting for clean pgs...
+      command: >
+        {{ container_binary }} exec ceph-mon-{{ hostvars[groups[mon_group_name][0]]['ansible_hostname'] }} ceph --cluster {{ cluster }} -s --format json
+      register: ceph_health_post
+      until: >
+        (((ceph_health_post.stdout | from_json).pgmap.pgs_by_state | length) > 0)
+        and
+        (((ceph_health_post.stdout | from_json).pgmap.pgs_by_state | selectattr('state_name', 'search', '^active\\+clean') | map(attribute='count') | list | sum) == (ceph_pgs.stdout | from_json).pgmap.num_pgs)
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+      retries: "{{ health_osd_check_retries }}"
+      delay: "{{ health_osd_check_delay }}"
+      when: (ceph_pgs.stdout | from_json).pgmap.num_pgs != 0
+
+
+- name: switching from non-containerized to containerized ceph mds
+
+  hosts: "{{ mds_group_name|default('mdss') }}"
+
+  vars:
+    containerized_deployment: true
+    mds_group_name: mdss
+
+  serial: 1
+  become: true
+  pre_tasks:
+
+    - name: stop non-containerized ceph mds(s)
+      service:
+        name: "ceph-mds@{{ ansible_hostname }}"
+        state: stopped
+        enabled: no
+
+    - name: remove old systemd unit files
+      file:
+        path: /usr/lib/systemd/system/{{ item }}
+        state: absent
+      with_items:
+        - ceph-mds@.service
+        - ceph-mds.target
+
+    - import_role:
+        name: ceph-defaults
+
+    - import_role:
+        name: ceph-facts
+
+    # NOTE: changed from file module to raw find command for performance reasons
+    # The file module has to run checks on current ownership of all directories and files. This is unnecessary
+    # as in this case we know we want all owned by ceph user
+    - name: set proper ownership on ceph directories
+      command: "find /var/lib/ceph /etc/ceph -not -( -user {{ ceph_uid }} -or -group {{ ceph_uid }} -) -execdir chown {{ ceph_uid }}:{{ ceph_uid }} {} +"
+      changed_when: false
+
+  tasks:
+    - import_role:
+        name: ceph-handler
+
+    - import_role:
+        name: ceph-container-engine
+
+    - import_role:
+        name: ceph-container-common
+
+    - import_role:
+         name: ceph-mds
+
+
+- name: switching from non-containerized to containerized ceph rgw
+
+  hosts: "{{ rgw_group_name|default('rgws') }}"
+
+  vars:
+    containerized_deployment: true
+    rgw_group_name: rgws
+
+  serial: 1
+  become: true
+  pre_tasks:
+    - import_role:
+        name: ceph-defaults
+
+    - import_role:
+        name: ceph-facts
+
+    # NOTE: changed from file module to raw find command for performance reasons
+    # The file module has to run checks on current ownership of all directories and files. This is unnecessary
+    # as in this case we know we want all owned by ceph user
+    - name: set proper ownership on ceph directories
+      command: "find /var/lib/ceph /etc/ceph -not -( -user {{ ceph_uid }} -or -group {{ ceph_uid }} -) -execdir chown {{ ceph_uid }}:{{ ceph_uid }} {} +"
+      changed_when: false
+
+  tasks:
+    - name: stop non-containerized ceph rgw(s)
+      service:
+        name: "ceph-radosgw@rgw.{{ ansible_hostname }}.{{ item.instance_name }}"
+        state: stopped
+        enabled: no
+      with_items: "{{ rgw_instances }}"
+
+    - name: remove old systemd unit file
+      file:
+        path: /usr/lib/systemd/system/ceph-radosgw@.service
+        state: absent
+
+    - import_role:
+        name: ceph-handler
+
+    - import_role:
+        name: ceph-container-engine
+
+    - import_role:
+        name: ceph-container-common
+
+    - import_role:
+        name: ceph-rgw
+
+
+- name: switching from non-containerized to containerized ceph rbd-mirror
+
+  hosts: "{{ rbdmirror_group_name|default('rbdmirrors') }}"
+
+  vars:
+    containerized_deployment: true
+    rbdmirror_group_name: rbdmirrors
+
+  serial: 1
+  become: true
+  pre_tasks:
+    - name: stop non-containerized ceph rbd mirror(s)
+      service:
+        name: "ceph-rbd-mirror@rbd-mirror.{{ ansible_hostname }}"
+        state: stopped
+        enabled: no
+
+    - name: remove old systemd unit files
+      file:
+        path: /usr/lib/systemd/system/{{ item }}
+        state: absent
+      with_items:
+        - ceph-rbd-mirror@.service
+        - ceph-rbd-mirror.target
+
+    - import_role:
+        name: ceph-defaults
+
+    - import_role:
+        name: ceph-facts
+
+    # NOTE: changed from file module to raw find command for performance reasons
+    # The file module has to run checks on current ownership of all directories and files. This is unnecessary
+    # as in this case we know we want all owned by ceph user
+    - name: set proper ownership on ceph directories
+      command: "find /var/lib/ceph /etc/ceph -not -( -user {{ ceph_uid }} -or -group {{ ceph_uid }} -) -execdir chown {{ ceph_uid }}:{{ ceph_uid }} {} +"
+      changed_when: false
+
+  tasks:
+    - import_role:
+        name: ceph-handler
+
+    - import_role:
+        name: ceph-container-engine
+
+    - import_role:
+        name: ceph-container-common
+
+    - import_role:
+        name: ceph-rbd-mirror
+
+
+- name: switching from non-containerized to containerized ceph nfs
+
+  hosts: "{{ nfs_group_name|default('nfss') }}"
+
+  vars:
+    containerized_deployment: true
+    nfs_group_name: nfss
+
+  serial: 1
+  become: true
+  pre_tasks:
+
+    # failed_when: false is here because if we're
+    # working with a jewel cluster then ceph nfs
+    # will not exist
+    - name: stop non-containerized ceph nfs(s)
+      service:
+        name: nfs-ganesha
+        state: stopped
+        enabled: no
+      failed_when: false
+
+    - import_role:
+        name: ceph-defaults
+
+    - import_role:
+        name: ceph-facts
+
+    # NOTE: changed from file module to raw find command for performance reasons
+    # The file module has to run checks on current ownership of all directories and files. This is unnecessary
+    # as in this case we know we want all owned by ceph user
+    - name: set proper ownership on ceph directories
+      command: "find /var/lib/ceph /etc/ceph -not -( -user {{ ceph_uid }} -or -group {{ ceph_uid }} -) -execdir chown {{ ceph_uid }}:{{ ceph_uid }} {} +"
+      changed_when: false
+
+  tasks:
+    - import_role:
+        name: ceph-handler
+
+    - import_role:
+        name: ceph-container-engine
+
+    - import_role:
+        name: ceph-container-common
+
+    - import_role:
+        name: ceph-nfs

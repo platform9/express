@@ -1,0 +1,26 @@
+---
+- name: install ceph-mgr packages on RedHat or SUSE
+  package:
+    name: '{{ ceph_mgr_packages }}'
+    state: "{{ (upgrade_ceph_packages|bool) | ternary('latest','present') }}"
+  register: result
+  until: result is succeeded
+  when: ansible_os_family in ['RedHat', 'Suse']
+
+- name: install ceph-mgr packages for debian
+  apt:
+    name: '{{ ceph_mgr_packages }}'
+    state: "{{ (upgrade_ceph_packages|bool) | ternary('latest','present') }}"
+    default_release: "{{ ceph_stable_release_uca | default('') if ceph_origin == 'repository' and ceph_repository == 'uca' else ''}}{{ ansible_distribution_release ~ '-backports' if ceph_origin == 'distro' and ceph_use_distro_backports else '' }}"
+  register: result
+  until: result is succeeded
+  when: ansible_os_family == 'Debian'
+
+- name: install routes python library for dashboard module
+  apt:
+    name: python-routes
+  register: result
+  until: result is succeeded
+  when:
+    - ansible_os_family == 'Debian'
+    - "'ceph-mgr-dashboard' in ceph_mgr_packages"

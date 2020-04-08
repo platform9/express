@@ -1,0 +1,43 @@
+---
+- name: append dashboard modules to ceph_mgr_modules
+  set_fact:
+    ceph_mgr_modules: "{{ (ceph_mgr_modules + [ 'dashboard', 'prometheus' ]) | unique }}"
+  when: dashboard_enabled | bool
+
+- name: wait for all mgr to be up
+  command: "{{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }} mgr dump -f json"
+  register: mgr_dump
+  retries: 30
+  delay: 5
+  delegate_to: "{{ groups[mon_group_name][0] }}"
+  changed_when: false
+  until:
+    - mgr_dump.rc == 0
+    - (mgr_dump.stdout | from_json).available | bool
+
+- name: get enabled modules from ceph-mgr
+  command: "{{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }} --format json mgr module ls"
+  check_mode: no
+  changed_when: false
+  register: _ceph_mgr_modules
+  delegate_to: "{{ groups[mon_group_name][0] }}"
+
+- name: set _ceph_mgr_modules fact (convert _ceph_mgr_modules.stdout to a dict)
+  set_fact:
+    _ceph_mgr_modules: "{{ _ceph_mgr_modules.get('stdout', '{}') | from_json }}"
+
+- name: set _disabled_ceph_mgr_modules fact
+  set_fact:
+    _disabled_ceph_mgr_modules: "{% if _ceph_mgr_modules.disabled_modules | length == 0 %}[]{% elif _ceph_mgr_modules.disabled_modules[0] | type_debug != 'dict' %}{{ _ceph_mgr_modules['disabled_modules'] }}{% else %}{{ _ceph_mgr_modules['disabled_modules'] | map(attribute='name') | list }}{% endif %}"
+
+- name: disable ceph mgr enabled modules
+  command: "{{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }} mgr module disable {{ item }}"
+  with_items: "{{ _ceph_mgr_modules.get('enabled_modules', []) }}"
+  delegate_to: "{{ groups[mon_group_name][0] }}"
+  when: item not in ceph_mgr_modules
+
+- name: add modules to ceph-mgr
+  command: "{{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }} mgr module enable {{ item }}"
+  with_items: "{{ ceph_mgr_modules }}"
+  delegate_to: "{{ groups[mon_group_name][0] }}"
+  when: (item in _disabled_ceph_mgr_modules or _disabled_ceph_mgr_modules == [])

@@ -579,7 +579,7 @@ if [ ${flag_setup} -eq 1 -a -n "${pf9_custom_configFile}" ]; then assert "'-s' a
 
 if [ ${ceph_cluster} -eq 1 ]; then
 install_prereqs; echo
-cd /root/express/roles/ceph/ceph-ansible && sudo ansible-playbook -i ${ceph_inventory} site.yml
+cd /root/express/roles/ceph/ceph_ans && sudo ansible-playbook -i ${ceph_inventory} site.yml
  exit 0
 fi
 

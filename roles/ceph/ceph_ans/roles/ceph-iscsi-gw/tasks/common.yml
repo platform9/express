@@ -1,0 +1,78 @@
+---
+- name: get keys from monitors
+  command: "{{ container_exec_cmd }} ceph --cluster {{ cluster }} auth get {{ item.name }}"
+  register: _iscsi_keys
+  with_items:
+    - { name: "client.admin", path: "/etc/ceph/{{ cluster }}.client.admin.keyring", copy_key: "{{ copy_admin_key }}" }
+  delegate_to: "{{ groups.get(mon_group_name)[0] }}"
+  run_once: true
+  when:
+    - cephx | bool
+    - item.copy_key | bool
+
+- name: copy ceph key(s) if needed
+  copy:
+    dest: "{{ item.item.path }}"
+    content: "{{ item.stdout + '\n' }}"
+    owner: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    group: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    mode: "{{ ceph_keyring_permissions }}"
+  with_items: "{{ _iscsi_keys.results }}"
+  when:
+    - cephx | bool
+    - item.item.copy_key | bool
+
+- name: add mgr ip address to trusted list with dashboard - ipv4
+  set_fact:
+    trusted_ip_list: '{{ trusted_ip_list }},{{ hostvars[item]["ansible_all_ipv4_addresses"] | ips_in_ranges(public_network.split(",")) | first }}'
+  with_items: '{{ groups[mgr_group_name] | default(groups[mon_group_name]) }}'
+  when:
+    - dashboard_enabled | bool
+    - ip_version == 'ipv4'
+
+- name: add mgr ip address to trusted list with dashboard - ipv6
+  set_fact:
+    trusted_ip_list: '{{ trusted_ip_list }},{{ hostvars[item]["ansible_all_ipv6_addresses"] | ips_in_ranges(public_network.split(",")) | last }}'
+  with_items: '{{ groups[mgr_group_name] | default(groups[mon_group_name]) }}'
+  when:
+    - dashboard_enabled | bool
+    - ip_version == 'ipv6'
+
+- name: deploy gateway settings, used by the ceph_iscsi_config modules
+  config_template:
+    src: "{{ role_path }}/templates/iscsi-gateway.cfg.j2"
+    dest: /etc/ceph/iscsi-gateway.cfg
+    config_type: ini
+    config_overrides: '{{ iscsi_conf_overrides }}'
+  notify: restart ceph rbd-target-api-gw
+
+- name: set_fact container_exec_cmd
+  set_fact:
+    container_exec_cmd: "{{ container_binary }} exec ceph-mon-{{ hostvars[groups[mon_group_name][0]]['ansible_hostname'] }}"
+  delegate_to: "{{ groups[mon_group_name][0] }}"
+  when: containerized_deployment | bool
+
+- name: check if a rbd pool exists
+  command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} osd pool ls --format json"
+  changed_when: false
+  register: iscsi_pool_exists
+  delegate_to: "{{ groups[mon_group_name][0] }}"
+
+- name: iscsi pool related tasks
+  when: "iscsi_pool_name not in (iscsi_pool_exists.stdout | from_json)"
+  block:
+    - name: create a iscsi pool if it doesn't exist
+      command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} osd pool create {{ iscsi_pool_name }} {{ osd_pool_default_pg_num }}"
+      changed_when: false
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+
+    - name: assign application rbd to iscsi pool
+      command: "{{ container_exec_cmd }} ceph --connect-timeout 5 --cluster {{ cluster }} osd pool application enable {{ iscsi_pool_name }} rbd"
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+      run_once: True
+
+    - name: customize pool size
+      command: "{{ container_exec_cmd | default('') }} ceph --cluster {{ cluster }} osd pool set {{ iscsi_pool_name }} size {{ iscsi_pool_size | default(osd_pool_default_size) }}"
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+      changed_when: false
+      when: iscsi_pool_size | default(osd_pool_default_size) != ceph_osd_pool_default_size

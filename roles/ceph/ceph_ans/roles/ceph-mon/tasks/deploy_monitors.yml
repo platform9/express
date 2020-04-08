@@ -1,0 +1,123 @@
+---
+- name: check if monitor initial keyring already exists
+  command: >
+    {{ _container_exec_cmd | default('') }} ceph --cluster {{ cluster }} --name mon. -k
+    /var/lib/ceph/mon/{{ cluster }}-{{ hostvars[groups[mon_group_name][0] if running_mon is undefined else running_mon]['ansible_hostname'] }}/keyring
+    auth get-key mon.
+  register: initial_mon_key
+  run_once: True
+  delegate_to: "{{ groups[mon_group_name][0] if running_mon is undefined else running_mon }}"
+  when: ceph_current_status.fsid is defined
+
+- name: generate monitor initial keyring
+  command: >
+    {{ hostvars[groups[mon_group_name][0] if running_mon is undefined else running_mon]['discovered_interpreter_python'] }} -c "import os ; import struct ;
+    import time; import base64 ; key = os.urandom(16) ;
+    header = struct.pack('<hiih',1,int(time.time()),0,len(key)) ;
+    print(base64.b64encode(header + key).decode())"
+  register: monitor_keyring
+  run_once: True
+  delegate_to: "{{ groups[mon_group_name][0] if running_mon is undefined else running_mon }}"
+  when:
+    - initial_mon_key.skipped is defined
+    - ceph_current_status.fsid is undefined
+
+- name: get initial keyring when it already exists
+  set_fact:
+    monitor_keyring: "{{ initial_mon_key.stdout if monitor_keyring.skipped is defined else monitor_keyring.stdout if initial_mon_key.skipped is defined }}"
+
+- name: create monitor initial keyring
+  ceph_key:
+    name: mon.
+    state: present
+    dest: "/var/lib/ceph/tmp/"
+    secret: "{{ monitor_keyring }}"
+    cluster: "{{ cluster }}"
+    caps:
+      mon: allow *
+    import_key: False
+    owner: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    group: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    mode: "0400"
+  environment:
+    CEPH_CONTAINER_IMAGE: "{{ ceph_docker_registry + '/' + ceph_docker_image + ':' + ceph_docker_image_tag if containerized_deployment else None }}"
+    CEPH_CONTAINER_BINARY: "{{ container_binary }}"
+
+- name: copy the initial key in /etc/ceph (for containers)
+  command: >
+    cp /var/lib/ceph/tmp/{{ cluster }}.mon..keyring
+       /etc/ceph/{{ cluster }}.mon.keyring
+  changed_when: false
+  when: containerized_deployment | bool
+
+- name: create (and fix ownership of) monitor directory
+  file:
+    path: /var/lib/ceph/mon/{{ cluster }}-{{ monitor_name }}
+    state: directory
+    owner: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    group: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    mode: "{{ ceph_directories_mode | default('0755') }}"
+    recurse: true
+
+- name: create custom admin keyring
+  ceph_key:
+    name: client.admin
+    state: present
+    secret: "{{ admin_secret }}"
+    caps: "{{ client_admin_ceph_authtool_cap }}"
+    import_key: False
+    cluster: "{{ cluster }}"
+    owner: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    group: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    mode: "0400"
+  environment:
+    CEPH_CONTAINER_IMAGE: "{{ ceph_docker_registry + '/' + ceph_docker_image + ':' + ceph_docker_image_tag if containerized_deployment else None }}"
+    CEPH_CONTAINER_BINARY: "{{ container_binary }}"
+  register: create_custom_admin_secret
+  when:
+    - cephx | bool
+    - admin_secret != 'admin_secret'
+
+- name: set_fact ceph-authtool container command
+  set_fact:
+    ceph_authtool_cmd: "{{ container_binary + ' run --net=host --rm -v /var/lib/ceph:/var/lib/ceph:z -v /etc/ceph/:/etc/ceph/:z --entrypoint=ceph-authtool ' + ceph_client_docker_registry + '/' + ceph_client_docker_image + ':' + ceph_client_docker_image_tag if containerized_deployment else 'ceph-authtool' }}"
+
+- name: import admin keyring into mon keyring
+  command: >
+    {{ ceph_authtool_cmd }}
+     /var/lib/ceph/tmp/{{ cluster }}.mon..keyring --import-keyring /etc/ceph/{{ cluster }}.client.admin.keyring
+  when:
+    - not create_custom_admin_secret.get('skipped')
+    - cephx | bool
+    - admin_secret != 'admin_secret'
+
+- name: set_fact ceph-mon container command
+  set_fact:
+    ceph_mon_cmd: "{{ container_binary + ' run --rm --net=host -v /var/lib/ceph/:/var/lib/ceph:z -v /etc/ceph/:/etc/ceph/:z --entrypoint=ceph-mon ' + ceph_client_docker_registry + '/' + ceph_client_docker_image + ':' +ceph_client_docker_image_tag if containerized_deployment else 'ceph-mon' }}"
+
+- name: ceph monitor mkfs with keyring
+  command: >
+    {{ ceph_mon_cmd }}
+    --cluster {{ cluster }}
+    --setuser "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    --setgroup "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    --mkfs
+    -i {{ monitor_name }}
+    --fsid {{ fsid }}
+    --keyring /var/lib/ceph/tmp/{{ cluster }}.mon..keyring
+  args:
+    creates: /var/lib/ceph/mon/{{ cluster }}-{{ monitor_name }}/keyring
+  when: cephx | bool
+
+- name: ceph monitor mkfs without keyring
+  command: >
+    {{ ceph_mon_cmd }}
+    --cluster {{ cluster }}
+    --setuser "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    --setgroup "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+    --mkfs
+    -i {{ monitor_name }}
+    --fsid {{ fsid }}
+  args:
+    creates: /var/lib/ceph/mon/{{ cluster }}-{{ monitor_name }}/store.db
+  when: not cephx | bool

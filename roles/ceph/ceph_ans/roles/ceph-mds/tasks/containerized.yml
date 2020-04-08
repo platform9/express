@@ -1,0 +1,19 @@
+---
+- name: include_tasks systemd.yml
+  include_tasks: systemd.yml
+
+- name: systemd start mds container
+  systemd:
+    name: ceph-mds@{{ ansible_hostname }}
+    state: started
+    enabled: yes
+    masked: no
+    daemon_reload: yes
+
+- name: wait for mds socket to exist
+  command: "{{ container_binary }} exec ceph-mds-{{ ansible_hostname }} sh -c 'stat /var/run/ceph/{{ cluster }}-mds.{{ ansible_hostname }}.asok || stat /var/run/ceph/{{ cluster }}-mds.{{ ansible_fqdn }}.asok'"
+  changed_when: false
+  register: multi_mds_socket
+  retries: 5
+  delay: 15
+  until: multi_mds_socket.rc == 0

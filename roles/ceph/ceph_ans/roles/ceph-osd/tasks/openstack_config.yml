@@ -1,0 +1,113 @@
+---
+- name: pool related tasks
+  block:
+    - name: list existing pool(s)
+      command: >
+        {{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }}
+        osd pool get {{ item.name }} size
+      with_items: "{{ openstack_pools | unique }}"
+      register: created_pools
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+      failed_when: created_pools.rc in [1, 125]
+      changed_when: false
+
+    - name: create openstack pool(s)
+      command: >
+        {{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }}
+        osd pool create {{ item.0.name }}
+        {{ item.0.pg_num | default(osd_pool_default_pg_num) if not item.0.pg_autoscale_mode | default(False) | bool else 16 }}
+        {{ item.0.pgp_num | default(item.0.pg_num) | default(osd_pool_default_pg_num) if not item.0.pg_autoscale_mode | default(False) | bool else '' }}
+        {%- if item.0.type | default(1) | int == 1 or item.0.type | default('replicated') == 'replicated' %}
+        replicated
+        {{ item.0.rule_name | default(osd_pool_default_crush_rule) }}
+        {{ item.0.expected_num_objects | default(0) }}
+        {%- else %}
+        erasure
+        {{ item.0.erasure_profile }}
+        {%- endif %}
+      with_together:
+        - "{{ openstack_pools | unique }}"
+        - "{{ created_pools.results }}"
+      changed_when: false
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+      when: item.1.get('rc', 0) != 0
+
+    - name: set the target ratio on pool(s)
+      command: "{{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }} osd pool set {{ item.name }} target_size_ratio {{ item.target_size_ratio }}"
+      with_items: "{{ openstack_pools | unique }}"
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+      when: item.pg_autoscale_mode | default(False) | bool
+
+    - name: set pg_autoscale_mode value on pool(s)
+      command: "{{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }} osd pool set {{ item.name }} pg_autoscale_mode {{ item.pg_autoscale_mode | default(False) | ternary('on', 'warn') }}"
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+      with_items: "{{ openstack_pools | unique }}"
+
+    - name: customize pool size
+      command: >
+        {{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }}
+        osd pool set {{ item.name }} size {{ item.size | default(osd_pool_default_size) }}
+      with_items: "{{ openstack_pools | unique }}"
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+      changed_when: false
+      when:
+        - item.size | default(osd_pool_default_size)
+        - item.type | default(1) | int != 3
+        - item.type | default('replicated') != 'erasure'
+
+    - name: customize pool min_size
+      command: >
+        {{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }}
+        osd pool set {{ item.name }} min_size {{ item.min_size | default(osd_pool_default_min_size) }}
+      with_items: "{{ openstack_pools | unique }}"
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+      changed_when: false
+      when:
+        - (item.min_size | default(osd_pool_default_min_size))|int > ceph_osd_pool_default_min_size
+        - item.type | default(1) | int != 3
+        - item.type | default('replicated') != 'erasure'
+
+    - name: assign application to pool(s)
+      command: "{{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }} osd pool application enable {{ item.name }} {{ item.application }}"
+      with_items: "{{ openstack_pools | unique }}"
+      changed_when: false
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+      when: item.application is defined
+
+- name: create openstack cephx key(s)
+  block:
+    - name: generate keys
+      ceph_key:
+        state: present
+        name: "{{ item.name }}"
+        caps: "{{ item.caps }}"
+        secret: "{{ item.key | default('') }}"
+        cluster: "{{ cluster }}"
+        mode: "{{ item.mode|default(omit) }}"
+      environment:
+        CEPH_CONTAINER_IMAGE: "{{ ceph_docker_registry + '/' + ceph_docker_image + ':' + ceph_docker_image_tag if containerized_deployment else None }}"
+        CEPH_CONTAINER_BINARY: "{{ container_binary }}"
+      with_items: "{{ openstack_keys }}"
+      delegate_to: "{{ groups[mon_group_name][0] }}"
+
+    - name: get keys from monitors
+      command: "{{ hostvars[groups[mon_group_name][0]]['container_exec_cmd'] | default('') }} ceph --cluster {{ cluster }} auth get {{ item.name }}"
+      register: _osp_keys
+      with_items: "{{ openstack_keys }}"
+      run_once: true
+      delegate_to: "{{ groups.get(mon_group_name)[0] }}"
+
+    - name: copy ceph key(s) if needed
+      copy:
+        dest: "/etc/ceph/{{ cluster }}.{{ item.0.item.name }}.keyring"
+        content: "{{ item.0.stdout + '\n' }}"
+        owner: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+        group: "{{ ceph_uid if containerized_deployment else 'ceph' }}"
+        mode: "{{ item.0.item.mode }}"
+      with_nested:
+        - "{{ _osp_keys.results }}"
+        - "{{ groups[mon_group_name] }}"
+      delegate_to: "{{ item.1 }}"
+  when:
+    - cephx | bool
+    - openstack_config | bool
