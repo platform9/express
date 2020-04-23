@@ -8,9 +8,6 @@ assert() {
 }
 
 echo "[libvirt]" > $NOVA_CONF
-if [ $? -ne 0 ]; then assert "failed to update ${NOVA_CONF}"; fi
-echo "virt_type = qemu" >> $NOVA_CONF
-echo "[libvirt]" > $NOVA_CONF
 echo "libvirt_type = qemu" >> $NOVA_CONF
 
 service pf9-ostackhost restart
