@@ -8,7 +8,7 @@
 
 - name: Add Platform9 APT repository
   apt_repository:
-    repo: 'deb http://platform9-neutron.s3-website-us-west-1.amazonaws.com ubuntu/'
+    repo: 'deb [trusted=yes] http://platform9-neutron.s3-website-us-west-1.amazonaws.com ubuntu/'
     state: present
     update_cache: yes
 
