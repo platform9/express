@@ -58,7 +58,6 @@
   yum:
     name: openvswitch
     state: present
-    disablerepo: '*'
     enablerepo: 'platform9-neutron-el7-repo,base'
 
 - name: Enable and start Open vSwitch
