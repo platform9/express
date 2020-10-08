@@ -48,9 +48,11 @@
     enabled: no
   when: NetworkManager_install_status.stdout_lines is defined and NetworkManager_install_status.stdout_lines == "installed"
 
+
+
 - name: Add Platform9 Yum repository
   yum:
-    name: https://s3-us-west-1.amazonaws.com/platform9-neutron/noarch/platform9-neutron-repo-1-0.noarch.rpm
+    name: https://s3-us-west-1.amazonaws.com/platform9-neutron/noarch/platform9-neutron-repo.noarch.rpm
     state: present
     update_cache: yes
 
@@ -59,8 +61,7 @@
     name: openvswitch
     state: present
     disablerepo: '*'
-    enablerepo: 'platform9-neutron-el7-repo,base'
-
+    enablerepo: 'platform9-neutron-repo,base'
 - name: Enable and start Open vSwitch
   service:
     name: openvswitch
