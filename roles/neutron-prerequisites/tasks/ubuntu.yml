@@ -6,9 +6,18 @@
     - ifenslave
     - vlan
 
+- name: Download gpg key for Platform9 neutron repo
+  get_url:
+    url: https://platform9-neutron.s3-us-west-1.amazonaws.com/ubuntu_latest/key.gpg
+    dest: /tmp/pf9-key.gpg
+- name: Install Platform9 gpg key
+  apt_key: 
+    file: /tmp/pf9-key.gpg
+    state: present 
+
 - name: Add Platform9 APT repository
   apt_repository:
-    repo: 'deb [trusted=yes] http://platform9-neutron.s3-website-us-west-1.amazonaws.com ubuntu/'
+    repo: 'deb http://platform9-neutron.s3-website-us-west-1.amazonaws.com/ubuntu_latest /'
     state: present
     update_cache: yes
 
@@ -28,3 +37,5 @@
   apt:
     name: radvd
     state: present
+
+
