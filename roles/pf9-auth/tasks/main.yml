@@ -15,10 +15,12 @@
 - name: Set OS_AUTH fact
   set_fact:
     os_auth:
-      auth_url: "{{du_url}}/keystone/v2.0"
+      auth_url: "{{du_url}}/keystone/v3"
       username: "{{os_username}}"
       password: "{{os_password}}"
       project_name: "{{os_tenant}}"
+      user_domain_name: "default"
+      project_domain_name: "default"
 
 - name: Obtain authentication token from Keystone (with custom python)
   os_auth:
