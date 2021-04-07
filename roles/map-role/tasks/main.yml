@@ -58,12 +58,12 @@
 # Cinder Settings
 ################################################################################
 - block:
-  # cinder_iscsi_ip_address
+  # cinder_target_ip_address
   - set_fact:
       cinder_ip: "{{ansible_host}}"
     when: cinder_ip is undefined
   - set_fact:
-      cinder_iscsi_ip_address: "{{cinder_ip}}"
+      cinder_target_ip_address: "{{cinder_ip}}"
 
   # cinder_volume_backend_name
   - set_fact:
