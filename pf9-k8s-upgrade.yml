@@ -16,5 +16,8 @@
   roles:
     - pf9-auth
     - k8s-node-drain
-    - { role: "map-role", rolename: "pf9-kube" }
+    - { role: "map-role", rolename: "pf9-kube", version: "1.18.10-pmk.1547" }
     - { role: "wait-for-convergence" }
+  environment:
+    http_proxy: #<there-proxy-server>
+    no_proxy: #<k8s-api-server-vip/fqdn>
