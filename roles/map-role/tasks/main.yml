@@ -132,9 +132,9 @@
   shell: "cat /tmp/keystone-token.txt"
   register: api_token
 
-- name: "Assigning Role - {{rolename}}"
+- name: "Assigning Role - {{rolename}} with role version"
   uri:
-    url: "https://{{du_fqdn}}/resmgr/v1/hosts/{{host_id.stdout.strip()}}/roles/{{rolename}}/versions/{{version}}"
+    url: "https://{{du_fqdn}}/resmgr/v1/hosts/{{host_id.stdout.strip()}}/roles/{{rolename}}/versions/{{roleversion}}"
     method: PUT
     body: "{{role_json.stdout.strip()}}"
     body_format: json
@@ -144,5 +144,19 @@
       X-Auth-Token: "{{api_token.stdout.strip()}}"
   register: uri_result
   delegate_to: localhost
+  when: roleversion is defined and roleversion != ""
+- name: "Assigning Role - {{rolename}}"
+  uri:
+    url: "https://{{du_fqdn}}/resmgr/v1/hosts/{{host_id.stdout.strip()}}/roles/{{rolename}}"
+    method: PUT
+    body: "{{role_json.stdout.strip()}}"
+    body_format: json
+    validate_certs: False
+    headers:
+      Content-Type: "application/json"
+      X-Auth-Token: "{{api_token.stdout.strip()}}"
+  register: uri_result
+  delegate_to: localhost
+  when: not (roleversion is defined) or roleversion == ""
 - debug: var=uri_result
 
