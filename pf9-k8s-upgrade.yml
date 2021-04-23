@@ -11,10 +11,17 @@
 
 - hosts:
     - k8s_worker
+  vars:
+    roleversion: "" # provide appropriate pf9-kube role version, e.g. 1.18.10-pmk.1547
+    proxy_url: "" # provide proxy URL if running in such environment
+    no_proxy_urls: "" # If running in proxy environment, provide API server VIP/FQDN
   become: true
   serial: 15
   roles:
     - pf9-auth
     - k8s-node-drain
-    - { role: "map-role", rolename: "pf9-kube" }
+    - { role: "map-role", rolename: "pf9-kube"}
     - { role: "wait-for-convergence" }
+  environment:
+    http_proxy: "{{ proxy_url }}"
+    no_proxy: "{{ no_proxy_urls }}"
