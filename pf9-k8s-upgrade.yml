@@ -23,5 +23,5 @@
     - { role: "map-role", rolename: "pf9-kube"}
     - { role: "wait-for-convergence" }
   environment:
-    http_proxy: proxy_url
-    no_proxy: no_proxy_urls
+    http_proxy: "{{ proxy_url }}"
+    no_proxy: "{{ no_proxy_urls }}"
