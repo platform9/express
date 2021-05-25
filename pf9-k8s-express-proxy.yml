@@ -1,0 +1,57 @@
+---
+##
+## pf9-express - Platform9 Systems, Inc. - https://www.platform9.com/
+##
+## This playbook can be used to deploy and manage Platform9's PMK product.
+##
+
+# Pre-tasks
+- hosts:
+    - k8s_master
+    - k8s_worker
+  become: true
+  gather_facts: False
+  pre_tasks:
+    - debug: var=autoreg
+    - name: install python2 on Ubuntu to enable running Ansible on Ubuntu hosts
+      raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt-get -y update && apt-get install -y python-minimal); fi
+
+# Run pre_flight_checks
+- hosts:
+    - k8s_master
+    - k8s_worker
+  become: true
+  environment:
+    http_proxy: "{{ proxy_url }}"
+  roles:
+    - pf9-auth
+
+# Kubernetes Master Nodes
+- hosts: k8s_master
+  become: true
+  environment:
+    http_proxy: "{{ proxy_url }}"
+  roles:
+    - common
+    - ntp
+    - disable-swap
+    - pf9-hostagent
+    - { role: "wait-for-convergence", flags: "k8s", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
+    - { role: "wait-for-convergence", when: autoreg == "on" }
+    - { role: "k8s-cluster-attach", k8s_node_type: "master", when: autoreg == "on" }
+
+# Kubernetes Worker Nodes
+- hosts: k8s_worker
+  become: true
+  environment:
+    http_proxy: "{{ proxy_url }}"
+  roles:
+    - common
+    - ntp
+    - disable-swap
+    - pf9-hostagent
+    - { role: "wait-for-convergence", flags: "k8s", when: autoreg == "on" }
+    - { role: "map-role", rolename: "pf9-kube", when: autoreg == "on" }
+    - { role: "wait-for-convergence", when: autoreg == "on" }
+    - { role: "k8s-cluster-attach", k8s_node_type: "worker", when: autoreg == "on" }

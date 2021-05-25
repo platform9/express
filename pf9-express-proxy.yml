@@ -1,0 +1,72 @@
+---
+##
+## pf9-express - Platform9 Systems, Inc. - https://www.platform9.com/
+##
+## This playbook can be used to deploy and manage Platform9's PMO and PMK products.
+##
+
+######################################################################
+# Repair Inventory
+#
+# In Ansible 2.8+, hyphens are not allowed in inventory group names.
+# The following tasks backup and repair the inventory file as needed.
+# See Issue #210 for more information.
+######################################################################
+
+- hosts: all
+  any_errors_fatal: true
+  tasks:
+    - name: Grab all group names in inventory containing hyphens
+      shell: grep -E -o '\[.*?-.*?\]' {{ inventory_file }} | sed 's/[][]//g'
+      register: groups_list
+      failed_when: "groups_list.rc == 2"
+      changed_when: false
+      delegate_to: localhost
+      run_once: true
+
+    - debug:
+        msg: "The following group name/reference will be modified: {{ item }}"
+      with_items: "{{ groups_list.stdout_lines }}"
+      when: groups_list.stdout != ""
+      run_once: true
+
+    - name: Make a backup of the inventory file, if needed
+      copy:
+        src: "{{ inventory_file }}"
+        dest: "{{ inventory_file }}.{{ ansible_date_time.iso8601 }}.bak"
+      when: groups_list.stdout != ""
+      delegate_to: localhost
+      run_once: true
+
+    - name: Replace hyphens with underscores in inventory group names
+      replace:
+        path: "{{ inventory_file }}"
+        regexp: "{{ item }}"
+        replace: "{{ item | regex_replace('-','_') }}"
+      with_items: "{{ groups_list.stdout_lines }}"
+      when: groups_list.stdout != ""
+      delegate_to: localhost
+      run_once: true
+
+# Common Roles
+- hosts:
+    - hypervisors
+    - k8s_master
+    - k8s_worker
+  become: true
+  gather_facts: False
+  pre_tasks:
+    - debug: var=autoreg
+    - name: install python2 on Ubuntu to enable running Ansible on Ubuntu hosts
+      raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt-get -y update && apt-get install -y python-minimal); fi
+
+# Run pre_flight_checks
+- hosts:
+    - hypervisors
+    - k8s_master
+    - k8s_worker
+  environment:
+    http_proxy: "{{ proxy_url }}"
+  become: true
+  roles:
+    - pf9-auth
