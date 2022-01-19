@@ -351,7 +351,7 @@ install_oscli() {
     mkvirtualenv os_cli > ${log} 2>&1
 
     echo "--> Upgrading PIP"
-    pip install pip --upgrade > ${log} 2>&1
+    pip install pip==20.3.4 --upgrade > ${log} 2>&1
 
     echo "--> Installing OpenStack CLI"
     pip install --upgrade --requirement \
@@ -390,11 +390,21 @@ install_prereqs() {
     done
 
     ## upgrade pip
-    sudo pip install --upgrade pip > ${log} 2>&1
+    sudo pip install --upgrade pip==20.3.4 > ${log} 2>&1
     if [ $? -ne 0 ]; then
       echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
       tail -10 ${log}; exit 1
     fi
+
+    # Install pbr
+    for pkg in 'pbr==5.6.0'; do
+      echo -n "${pkg} "
+      sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    done
 
     ## install additional pip-based packages
     for pkg in 'openstacksdk==0.39.0' docker-py; do
