@@ -52,7 +52,7 @@
 
 - name: Add Platform9 Yum repository
   yum:
-    name: https://s3-us-west-1.amazonaws.com/platform9-neutron/noarch/platform9-neutron-repo.noarch.rpm
+    name: https://s3-us-west-1.amazonaws.com/platform9-neutron/noarch/platform9-neutron-repo-1-0.noarch.rpm
     state: present
     update_cache: yes
 
