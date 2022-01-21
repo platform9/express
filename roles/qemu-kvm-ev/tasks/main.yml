@@ -5,6 +5,11 @@
     copy:
       dest: /etc/yum/vars/contentdir
       content: 'centos'
+ 
+  - name: install the epel-release repo
+    yum:
+      name: epel-release
+      state: latest
 
   - name: install the centos-release-qemu-ev repo
     yum:
