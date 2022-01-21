@@ -4,6 +4,11 @@
     state: present
     name: libselinux-python
 
+- name: Install the latest version ca-certificates
+  yum:
+    name: ca-certificates
+    state: latest
+
 - name: Modify devpts mount point
   mount:
     state: present
