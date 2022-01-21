@@ -6,7 +6,7 @@
       dest: /etc/yum/vars/contentdir
       content: 'centos'
  
- - name: install the epel-release repo
+  - name: install the epel-release repo
     yum:
       name: epel-release
       state: latest
