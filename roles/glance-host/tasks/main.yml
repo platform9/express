@@ -1,4 +1,11 @@
 ---
+# CentOS
+- block:
+  - name: install the latest version ca-certificates
+    yum:
+      name: ca-certificates
+      state: latest
+  when: ansible_distribution == "CentOS"
 
 - name: Create Glance image library path
   file:
