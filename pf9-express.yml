@@ -85,11 +85,17 @@
     - { role: "bond-config", when: manage_network == True }
     - { role: "pf9-auth", when: manage_network == True and ansible_distribution == "Ubuntu" }
 
-# OpenStack Hypervisor Nodes
+# OpenStack Hypervisor Nodes - Pre-Flight Checks
+# Runs pre-checks and prompts users to reboot if necessary
 - hosts: hypervisors
+  any_errors_fatal: true
   become: true
   roles:
     - pre-flight-checks-openstack
+
+- hosts: hypervisors
+  become: true
+  roles:
     - common
     - ntp
     - pf9-hostagent
@@ -103,6 +109,7 @@
     - { role: "map-role", rolename: "pf9-neutron-l3-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-metadata-agent", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-neutron-dhcp-agent", when: autoreg == "on" and dhcp == "on" }
+    - { role: "map-role", rolename: "pf9-neutron-sriov-agent", when: sriov == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "multipath", when: multipath == True }
     - { role: "enable-nested-virt", when: nested_virt == True }
@@ -168,3 +175,16 @@
   become: true
   roles:
     - post-hook
+
+# Run SR-IOV role
+- hosts:
+    - hypervisors
+  become: true
+  tasks:
+  - import_role:
+      name: neutron-sriov
+    when:
+      - sriov == "on"
+      - ansible_virtualization_role == "host"
+  tags:
+    - refresh-sriov

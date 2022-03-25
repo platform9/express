@@ -11,7 +11,21 @@ glance: "off"
 multipath: False
 nova_instances_path: /opt/pf9/data/instances/
 neutron_ovs_allow_dhcp_vms: "False"
+
 neutron_ovs_bridge_name: "br-pf9"
+
+# neutron_ovs_bridge_mappings should be used in conjunction with
+# neutron_ovs_bridge_name. Multiple bridge mappings can be specified
+# using a comma-separated list.
 neutron_ovs_bridge_mappings: "external:br-pf9"
+
 ceilometer_customize: False
 ceilometer_cpu_interval: 600
+
+####################
+# SRIOV
+####################
+
+sriov: "off"
+physical_device_mappings: ""
+pci_passthrough_whitelist: "{}"

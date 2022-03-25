@@ -1,0 +1,33 @@
+---
+# SR-IOV virtual functions get reset at boot unless commands exist in
+# rc.local (deprecated), a systemctl unit file, or sysfs.conf. We set up
+# up a custom systemctl unit/service.
+
+- name: Drop-in SR-IOV VF Manager Systemd Unit
+  template:
+    src: pf9-sriov-vf-manager.service.j2
+    dest: /usr/lib/systemd/system/pf9-sriov-vf-manager.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Force systemd to reread config
+  systemd:
+    daemon_reload: yes
+
+- name: Enable SR-IOV VF Manager Systemd Service
+  systemd:
+    enabled: yes
+    name: pf9-sriov-vf-manager.service
+
+- name: Update SR-IOV VF Manager Script
+  template:
+    src: pf9-virtual-functions.sh.j2
+    dest: /opt/pf9/pf9-virtual-functions.sh
+    owner: root
+    group: root
+    mode: '0755'
+  notify:
+    - restart_vf_manager
+    - restart_ostackhost
+    - restart_neutronsriovagent

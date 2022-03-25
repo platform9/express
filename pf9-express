@@ -535,7 +535,7 @@ while [ $# -gt 0 ]; do
     tags=${2}
     for tag in $(echo ${tags} | sed -e 's/,/ /g'); do
       case ${tag} in
-      live-migration|image-import)
+      live-migration|image-import|refresh-sriov)
         ;;
       *)
         assert "invalid tag : '${tag}'"

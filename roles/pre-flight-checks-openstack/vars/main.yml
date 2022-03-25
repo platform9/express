@@ -1,0 +1,10 @@
+---
+# SR-IOV support requires Intel or AMD CPUs
+cpu_vendor: "{{ ansible_facts['processor'][1] | lower | regex_replace('(authentic)|(genuine)', '') }}"
+iommu_kernel_cmds: '{{ cpu_vendor }}_iommu=on iommu=pt'
+supported_cpus:
+  - intel
+  - amd
+supported_nic_drivers:
+  - ixgbe
+  - bnx2x

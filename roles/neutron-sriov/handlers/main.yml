@@ -1,0 +1,18 @@
+---
+- name: Reload Platform9 VF Manager
+  systemd:
+    name: pf9-sriov-vf-manager.service
+    state: reloaded
+  listen: restart_vf_manager
+
+- name: Restart pf9-ostackhost
+  systemd:
+    name: pf9-ostackhost.service
+    state: restarted
+  listen: restart_ostackhost
+
+- name: Restart pf9-sriov-agent
+  systemd:
+    name: pf9-neutron-sriov-agent.service
+    state: restarted
+  listen: restart_neutronsriovagent
