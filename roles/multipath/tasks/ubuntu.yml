@@ -6,3 +6,8 @@
     - ansible_pkg_mgr == "apt"
 
 - debug: msg="running multipath/tasks/ubuntu.yml"
+
+- name: install multipath-tools
+  apt:
+    name: multipath-tools
+    state: present
