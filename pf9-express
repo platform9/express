@@ -459,9 +459,9 @@ install_prereqs() {
     fi
 
     ## install additional pip-based packages
-    for pkg in 'openstacksdk' docker-py; do
+    for pkg in openstacksdk docker-py pyopenssl; do
       echo -n "${pkg} "
-      sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
+      sudo pip install ${pkg} --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1

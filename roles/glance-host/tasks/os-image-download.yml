@@ -4,28 +4,11 @@
   get_url:
     url: "{{ item }}"
     dest: "{{ glance_filesystem_store_datadir }}/{{ item | basename }}"
-  async: 900
-  tags: 
-    - image-import
-  register: image_downloads
-  with_items: "{{ glance_images }}"
-
-- name: Check on OS image downloads
-  async_status: "jid={{ item.ansible_job_id }}"
-  retries: 50
-  delay: 5
-  register: job_result
-  tags: 
-    - image-import
-  until: job_result.finished
-  with_items: "{{ image_downloads.results }}"
-
-- name: set permissions on images (pf9:pf9group)
-  file:
-    path: "{{ glance_filesystem_store_datadir }}/{{ item | basename }}"
     owner: pf9
     group: pf9group
     mode: 0744
-  tags: 
+  async: 900
+  tags:
     - image-import
+  register: image_downloads
   with_items: "{{ glance_images }}"

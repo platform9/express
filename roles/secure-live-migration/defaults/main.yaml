@@ -1,4 +1,4 @@
 ---
 libvirt_pki_path: /etc/pf9/certs/libvirt
 sshd_service_name: "{% if ansible_os_family == 'RedHat' %}sshd{% elif ansible_distribution == 'Ubuntu' %}ssh{% endif %}"
-libvirtd_service_name: "{% if ansible_os_family == 'RedHat' %}libvirtd{% elif ansible_distribution == 'Ubuntu' %}libvirt-bin{% endif %}"
+libvirtd_service_name: "{% if ansible_distribution_version == '18.04' %}libvirt-bin{% else %}libvirtd{% endif %}"
