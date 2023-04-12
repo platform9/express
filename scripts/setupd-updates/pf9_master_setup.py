@@ -51,7 +51,7 @@ def read_host_id():
     return cfg_parser.get('hostagent', 'host_id')
 
 def configure_master(mgmt_address, admin_user, admin_password, cluster_name='defaultCluster'):
-    print "Downloading agents from management node"
+    print("Downloading agents from management node")
     download_and_install_agent(mgmt_address, admin_user, admin_password)
     auth = login(mgmt_address, admin_user, admin_password, 'service')
     host_id = read_host_id()
@@ -80,9 +80,9 @@ if __name__ == '__main__':
     try:
 
         main()
-        print "Master setup is done"
+        print("Master setup is done")
     except Exception as ex:
-        print "master setup failed"
+        print("master setup failed")
         LOG.exception(ex)
         LOG.error('Really bad things happened: %s', str(ex))
         sys.exit(1)

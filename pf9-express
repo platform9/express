@@ -6,7 +6,7 @@
 
 # initialize variables
 basedir=$(dirname $0)
-min_ansible_version="2.2"
+min_ansible_version="2.02"
 oscli_version=pike
 oscli_rc_file=${basedir}/pf9-openstack.rc
 inventory=${basedir}/inventory/hosts
@@ -195,7 +195,7 @@ validate_platform() {
     host_os_info=$(cat /etc/centos-release)
   elif [ -r /etc/lsb-release ]; then
     release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
-    if [[ ! "${release}" == 16.04* ]] && [[ ! "${release}" == 18.04* ]]; then assert "unsupported Ubuntu release: ${release}"; fi
+    if [[ ! "${release}" == 16.04* ]] && [[ ! "${release}" == 18.04* ]] && [[ ! "${release}" == 20.04* ]] ; then assert "unsupported Ubuntu release: ${release}"; fi
     platform="ubuntu"
     ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
     host_os_info="${platform} ${ubuntu_release}"
@@ -377,7 +377,7 @@ install_prereqs() {
   # install Ansible (and dependencies)
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
-    for pkg in epel-release ntp nginx gcc python-devel python2-pip jq bc; do
+    for pkg in epel-release ntp nginx gcc python-devel python3-pip jq bc; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -439,7 +439,7 @@ install_prereqs() {
       fi
     fi
 
-    for pkg in ansible jq bc python-pip; do
+    for pkg in ansible jq bc python3-pip; do
       echo -n "${pkg} "
       dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -459,7 +459,7 @@ install_prereqs() {
     fi
 
     ## install additional pip-based packages
-    for pkg in 'openstacksdk==0.39.0' docker-py; do
+    for pkg in 'openstacksdk' docker-py; do
       echo -n "${pkg} "
       sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -667,7 +667,8 @@ if [ ${flag_oscli} -eq 1 ]; then
 fi
 
 ## validate minimum Ansible version
-ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
+#ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
+ansible_version=$(ansible --version| head -1| grep core|awk -F ']' '{print $1}'|awk '{print $3}'|cut -d . -f1-2)
 echo "--> ansible_version = ${ansible_version}"
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
 
