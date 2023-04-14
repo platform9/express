@@ -4,6 +4,4 @@
 glance_filesystem_store_datadir: /var/opt/pf9/imagelibrary/data
 glance_public_endpoint: False
 glance_images:
-  - https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
-  - https://cloud-images.ubuntu.com/releases/bionic/release/ubuntu-18.04-server-cloudimg-amd64.img
-  - http://download.cirros-cloud.net/0.4.0/cirros-0.4.0-x86_64-disk.img
+  - http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img
