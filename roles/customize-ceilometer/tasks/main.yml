@@ -13,6 +13,13 @@
     - ansible_os_family == "RedHat"
     - ansible_pkg_mgr == "yum"
 
+- name: Check if pf9-ceilometer is installed (Rocky)
+  shell: "`which dnf` list installed | grep \"^pf9-ceilometer\\.\" > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
+  register: pkg_state_ceilometer_redhat
+  when:
+    - ansible_distribution == "Rocky"
+    - ansible_pkg_mgr == "dnf"
+
 - name: Configure Ceilometer pipeline.yaml
   template:
     src: pipeline.yaml.j2

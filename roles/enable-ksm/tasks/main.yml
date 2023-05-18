@@ -11,7 +11,7 @@
       name: ksmtuned
       state: restarted
       enabled: yes
-  when: ansible_os_family == "RedHat"
+  when: '"RedHat" in ansible_distribution or ansible_distribution == "CentOS" or ansible_distribution == "Rocky"'
 
 - block:
   - name: Install Kernel Same-Page Merging (Ubuntu)

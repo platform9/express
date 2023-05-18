@@ -59,6 +59,12 @@
   when: ansible_os_family == "RedHat"
 
 - name: remove pf9-hostagent
+  dnf:
+    name: pf9-hostagent
+    state: absent
+  when: ansible_distribution == "Rocky"
+
+- name: remove pf9-hostagent
   apt:
     name: pf9-hostagent
     state: absent

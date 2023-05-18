@@ -1,5 +1,12 @@
 ---
-- include_vars: "{{ ansible_os_family|lower }}.yml"
+- include_vars: redhat.yml
+  when: "'RedHat' in ansible_distribution or ansible_distribution == 'CentOS'"
+
+- include_vars: rocky.yml
+  when: ansible_distribution == 'Rocky'
+
+- include_vars: debian.yml
+  when: ansible_distribution == 'Ubuntu'
 
 - name: Install NTP
   package:

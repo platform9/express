@@ -88,7 +88,10 @@
   when: pf9_account_status is defined and pf9_account_status.stdout.strip() == "not-exist"
 
 - include: redhat.yml
-  when: ansible_os_family == "RedHat"
+  when: '"RedHat" in ansible_distribution or ansible_distribution == "CentOS"'
+
+- include: rocky.yml
+  when: ansible_distribution == "Rocky"
 
 - include: ubuntu.yml
   when: ansible_distribution == "Ubuntu"

@@ -13,6 +13,13 @@
     - ansible_os_family == "RedHat"
     - ansible_pkg_mgr == "yum"
 
+- name: Check pf9-hostagent is installed (Rocky)
+  shell: "`which dnf` list installed | grep \"^pf9-hostagent\\.\" > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
+  register: pkg_state_redhat
+  when:
+    - ansible_distribution == "Rocky"
+    - ansible_pkg_mgr == "dnf"
+
 - name: Add execute permission to installer
   file:
     path: "/tmp/platform9-install-{{os_region}}-{{ansible_os_family|lower}}.sh"
@@ -41,4 +48,3 @@
     shell: "/tmp/platform9-install-{{os_region}}-{{ansible_os_family|lower}}.sh --no-proxy --no-ntpd --skip-os-check"
     when: pkg_state_ubuntu.stdout is defined and pkg_state_ubuntu.stdout.strip() == "not-installed"
   when: proxy_url is undefined
-

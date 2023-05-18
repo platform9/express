@@ -38,6 +38,7 @@ flag_csvImport=0
 flag_deauth=0
 flag_k8s_upgrade=0
 flag_pmk_only=0
+verbosity=""
 extra_vars=""
 awx_pf9_user="pf9"
 awx_pf9_password="Pl@tform9"
@@ -61,6 +62,7 @@ usage() {
   echo "-l|--log                   : Log output file. Assumes parent directory already exists."
   echo "-u|--upgradeK8s            : upgrade Kubernetes nodes"
   echo "-v|--inventory <file>      : use alternate inventory file for Ansible"
+  echo "-g|--debug                 : use extra ansible verbosity for debugging"
   echo "-f|--csvFile <file>        : import CSV file"
   echo "-t|--tag <tag[,<tag>]>     : available tags = [live-migration, image-import]"
   echo -e "-h|--help                  : display this message\n"
@@ -199,9 +201,15 @@ validate_platform() {
     platform="ubuntu"
     ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
     host_os_info="${platform} ${ubuntu_release}"
+  elif [ -r /etc/rocky-release ]; then
+    release=$(cat /etc/rocky-release | cut -d ' ' -f 4)
+    if [[ ! "${release}" == 9.* ]]; then assert "unsupported Rocky release: ${release}"; fi
+    platform="rocky"
+    host_os_info=$(cat /etc/rocky-release)
   else
     assert "unsupported platform"
   fi
+  echo "Found release $release on platform $platform"
 }
 
 banner() {
@@ -328,49 +336,13 @@ install_oscli() {
   # source rc file
   source ${oscli_rc_file}
 
-  # install openstack cli packages (CentOS)
-  if [ "${platform}" == "centos" ]; then
-    echo -n "--> Installing Package Dependencies: "
-    for pkg in gcc openssl-devel python-pip python-wheel python-virtualenv python-virtualenvwrapper; do
-      echo -n "${pkg} "
-      rpm -q ${pkg} > /dev/null 2>&1
-      if [ $? -ne 0 ]; then
-        sudo yum -y install ${pkg} > ${log} 2>&1
-        if [ $? -ne 0 ]; then
-          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
-          tail -10 ${log}; exit 1
-        fi
-      fi
-    done
-    echo
-
-    echo "--> Configuring Python Virtual Environment"
-    if [ ! -r /usr/bin/virtualenvwrapper.sh ]; then assert "missing script: /usr/bin/virtualenvwrapper.sh"; fi
-    source /usr/bin/virtualenvwrapper.sh
-    export WORKON_HOME=$HOME/.virtenvs
-    mkvirtualenv os_cli > ${log} 2>&1
-
-    echo "--> Upgrading PIP"
-    pip install pip==20.3.4 --upgrade > ${log} 2>&1
-
-    echo "--> Installing OpenStack CLI"
-    pip install --upgrade --requirement \
-        https://raw.githubusercontent.com/platform9/support-locker/master/openstack-clients/requirements.txt \
-        --constraint http://raw.githubusercontent.com/openstack/requirements/stable/${oscli_version}/upper-constraints.txt > ${log} 2>&1
-
-    # tracking alternate method of installation
-    # echo "--> Installing OpenStack CLI"
-    # pip install python-openstackclient> ${log} 2>&1
-  fi
-
-  # install openstack cli packages (Ubuntu)
-  if [ "${platform}" == "ubuntu" ]; then
-    assert "Not Implemented (for platform = ${platform})"
-  fi
-
+  pip install python-openstackclient> ${log} 2>&1
+  echo "You may need to add /usr/local/bin to your \$PATH"
+  echo "export PATH=\$PATH:/usr/local/bin"
 }
 
 install_prereqs() {
+  echo "--> Installing Prerequisites"
   # display log
   echo "--> Installation Log: ${install_log}"
 
@@ -390,14 +362,14 @@ install_prereqs() {
     done
 
     ## upgrade pip
-    sudo pip install --upgrade pip==20.3.4 > ${log} 2>&1
+    sudo pip install --upgrade pip > ${log} 2>&1
     if [ $? -ne 0 ]; then
       echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
       tail -10 ${log}; exit 1
     fi
 
     # Install pbr
-    for pkg in 'pbr==5.6.0'; do
+    for pkg in pbr; do
       echo -n "${pkg} "
       sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -407,9 +379,9 @@ install_prereqs() {
     done
 
     ## install additional pip-based packages
-    for pkg in 'openstacksdk==0.39.0' docker-py; do
+    for pkg in openstacksdk docker-py pyopenssl; do
       echo -n "${pkg} "
-      sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
+      sudo pip install ${pkg} --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -420,6 +392,56 @@ install_prereqs() {
     for pkg in ansible; do
       echo -n "${pkg} "
       sudo yum -y install ${pkg} > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    done
+    echo
+  elif [ "${platform}" == "rocky" ]; then
+    for pkg in epel-release chrony nginx gcc python3-devel python3-pip jq bc; do
+      echo -n "${pkg} "
+      dnf list installed | grep "^${pkg}\." > /dev/null 2>&1
+      if [ $? -ne 0 ]; then
+        sudo dnf -y install ${pkg} > ${log} 2>&1
+        if [ $? -ne 0 ]; then
+          echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+          tail -10 ${log}; exit 1
+        fi
+      fi
+    done
+
+    ## upgrade pip
+    sudo pip install --upgrade pip > ${log} 2>&1
+    if [ $? -ne 0 ]; then
+      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
+      tail -10 ${log}; exit 1
+    fi
+
+    # Install pbr
+    for pkg in pbr; do
+      echo -n "${pkg} "
+      sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    done
+
+    ## install additional pip-based packages
+    for pkg in openstacksdk docker-py pyopenssl; do
+      echo -n "${pkg} "
+      sudo pip install ${pkg} --upgrade > ${log} 2>&1
+      if [ $? -ne 0 ]; then
+        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+        tail -10 ${log}; exit 1
+      fi
+    done
+
+    ## install additional dnf-based packages
+    for pkg in ansible; do
+      echo -n "${pkg} "
+      sudo dnf -y install ${pkg} > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -512,6 +534,9 @@ while [ $# -gt 0 ]; do
     ;;
   -d|--deauth)
     flag_deauth=1
+    ;;
+  -g|--debug)
+    verbosity="-vvv"
     ;;
   -l|--log)
     if [ $# -lt 2 ]; then usage; fi
@@ -667,7 +692,6 @@ if [ ${flag_oscli} -eq 1 ]; then
 fi
 
 ## validate minimum Ansible version
-#ansible_version=$(ansible --version | head -1 | cut -d ' ' -f2 | cut -d . -f1-2)
 ansible_version=$(ansible --version| head -1| grep core|awk -F ']' '{print $1}'|awk '{print $3}'|cut -d . -f1-2)
 echo "--> ansible_version = ${ansible_version}"
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
@@ -723,7 +747,7 @@ else
 fi
 
 ## call pf9-express
-sudo ansible-playbook -i ${inventory} -l ${target} ${role_tags} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${express_script} 2>&1 | tee ${install_log}
+sudo ansible-playbook -i ${inventory} -l ${target} ${role_tags} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${express_script} ${verbosity} 2>&1 | tee ${install_log}
 
 ## display log path
 echo -e "Installation Log: ${install_log}\n"
