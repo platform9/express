@@ -57,12 +57,12 @@
 
 - name: Install Open vSwitch
   dnf:
-    name: openvswitch2.17.x86_64
+    name: openvswitch3.1.x86_64
     state: present
 
 - name: Install Open vSwitch scripts
   dnf:
-    name: openstack-network-scripts-openvswitch2.17.x86_64
+    name: openstack-network-scripts-openvswitch3.1.x86_64
     state: present
 
 - name: Enable and start Open vSwitch
