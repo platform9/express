@@ -379,7 +379,7 @@ install_prereqs() {
     done
 
     ## install additional pip-based packages
-    for pkg in openstacksdk docker-py pyopenssl; do
+    for pkg in 'openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
       sudo pip install ${pkg} --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -429,7 +429,7 @@ install_prereqs() {
     done
 
     ## install additional pip-based packages
-    for pkg in openstacksdk docker-py pyopenssl; do
+    for pkg in 'openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
       sudo pip install ${pkg} --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -481,7 +481,7 @@ install_prereqs() {
     fi
 
     ## install additional pip-based packages
-    for pkg in openstacksdk docker-py pyopenssl; do
+    for pkg in 'openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
       sudo pip install ${pkg} --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
