@@ -8,7 +8,7 @@
     regexp: '^#?LIBVIRTD_ARGS.*$'
   tags: 
     - live-migration
-  when: ansible_os_family == "RedHat"
+  when: '"RedHat" in ansible_distribution or ansible_distribution == "CentOS"'
   notify: restart libvirtd
 
 - name: Tell libvirt to listen on startup - Ubuntu

@@ -25,4 +25,4 @@
     file:
       state: absent
       path: /etc/modules-load.d/neutron.conf
-  when: ansible_os_family == "RedHat"
+  when: '"RedHat" in ansible_distribution or ansible_distribution == "CentOS" or ansible_distribution == "Rocky"'

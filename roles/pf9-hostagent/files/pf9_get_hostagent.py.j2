@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import getpass
 import json
@@ -275,7 +275,7 @@ def main():
                 proxyPort = proxySplit[1]
                 proxyHost = proxySplit[0]
         else:
-            print "ERROR: Incorrect proxy configuration"
+            print("ERROR: Incorrect proxy configuration")
             parser.print_usage()
             sys.exit(1)
     else:

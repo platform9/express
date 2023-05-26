@@ -29,7 +29,7 @@ class Platform9Inventory(object):
         else:
             self.inventory = self.empty_inventory()
 
-        print json.dumps(self.inventory)
+        print(json.dumps(self.inventory))
 
     def get_du_inventory(self):
         """
@@ -46,7 +46,7 @@ class Platform9Inventory(object):
             try:
                 os_token_file = open(self.pf9_keystone_file)
                 os_token = os_token_file.read().strip()
-            except Exception, err:
+            except Exception(err):
                 raise err
         else:
             return self.empty_inventory()
@@ -62,7 +62,7 @@ class Platform9Inventory(object):
             response = requests.get(url, headers=headers)
         except requests.exceptions.MissingSchema as err:
             response = requests.get("https://%s" % url, headers=headers)
-        except Exception, err:
+        except Exception(err):
             return self.empty_inventory()
 
         # Return empty inventory if token is not good

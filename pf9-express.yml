@@ -57,8 +57,10 @@
   gather_facts: False
   pre_tasks:
     - debug: var=autoreg
-    - name: install python2 on Ubuntu to enable running Ansible on Ubuntu hosts
-      raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python ]; then (apt-get -y update && apt-get install -y python-minimal); fi
+    - name: install python3 on Ubuntu hosts
+      raw: if [ -e /etc/lsb-release -a ! -e /usr/bin/python3 ]; then (apt-get -y update && apt-get install -y python3); fi
+    - name: install python3 on Rocky hosts
+      raw: if [ -e /etc/rocky-release -a ! -e /bin/python3 ]; then (dnf -y update && dnf install -y python3); fi
 
 # Run pre_flight_checks
 - hosts:

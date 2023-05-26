@@ -5,7 +5,7 @@
 ## Configure the physical and sub-interfaces behind the bond
 ##########################################################################################################
 - include: redhat.yml
-  when: ansible_os_family == "RedHat"
+  when: '"RedHat" in ansible_distribution or ansible_distribution == "CentOS" or ansible_distribution == "Rocky"'
 
 - include: ubuntu.yml
   when: ansible_distribution == "Ubuntu"

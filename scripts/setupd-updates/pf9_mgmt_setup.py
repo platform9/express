@@ -18,9 +18,9 @@ def parse_args():
     return ap.parse_args()
 
 def mgmt_cluster_create(ctrl_ip, admin_user, admin_password, master_ip, cluster_name='defaultCluster'):
-    print "Creating cluster specification"
+    print("Creating cluster specification")
     auth = login(ctrl_ip, admin_user, admin_password, 'service')
-    print 'Login succeded, creating cluster'
+    print('Login succeded, creating cluster')
     create_cluster(ctrl_ip, master_ip, auth, cluster_name)
 
 def main():
@@ -31,9 +31,9 @@ if __name__ == '__main__':
     try:
         setup_logs('/var/log/pf9-mgmt-setup.log')
         sys.exit(main())
-        print "Default cluster done"
+        print("Default cluster done")
     except Exception as ex:
-        print "cluster creation failed"
+        print("cluster creation failed")
         LOG.exception(ex)
         LOG.error('Really bad things happened: %s', str(ex))
         sys.exit(1)
