@@ -219,8 +219,30 @@ NOTE: This feature is not idempotent.  If the 'pf9' user had not been created ye
 The basic syntax for starting Platform9 Express includes a target (host group, individual host, comma-delimited list of hosts, or "all" to run all groups) and an optional flag ('-a') that instructs it to perform role deployment.
 
 Here's an example of invoking Platform9 Express against a number of hosts without registering them automatically to the management plane:
+
 ```
-# ./pf9-express hv01,hv02,hv03
+[root@jmiller-dev-centos7-pf9expressv2 pf9-express]# ./pf9-express -g -a -b centos03
+Found release 7.9.2009 on platform centos
+################################################################
+# Platform9 Express Utility
+################################################################
+
+[Executing: ansible-playbook ./pf9-express.yml]
+ansible-playbook-3 2.9.27
+  config file = /opt/pf9-express/ansible.cfg
+  configured module search path = ['/root/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/lib/python3.6/site-packages/ansible
+  executable location = /bin/ansible-playbook-3
+  python version = 3.6.8 (default, Nov 16 2020, 16:55:22) [GCC 4.8.5 20150623 (Red Hat 4.8.5-44)]
+Using /opt/pf9-express/ansible.cfg as config file
+host_list declined parsing /opt/pf9-express/inventory/hosts as it did not pass its verify_file() method
+script declined parsing /opt/pf9-express/inventory/hosts as it did not pass its verify_file() method
+```
+
+Here's an example of invoking Platform9 Express against a number of hosts without registering them automatically to the management plane:
+
+```
+# ./pf9-express -g -a -b hv01,hv02,hv03
 ################################################################
 # Platform9 Express Utility
 ################################################################
@@ -234,6 +256,7 @@ Here's an example of invoking Platform9 Express against a number of hosts withou
 .
 .
 ```
+
 Here's an example of invoking Platform9 Express against a single host group (host groups are either "pmo" for OpenStack and "pmk" for Kubernetes), performing role deployments (based on metadata defined in /opt/pf9-express/inventory/hosts), and registering them automatically to the management plane
 ```
 # ./pf9-express -a pmk
@@ -281,7 +304,12 @@ Args (Optional):
 -e|--extra-vars <string>   : ansible extra-vars <name=val,...>
 -b|--bypassPrereqs         : bypass pre-requisites
 -d|--deauth                : de-authorize host
+-l|--log                   : Log output file. Assumes parent directory already exists.
+-u|--upgradeK8s            : upgrade Kubernetes nodes
 -v|--inventory <file>      : use alternate inventory file for Ansible
+-g|--debug                 : use extra ansible verbosity for debugging
+-f|--csvFile <file>        : import CSV file
+-t|--tag <tag[,<tag>]>     : available tags = [live-migration, image-import]
 -h|--help                  : display this message
 ```
 
