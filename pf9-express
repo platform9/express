@@ -190,8 +190,8 @@ csv_import() {
 
 ansible_exec_path() {
   ansible_exec=$(which ansible 2> /dev/null || true)
-  if [[ -e $(which ansible 2> /dev/null || true)-3 ]]; then
-    ansible_exec=$(which ansible 2> /dev/null || true)-3
+  if [[ -e $(which ansible-3 2> /dev/null || true) ]]; then
+    ansible_exec=$(which ansible-3 2> /dev/null || true)
   elif [[ -e $(which ansible3 2> /dev/null || true) ]]; then
     ansible_exec=$(which ansible3 2> /dev/null || true)
   fi
@@ -200,8 +200,8 @@ ansible_exec_path() {
 
 ansible_playbook_exec_path() {
   ansible_playbook_exec=$(which ansible-playbook 2> /dev/null || true)
-  if [[ -e $(which ansible-playbook 2> /dev/null || true)-3 ]]; then
-    ansible_playbook_exec=$(which ansible-playbook 2> /dev/null || true)-3
+  if [[ -e $(which ansible-playbook-3 2> /dev/null || true) ]]; then
+    ansible_playbook_exec=$(which ansible-playbook-3 2> /dev/null || true)
   elif [[ -e $(which ansible-playbook3 2> /dev/null || true) ]]; then
     ansible_playbook_exec=$(which ansible-playbook3 2> /dev/null || true)
   fi

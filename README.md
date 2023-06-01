@@ -86,7 +86,7 @@ This is where you enter the credentials for your control host to log into the ta
 ansible_user=ubuntu
 ansible_sudo_pass=winterwonderland
 ansible_ssh_pass=winterwonderland
-#ansible_ssh_private_key_file=~/.ssh/id_rsa
+ansible_ssh_private_key_file=~/.ssh/id_rsa
 ```
 
 ## Sample Inventory File Part 2 - Network Portion
