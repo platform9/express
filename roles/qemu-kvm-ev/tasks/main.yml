@@ -7,31 +7,17 @@
       content: 'centos'
  
   - name: install the epel-release repo
-    yum:
-      name: epel-release
-      state: latest
+    shell: "yum install -y epel-release"
 
   - name: install the centos-release-qemu-ev repo
-    yum:
-      name: centos-release-qemu-ev
-      state: latest
+    shell: "yum install -y centos-release-qemu-ev"
 
   - name: install the latest version of qemu-kvm-ev
-    yum:
-      name: qemu-kvm-ev
-      state: latest
+    shell: "yum install -y qemu-kvm-ev"
   when: ansible_distribution == "CentOS"
 
 # RedHat
 - block:
   - name: install qemu packages
-    yum:
-      name: "{{item}}"
-      state: latest
-    with_items:
-      - qemu-kvm
-      - qemu-kvm-common
-      - qemu-kvm-tools
-      - qemu-guest-agent
-      - libvirt-daemon-driver-qemu
+    shell: "yum install -y qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-guest-agent libvirt-daemon-driver-qemu"
   when: ansible_distribution == "RedHat"

@@ -53,9 +53,7 @@
   ignore_errors: true
 
 - name: remove pf9-hostagent
-  yum:
-    name: pf9-hostagent
-    state: absent
+  shell: "yum remove -y pf9-hostagent"
   when: ansible_os_family == "RedHat"
 
 - name: remove pf9-hostagent

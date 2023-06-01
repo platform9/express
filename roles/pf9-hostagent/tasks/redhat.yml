@@ -1,0 +1,10 @@
+---
+- name: Check pf9-hostagent is installed (RedHat/CentOS)
+  shell: "`which rpm` -qa | grep pf9-hostagent > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
+  register: hostagent_installed
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_pkg_mgr == "yum"
+
+- set_fact: hostagent_pkg_state="{{ hostagent_installed.stdout.strip() }}"
+  when: hostagent_installed.changed

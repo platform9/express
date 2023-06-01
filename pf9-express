@@ -188,6 +188,16 @@ csv_import() {
   echo "Import Complete"
 }
 
+ansible_playbook_exec_path() {
+  ansible_playbook_exec=$(which ansible-playbook)
+  if [[ -e $(which ansible-playbook)-3 ]]; then
+    ansible_playbook_exec=$(which ansible-playbook)-3
+  elif [[ -e $(which ansible-playbook3) ]]; then
+    ansible_playbook_exec=$(which ansible-playbook3)
+  fi
+  echo -n $ansible_playbook_exec
+}
+
 validate_platform() {
   # check if running CentOS 7, Ubuntu 16.04, or Ubuntu 18.04
   if [ -r /etc/centos-release ]; then
@@ -289,8 +299,8 @@ install_awx() {
 
   # Install Tower CLI
   echo "--> installing tower-cli"
-  sudo pip install ansible-tower-cli > ${log} 2>&1
-  if [ $? -ne 0 ]; then assert "failed to pip install ansible-tower-cli"; fi
+  sudo pip3 install ansible-tower-cli > ${log} 2>&1
+  if [ $? -ne 0 ]; then assert "failed to pip3 install ansible-tower-cli"; fi
   sudo /bin/cp -f ${basedir}/lib/tower_cli.cfg.tpl /root/.tower_cli.cfg
   if [ $? -ne 0 ]; then assert "failed to copy lib/tower_cli.cfg.tpl"; fi
   sudo chmod 0400 /root/.tower_cli.cfg
@@ -336,7 +346,7 @@ install_oscli() {
   # source rc file
   source ${oscli_rc_file}
 
-  pip install python-openstackclient> ${log} 2>&1
+  pip3 install python-openstackclient> ${log} 2>&1
   echo "You may need to add /usr/local/bin to your \$PATH"
   echo "export PATH=\$PATH:/usr/local/bin"
 }
@@ -349,7 +359,7 @@ install_prereqs() {
   # install Ansible (and dependencies)
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
-    for pkg in epel-release ntp nginx gcc python-devel python3-pip jq bc; do
+    for pkg in epel-release ntp nginx gcc python3-devel python3-pip jq bc; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -362,16 +372,16 @@ install_prereqs() {
     done
 
     ## upgrade pip
-    sudo pip install --upgrade pip > ${log} 2>&1
+    sudo pip3 install --upgrade pip > ${log} 2>&1
     if [ $? -ne 0 ]; then
-      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
+      echo -e "\nERROR: failed to upgrade pip3 - here's the last 10 lines of the log:\n"
       tail -10 ${log}; exit 1
     fi
 
     # Install pbr
     for pkg in pbr; do
       echo -n "${pkg} "
-      sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
+      sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -381,7 +391,7 @@ install_prereqs() {
     ## install additional pip-based packages
     for pkg in 'openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
-      sudo pip install ${pkg} --upgrade > ${log} 2>&1
+      sudo pip3 install ${pkg} --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -389,7 +399,7 @@ install_prereqs() {
     done
 
     ## install additional yum-based packages
-    for pkg in ansible; do
+    for pkg in ansible-python3; do
       echo -n "${pkg} "
       sudo yum -y install ${pkg} > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -412,16 +422,16 @@ install_prereqs() {
     done
 
     ## upgrade pip
-    sudo pip install --upgrade pip > ${log} 2>&1
+    sudo pip3 install --upgrade pip > ${log} 2>&1
     if [ $? -ne 0 ]; then
-      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
+      echo -e "\nERROR: failed to upgrade pip3 - here's the last 10 lines of the log:\n"
       tail -10 ${log}; exit 1
     fi
 
     # Install pbr
     for pkg in pbr; do
       echo -n "${pkg} "
-      sudo pip install ${pkg} --ignore-installed > ${log} 2>&1
+      sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -431,7 +441,7 @@ install_prereqs() {
     ## install additional pip-based packages
     for pkg in 'openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
-      sudo pip install ${pkg} --upgrade > ${log} 2>&1
+      sudo pip3 install ${pkg} --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -474,16 +484,16 @@ install_prereqs() {
     done
 
     ## upgrade pip
-    sudo pip install --upgrade pip > ${log} 2>&1
+    sudo pip3 install --upgrade pip > ${log} 2>&1
     if [ $? -ne 0 ]; then
-      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
+      echo -e "\nERROR: failed to upgrade pip3 - here's the last 10 lines of the log:\n"
       tail -10 ${log}; exit 1
     fi
 
     ## install additional pip-based packages
     for pkg in 'openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
-      sudo pip install ${pkg} --upgrade > ${log} 2>&1
+      sudo pip3 install ${pkg} --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -714,7 +724,7 @@ if [ ${flag_deauth} -eq 1 ]; then
   display_warning
   if [ $? -eq 0 ]; then
     extra_vars="${extra_vars} flag_deauth=1"
-    sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${deauth_script} 2>&1 | tee ${install_log}
+    sudo $(ansible_playbook_exec_path) -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${deauth_script} ${verbosity} 2>&1 | tee ${install_log}
     echo -e "Log: ${install_log}\n"
   fi
   exit 0
@@ -726,7 +736,7 @@ if [ ${flag_pmk_only} -eq 1 ]; then
   set -euo pipefail
   extra_vars="${extra_vars} k8s_only=1"
   echo -e "Log: ${install_log}\n"
-  sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${k8s_only_playbook} 2>&1 | tee ${install_log}
+  sudo $(ansible_playbook_exec_path) -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${k8s_only_playbook} ${verbosity} 2>&1 | tee ${install_log}
   echo -e "Log: ${install_log}\n"
   exit 0
 fi
@@ -734,7 +744,7 @@ fi
 ## upgrade K8s nodes
 if [ ${flag_k8s_upgrade} -eq 1 ]; then
   extra_vars="${extra_vars} flag_k8s_upgrade=1"
-  sudo ansible-playbook -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${k8s_upgrade_script} 2>&1 | tee ${install_log}
+  sudo $(ansible_playbook_exec_path) -i ${inventory} -l ${target} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${k8s_upgrade_script} ${verbosity} 2>&1 | tee ${install_log}
   echo -e "Log: ${install_log}\n"
   exit 0
 fi
@@ -747,7 +757,7 @@ else
 fi
 
 ## call pf9-express
-sudo ansible-playbook -i ${inventory} -l ${target} ${role_tags} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${express_script} ${verbosity} 2>&1 | tee ${install_log}
+sudo $(ansible_playbook_exec_path) -i ${inventory} -l ${target} ${role_tags} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${express_script} ${verbosity} 2>&1 | tee ${install_log}
 
 ## display log path
 echo -e "Installation Log: ${install_log}\n"

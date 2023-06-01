@@ -1,18 +1,4 @@
 ---
-- name: Check if pf9-hostagent in installed (Ubuntu)
-  shell: "`which dpkg-query` -s pf9-hostagent > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
-  register: pkg_state_ubuntu
-  when:
-    - ansible_distribution == "Ubuntu"
-    - ansible_pkg_mgr == "apt"
-
-- name: Check pf9-hostagent is installed (RedHat)
-  shell: "`which rpm` -qa | grep pf9-hostagent > /dev/null 2>&1; if [ $? -ne 0 ]; then echo 'not-installed'; fi"
-  register: pkg_state_redhat
-  when:
-    - ansible_os_family == "RedHat"
-    - ansible_pkg_mgr == "yum"
-
 - name: Add execute permission to installer
   file:
     path: "/tmp/platform9-install-{{ansible_os_family|lower}}.sh"
@@ -20,26 +6,13 @@
 
 # install pf9-hostagent with a proxy
 # NOTE: This installer cannot work with multiple regions today
-- block:
-  - name: Install pf9-hostagent on hypervisor/containervisor (RedHat)
-    shell: "/tmp/platform9-install-{{ansible_os_family|lower}}.sh --controller={{du_fqdn}} --project-name={{os_tenant}} --username={{os_username}} --password='{{os_password}}' --proxy={{proxy_url}} --no-ntpd --skip-os-check"
-    register: agent_install
-    when: pkg_state_redhat.stdout is defined and pkg_state_redhat.stdout.strip() == "not-installed"
-  - debug: var=agent_install
-
-  - name: Install pf9-hostagent on hypervisor/containervisor (Ubuntu)
-    shell: "/tmp/platform9-install-{{ansible_os_family|lower}}.sh --controller={{du_fqdn}} --project-name={{os_tenant}} --username={{os_username}} --password='{{os_password}}' --proxy={{proxy_url}} --no-ntpd --skip-os-check"
-    when: pkg_state_ubuntu.stdout is defined and pkg_state_ubuntu.stdout.strip() == "not-installed"
+- name: Install pf9-hostagent on hypervisor/containervisor (RedHat)
+  shell: "/tmp/platform9-install-{{ansible_os_family|lower}}.sh --controller={{du_fqdn}} --project-name={{os_tenant}} --username={{os_username}} --password='{{os_password}}' --proxy={{proxy_url}} --no-ntpd --skip-os-check"
+  register: agent_install
   when: proxy_url is defined
 
 # install pf9-hostagent without a proxy
-- block:
-  - name: Install pf9-hostagent on hypervisor/containervisor (RedHat)
-    shell: "/tmp/platform9-install-{{ansible_os_family|lower}}.sh --controller={{du_fqdn}} --project-name={{os_tenant}} --username={{os_username}} --password='{{os_password}}' --no-proxy --no-ntpd --skip-os-check"
-    when: pkg_state_redhat.stdout is defined and pkg_state_redhat.stdout.strip() == "not-installed"
-
-  - name: Install pf9-hostagent on hypervisor/containervisor (Ubuntu)
-    shell: "/tmp/platform9-install-{{ansible_os_family|lower}}.sh --controller={{du_fqdn}} --project-name={{os_tenant}} --username={{os_username}} --password='{{os_password}}' --no-proxy --no-ntpd --skip-os-check"
-    when: pkg_state_ubuntu.stdout is defined and pkg_state_ubuntu.stdout.strip() == "not-installed"
+- name: Install pf9-hostagent on hypervisor/containervisor (RedHat)
+  shell: "/tmp/platform9-install-{{ansible_os_family|lower}}.sh --controller={{du_fqdn}} --project-name={{os_tenant}} --username={{os_username}} --password='{{os_password}}' --no-proxy --no-ntpd --skip-os-check"
   when: proxy_url is undefined
 

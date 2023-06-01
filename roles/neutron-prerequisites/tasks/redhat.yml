@@ -16,9 +16,7 @@
   when: firewalld_install_status.stdout is defined and firewalld_install_status.stdout.strip() == "installed"
 
 - name: Installing iptables-services
-  yum:
-    name: iptables-services
-    state: present
+  shell: "yum install -y iptables-services"
 
 - name: Assemble list of ifcfg scripts
   find:
@@ -48,20 +46,12 @@
     enabled: no
   when: NetworkManager_install_status.stdout_lines is defined and NetworkManager_install_status.stdout_lines == "installed"
 
-
-
 - name: Add Platform9 Yum repository
-  yum:
-    name: https://s3-us-west-1.amazonaws.com/platform9-neutron/noarch/platform9-neutron-repo-1-0.noarch.rpm
-    state: present
-    update_cache: yes
+  shell: "yum install -y https://s3-us-west-1.amazonaws.com/platform9-neutron/noarch/platform9-neutron-repo-1-0.noarch.rpm || true"
 
 - name: Install Open vSwitch
-  yum:
-    name: openvswitch
-    state: present
-    disablerepo: '*'
-    enablerepo: 'platform9-neutron-repo,base'
+  shell: "yum install -y openvswitch"
+
 - name: Enable and start Open vSwitch
   service:
     name: openvswitch
@@ -69,6 +59,4 @@
     enabled: yes
 
 - name: Install Router Advertisement Daemon
-  yum:
-    name: radvd
-    state: present
+  shell: "yum install -y radvd"
