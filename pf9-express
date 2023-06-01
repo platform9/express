@@ -6,7 +6,6 @@
 
 # initialize variables
 basedir=$(dirname $0)
-min_ansible_version="2.02"
 oscli_version=pike
 oscli_rc_file=${basedir}/pf9-openstack.rc
 inventory=${basedir}/inventory/hosts
@@ -189,11 +188,11 @@ csv_import() {
 }
 
 ansible_exec_path() {
-  ansible_exec=$(which ansible 2> /dev/null || true)
-  if [[ -e $(which ansible-3 2> /dev/null || true) ]]; then
-    ansible_exec=$(which ansible-3 2> /dev/null || true)
+  ansible_exec=$(which ansible 2>/dev/null || true)
+  if [[ -e $(which ansible-3 2>/dev/null || true) ]]; then
+    ansible_exec=$(which ansible-3)
   elif [[ -e $(which ansible3 2> /dev/null || true) ]]; then
-    ansible_exec=$(which ansible3 2> /dev/null || true)
+    ansible_exec=$(which ansible3)
   fi
   echo -n $ansible_exec
 }
@@ -201,9 +200,9 @@ ansible_exec_path() {
 ansible_playbook_exec_path() {
   ansible_playbook_exec=$(which ansible-playbook 2> /dev/null || true)
   if [[ -e $(which ansible-playbook-3 2> /dev/null || true) ]]; then
-    ansible_playbook_exec=$(which ansible-playbook-3 2> /dev/null || true)
+    ansible_playbook_exec=$(which ansible-playbook-3)
   elif [[ -e $(which ansible-playbook3 2> /dev/null || true) ]]; then
-    ansible_playbook_exec=$(which ansible-playbook3 2> /dev/null || true)
+    ansible_playbook_exec=$(which ansible-playbook3)
   fi
   echo -n $ansible_playbook_exec
 }
@@ -710,11 +709,6 @@ if [ ${flag_oscli} -eq 1 ]; then
   install_oscli ${ctrl_hostname} ${du_region} ${du_tenant} ${du_username} ${du_password}
   exit 0
 fi
-
-## validate minimum Ansible version
-ansible_version=$($(ansible_exec_path) --version| head -1| grep core|awk -F ']' '{print $1}'|awk '{print $3}'|cut -d . -f1-2)
-echo "--> ansible_version = ${ansible_version}"
-if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
 
 ## validate target
 if [ -z "${target}" ]; then usage; fi

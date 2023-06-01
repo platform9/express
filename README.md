@@ -28,12 +28,12 @@ yum install git # CentOS
 apt update && apt install git # Ubuntu
 ```
 
-3. Clone the Platform9 Express repository. 
+3. Clone the Platform9 Express repository.
 
 ```
-git clone https://github.com/platform9/express.git /opt/pf9-express
+git clone https://github.com/platform9/express.git /opt/pf9-express && cd /opt/pf9-express
 ```
-NOTE: In this example, the installation directory is /opt/pf9-express, but any directory can be used.
+**NOTE:** In this example, the installation directory is /opt/pf9-express, but any directory can be used.
 
 ## Configure Access to the Management Plane (CLI Only)
 To configure the Platform9 Express CLI to communicate with the Platform9 management plane, run the following command (a sample session is included):
@@ -41,34 +41,34 @@ To configure the Platform9 Express CLI to communicate with the Platform9 managem
 ```
 # ./pf9-express -s
 NOTE: to enter a NULL value for prompt, enter '-'
- 
+
 PF9 Management Plane URL [https://company.platform9.net]:
 --> accepted: https://company.platform9.net
- 
+
 Admin Username [user@company.com]:
 --> accepted: user@company.com
- 
+
 Admin Password [********]:
 --> accepted: ********
- 
+
 Region [Sunnyvale]:
 --> accepted: Sunnyvale
- 
+
 Tenant [service]:
 --> accepted: service
- 
+
 Manage Hostname [true false] [false]:
 --> accepted: false
- 
+
 Manage DNS Resolver [true false] [false]:
 --> accepted: false
- 
+
 DNS Resolver 1 [8.8.8.8]:
 --> accepted: 8.8.8.8
- 
+
 DNS Resolver 2 [8.8.4.4]:
 --> accepted: 8.8.4.4
- 
+
 Proxy URL:
 --> accepted: -
 ```
@@ -77,15 +77,22 @@ Proxy URL:
 To install prerequisite packages on the Platform9 Express control host, run the following command (a sample session is included):
 
 ```
-# ./pf9-express -i
---> Installation Log: ./log/pf9-express.2018-05-22_11:36:13.log
---> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible
+# [root@jmiller-dev-centos7-pf9expressv2 pf9-express]# ./pf9-express -i
+Found release 7.9.2009 on platform centos
+--> Installing Prerequisites
+--> Installation Log: ./log/pf9-express.2023-06-01_20:50:31.log
+--> Validating package dependencies: epel-release ntp nginx gcc python3-devel python3-pip jq bc pbr openstacksdk==0.62.0 docker-py pyopenssl ansible-python3
 ```
 
-## Configuration Inventory (CLI Only)
-Platform9 Express uses Ansible to execute commands on the hosts to be taken under management.  In order to configure Ansible to run remote commands on the managed hosts, the Ansible Inventory file must be configured.  This file is located in /opt/pf9-express/inventory/hosts.
+**NOTE:** As you can see, python3 based stack will be installed. If your system already has python2, you will need to refer to [the Python3](#python3) section above.
 
-NOTE: A sample template is installed in the previous command ("./pf9-express -s"). A breakdown of the Inventory File is below:
+## Configuration Inventory (CLI Only)
+Platform9 Express uses Ansible to execute commands on the hosts to be taken under management.  In order to configure Ansible to run remote commands on the managed hosts, the Ansible Inventory file must be configured.
+
+**NOTE:** A sample template is installed in the previous command ("./pf9-express -s").
+This file is located in `/opt/pf9-express/inventory/hosts`.
+
+A breakdown of the Inventory File is below:
 
 ## Sample Inventory File Part 1 - Authentication Portion
 This is where you enter the credentials for your control host to log into the target VM hosts to be managed by the Platform9 management plane (through either a password or SSH key, comment out any password lines if using SSH authentication and vice versa as needed)
@@ -95,14 +102,16 @@ This is where you enter the credentials for your control host to log into the ta
 ##
 [all]
 [all:vars]
+# The remote user ansible will use for ssh execution
 ansible_user=ubuntu
 ansible_sudo_pass=winterwonderland
 ansible_ssh_pass=winterwonderland
+# The ssh key for the ssh connection to the `ansible_user` on the remote host
 ansible_ssh_private_key_file=~/.ssh/id_rsa
 ```
 
 ## Sample Inventory File Part 2 - Network Portion
-This is where you can configure optional network settings to create a bond with single or multiple interfaces. 
+This is where you can configure optional network settings to create a bond with single or multiple interfaces.
 ```
 ################################################################################################
 ## Optional Settings
@@ -143,7 +152,7 @@ cinder
 hv01 ansible_host=10.0.0.11 vm_console_ip=10.0.0.11 ha_cluster_ip=10.0.1.11 tunnel_ip=10.0.2.11 dhcp=on snat=on
 hv02 ansible_host=10.0.0.12 vm_console_ip=10.0.0.12 tunnel_ip=10.0.2.12 dhcp=on snat=on
 hv03 ansible_host=10.0.0.13 vm_console_ip=10.0.0.13 tunnel_ip=10.0.2.13
-hv04 ansible_host=10.0.0.14 
+hv04 ansible_host=10.0.0.14
 
 ## global variables defined in group_vars/glance.yml
 ## note: if the following variables are not defined, the value of ansible_host will be inherited
@@ -219,7 +228,7 @@ Here's an example of invoking Platform9 Express against a number of hosts withou
 --> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible setupd
 --> Updating setupd libraries: pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py attach-node add-cluster
 --> ansible_version = 2.5
- 
+
 [Executing: ansible-playbook ./pf9-express.yml]
 .
 .
@@ -235,7 +244,7 @@ Here's an example of invoking Platform9 Express against a single host group (hos
 --> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible setupd
 --> Updating setupd libraries: pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py attach-node add-cluster
 --> ansible_version = 2.5
- 
+
 [Executing: ansible-playbook ./pf9-express.yml]
 .
 .
@@ -251,7 +260,7 @@ Here's an example of invoking Platform9 Express against all host groups and perf
 --> Validating package dependencies: epel-release ntp nginx gcc python-devel python2-pip bc shade docker-py ansible setupd
 --> Updating setupd libraries: pf9_master_setup.py pf9_utils.py pf9_mgmt_setup.py attach-node add-cluster
 --> ansible_version = 2.5
- 
+
 [Executing: ansible-playbook ./pf9-express.yml]
 .
 .
@@ -261,9 +270,9 @@ Here's the usage statement showing all command-line options:
 ```
 # ./pf9-express
 Usage: ./pf9-express [Args] <target>
- 
+
 Args (Optional):
- 
+
 -a|--autoRegister          : auto-register host with management plane
 -i|--installPrereqs        : install pre-requisites and exit
 -s|--setup                 : run setup and exit
