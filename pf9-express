@@ -188,6 +188,16 @@ csv_import() {
   echo "Import Complete"
 }
 
+ansible_exec_path() {
+  ansible_exec=$(which ansible)
+  if [[ -e $(which ansible)-3 ]]; then
+    ansible_exec=$(which ansible)-3
+  elif [[ -e $(which ansible3) ]]; then
+    ansible_exec=$(which ansible3)
+  fi
+  echo -n $ansible_exec
+}
+
 ansible_playbook_exec_path() {
   ansible_playbook_exec=$(which ansible-playbook)
   if [[ -e $(which ansible-playbook)-3 ]]; then
@@ -702,7 +712,7 @@ if [ ${flag_oscli} -eq 1 ]; then
 fi
 
 ## validate minimum Ansible version
-ansible_version=$(ansible --version| head -1| grep core|awk -F ']' '{print $1}'|awk '{print $3}'|cut -d . -f1-2)
+ansible_version=$($(ansible_exec_path) --version| head -1| grep core|awk -F ']' '{print $1}'|awk '{print $3}'|cut -d . -f1-2)
 echo "--> ansible_version = ${ansible_version}"
 if (( ! $(bc <<< "$ansible_version >= $min_ansible_version") )); then assert "Ansible ${min_ansible_version} or greater is required"; fi
 
