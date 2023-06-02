@@ -368,7 +368,7 @@ install_prereqs() {
   # install Ansible (and dependencies)
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
-    for pkg in epel-release ntp nginx gcc python3-devel python3-pip jq bc; do
+    for pkg in epel-release gcc python3-devel python3-pip jq; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -387,30 +387,10 @@ install_prereqs() {
       tail -10 ${log}; exit 1
     fi
 
-    # Install pbr
-    for pkg in pbr; do
-      echo -n "${pkg} "
-      sudo pip3 install ${pkg} > ${log} 2>&1
-      if [ $? -ne 0 ]; then
-        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
-        tail -10 ${log}; exit 1
-      fi
-    done
-
     ## install additional pip-based packages
-    for pkg in 'openstacksdk==0.62.0' docker-py pyopenssl; do
+    for pkg in 'ansible openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
-      sudo pip3 install ${pkg} > ${log} 2>&1
-      if [ $? -ne 0 ]; then
-        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
-        tail -10 ${log}; exit 1
-      fi
-    done
-
-    ## install additional yum-based packages
-    for pkg in ansible-python3; do
-      echo -n "${pkg} "
-      sudo yum -y install ${pkg} > ${log} 2>&1
+      sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -437,8 +417,8 @@ install_prereqs() {
       tail -10 ${log}; exit 1
     fi
 
-    # Install pbr
-    for pkg in pbr; do
+    ## install additional pip-based packages
+    for pkg in 'ansible openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
       sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -446,29 +426,9 @@ install_prereqs() {
         tail -10 ${log}; exit 1
       fi
     done
-
-    ## install additional pip-based packages
-    for pkg in 'openstacksdk==0.62.0' docker-py pyopenssl; do
-      echo -n "${pkg} "
-      sudo pip3 install ${pkg} --upgrade --ignore-installed > ${log} 2>&1
-      if [ $? -ne 0 ]; then
-        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
-        tail -10 ${log}; exit 1
-      fi
-    done
-
-    ## install additional dnf-based packages
-    for pkg in ansible; do
-      echo -n "${pkg} "
-      sudo dnf -y install ${pkg} > ${log} 2>&1
-      if [ $? -ne 0 ]; then
-        echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
-        tail -10 ${log}; exit 1
-      fi
-    done
     echo
   elif [ "${platform}" == "ubuntu" ]; then
-    for pkg in jq python3 python3-dev python3-pip; do
+    for pkg in sshpass jq python3 python3-dev python3-pip; do
       echo -n "${pkg} "
       dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -490,7 +450,7 @@ install_prereqs() {
     ## install additional pip-based packages
     for pkg in 'ansible openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
-      sudo pip3 install ${pkg} > ${log} 2>&1
+      sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
