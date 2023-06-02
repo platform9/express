@@ -74,7 +74,7 @@ usage() {
 
 csv_import() {
   if [ ! -f ${csv_file} ]; then assert "CSV file not found"; fi
-  
+
   # Define templates
   tmp_inventory=/tmp/pf9-hosts.tmp
   tpl_global=${basedir}/lib/pf9-builder/template/hosts-global.tpl
@@ -95,7 +95,7 @@ csv_import() {
 
     lineArgs=(${line})
     inv_entry="${lineArgs[0]} ansible_host=${lineArgs[3]} ansible_user=${lineArgs[1]} ansible_ssh_private_key_file=${lineArgs[2]}"
-    
+
     # check for dhcp
     if [ "${lineArgs[4]}" == "TRUE" ]; then
       inv_entry="${inv_entry} dhcp=on"
@@ -169,7 +169,7 @@ csv_import() {
       fi
       inv_entry="${inv_entry} bond_sub_interfaces='[${sub_interfaces}]'"
     fi
-    
+
     echo ${inv_entry} >> ${tmp_inventory}
 
     IFS=","
@@ -398,7 +398,7 @@ install_prereqs() {
     done
     echo
   elif [ "${platform}" == "rocky" ]; then
-    for pkg in epel-release python3-devel python3-pip jq; do
+    for pkg in sshpass epel-release python3-devel python3-pip jq; do
       echo -n "${pkg} "
       dnf list installed | grep "^${pkg}\." > /dev/null 2>&1
       if [ $? -ne 0 ]; then
