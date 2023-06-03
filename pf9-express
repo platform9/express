@@ -368,7 +368,7 @@ install_prereqs() {
   # install Ansible (and dependencies)
   echo -n "--> Validating package dependencies: "
   if [ "${platform}" == "centos" ]; then
-    for pkg in epel-release gcc python3-devel python3-pip jq; do
+    for pkg in sshpass epel-release gcc python3-devel python3-pip jq; do
       echo -n "${pkg} "
       rpm -q ${pkg} > /dev/null 2>&1
       if [ $? -ne 0 ]; then
