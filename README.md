@@ -2,11 +2,12 @@
 Platform9 Express (pf9-express) is a Customer Success developed tool for bringing hosts under management by a Platform9 management plane.  It can bring a host to the point where it shows up in the Clarity UI as a host waiting to be authorized, or it can (optionally) perform Platform9 role deployments for both OpenStack and Kubernetes.  Platform9 Express includes a CLI and can be installed on a CentOS or Ubuntu control host.
 
 ## Prerequisites
-Platform9 Express must be installed on a control host with IP connectivity to the hosts to be brought under management. CentOS 7.4+, Ubuntu 16.04, or Ubuntu 18.04 are supported on the control host.  Before installing Platform9 Express, you'll need administrator credentials for the Platform9 management plane.  If a proxy is required for HTTP/HTTPS traffic, you'll need the URL for the proxy.
+Platform9 Express must be installed on a control host with IP connectivity to the hosts to be brought under management. CentOS 7.8+, Ubuntu 18.04, 20.04, or Rocky 9.x are supported.  Before installing Platform9 Express, you'll need administrator credentials for the Platform9 management plane.  If a proxy is required for HTTP/HTTPS traffic, you'll need the URL for the proxy.
 
 ### Python3
 
-Python3 is now required and will be installed automatically on the control host. If you already have python2 installed, you will need to set these two lines appropriately in `ansible.cfg`
+Python3 is now required for playbook execution and will be installed automatically on the control host.
+If you have a specific version of python that should be executed on the _remote_ hosts, you can set these two lines accordingly.
 
 ```
 [defaults]
@@ -26,6 +27,8 @@ Perform the following steps to install Platform9 Express:
 yum install git # CentOS
 
 apt update && apt install git # Ubuntu
+
+dnf install git # Rocky
 ```
 
 3. Clone the Platform9 Express repository.

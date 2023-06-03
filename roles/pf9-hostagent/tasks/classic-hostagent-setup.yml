@@ -5,14 +5,6 @@
     dest: /tmp/pf9_get_hostagent.py
     mode: 0755
 
-- set_fact:
-  agent_platform: "{{ ansbile_os_family|lower }}"
-  when: "ansible_distribution == 'Ubuntu' or ansible_distribution == 'Redhat' or ansible_distribution == 'CentOS'"
-
-- set_fact:
-  agent_platform: "redhat"
-  when: "ansible_distribution == 'Rocky'"
-
 - name: Download Platform9 installers
   shell: "./pf9_get_hostagent.py --account_endpoint {{du_fqdn}} --region {{os_region}} --user {{os_username}} --password '{{os_password}}' --tenant {{os_tenant}} --platform {{agent_platform}}"
   args:

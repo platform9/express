@@ -8,3 +8,6 @@
 
 - set_fact: hostagent_pkg_state="{{ hostagent_installed.stdout.strip() }}"
   when: hostagent_installed.changed
+
+- set_fact:
+    agent_platform: "redhat"

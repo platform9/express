@@ -18,7 +18,7 @@
 - block:
   - name: Check if the certless installer is available
     uri:
-      url: "https://{{du_fqdn}}/clarity/platform9-install-{{ansible_os_family|lower}}.sh"
+      url: "https://{{du_fqdn}}/clarity/platform9-install-{{agent_platform}}.sh"
       method: "HEAD"
       status_code: [200, 404]
       timeout: 30 

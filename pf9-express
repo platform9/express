@@ -388,7 +388,7 @@ install_prereqs() {
     fi
 
     ## install additional pip-based packages
-    for pkg in 'ansible openstacksdk==0.62.0' docker-py pyopenssl; do
+    for pkg in 'ansible==2.9.27 openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
       sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -418,7 +418,7 @@ install_prereqs() {
     fi
 
     ## install additional pip-based packages
-    for pkg in 'ansible openstacksdk==0.62.0' docker-py pyopenssl; do
+    for pkg in 'ansible==2.9.27 openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
       sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
@@ -448,7 +448,7 @@ install_prereqs() {
     fi
 
     ## install additional pip-based packages
-    for pkg in 'ansible openstacksdk==0.62.0' docker-py pyopenssl; do
+    for pkg in 'ansible==2.9.27 openstacksdk==0.62.0' docker-py pyopenssl; do
       echo -n "${pkg} "
       sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
       if [ $? -ne 0 ]; then
