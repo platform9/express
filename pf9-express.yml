@@ -69,6 +69,7 @@
     - k8s_worker
   become: true
   roles:
+    - common
     - pf9-auth
 
 # Run pre_hook

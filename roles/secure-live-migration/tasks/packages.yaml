@@ -1,7 +1,14 @@
 ---
-- name: Install sysfsutils
+- name: Install sysfsutils (Rocky/Ubuntu)
   package:
     name: sysfsutils
     state: present
+  when: "ansible_distribution == 'Rocky' or ansible_distribution == 'Ubuntu'"
+  tags: 
+    - live-migration
+
+- name: Install sysfsutils (Redhat)
+  shell: "yum install -y sysfsutils"
+  when: '"RedHat" in ansible_distribution or ansible_distribution == "CentOS"'
   tags: 
     - live-migration

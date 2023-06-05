@@ -1,13 +1,6 @@
 ---
-- name: Install libselinux-python
-  yum:
-    state: present
-    name: libselinux-python
-
-- name: Install the latest version ca-certificates
-  yum:
-    name: ca-certificates
-    state: latest
+- name: Install required yum common packages
+  shell: "yum install -y libselinux-python libselinux-python3 ca-certificates"
 
 - name: Modify devpts mount point
   mount:

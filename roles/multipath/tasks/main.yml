@@ -38,5 +38,4 @@
     systemd:
       state: restarted
       name: pf9-ostackhost
-  when: (pkg_state_ostackhost_ubuntu.stdout is defined and pkg_state_ostackhost_ubuntu.stdout.strip() != "not-installed") or
-        (pkg_state_ostackhost_redhat.stdout is defined and pkg_state_ostackhost_redhat.stdout.strip() != "not-installed")
+  when: ostackhost_pkg_state is defined and ostackhost_pkg_state != "not-installed"

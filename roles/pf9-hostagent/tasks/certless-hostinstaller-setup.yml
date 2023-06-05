@@ -2,8 +2,8 @@
 
 - name: Download Platform9 installers
   get_url:
-    url: "https://{{du_fqdn}}/clarity/platform9-install-{{ansible_os_family|lower}}.sh"
-    dest: "/tmp/platform9-install-{{ansible_os_family|lower}}.sh"
+    url: "https://{{du_fqdn}}/clarity/platform9-install-{{agent_platform}}.sh"
+    dest: "/tmp/platform9-install-{{agent_platform}}.sh"
     mode: 0755
     use_proxy: "{{ 'yes' if proxy_url is defined else 'no' }}"
 

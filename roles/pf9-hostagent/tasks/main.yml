@@ -1,20 +1,43 @@
 ---
 
-- name: Check if the certless installer is available
-  uri:
-    url: "https://{{du_fqdn}}/clarity/platform9-install-{{ansible_os_family|lower}}.sh"
-    method: "HEAD"
-    status_code: [200, 404]
-    timeout: 30 
-  register: result
+- include: redhat.yml
+  when:
+    - ansible_os_family == "RedHat"
 
-- name: Set if certless installer to true
-  set_fact:
-    is_certless_installer: "true"
-  when: result.status == 200
+- include: ubuntu.yml
+  when:
+    - ansible_distribution == "Ubuntu"
 
-- include: classic-hostagent-setup.yml
-  when: is_certless_installer is undefined
+- include: rocky.yml
+  when:
+    - ansible_distribution == "Rocky"
 
-- include: certless-hostinstaller-setup.yml
-  when: is_certless_installer is defined
+- name: debug
+  debug: var=hostagent_pkg_state
+
+- block:
+  - name: Check if the certless installer is available
+    uri:
+      url: "https://{{du_fqdn}}/clarity/platform9-install-{{agent_platform}}.sh"
+      method: "HEAD"
+      status_code: [200, 404]
+      timeout: 30 
+    register: result
+
+  - name: Set if certless installer to true
+    set_fact:
+      is_certless_installer: "true"
+    when: result.status == 200
+
+  - include: classic-hostagent-setup.yml
+    when: is_certless_installer is undefined
+
+  - include: certless-hostinstaller-setup.yml
+    when: is_certless_installer is defined
+  when: hostagent_pkg_state is defined and hostagent_pkg_state == "not-installed"
+
+- name: Enable and start pf9-hostagent
+  service:
+    name: pf9-hostagent
+    state: started
+    enabled: yes

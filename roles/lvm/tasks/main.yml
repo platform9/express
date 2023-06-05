@@ -2,9 +2,7 @@
 
 - block:
   - name: install LVM (Redhat)
-    yum:
-      name: lvm2
-      state: latest
+    shell: "yum install -y lvm2"
 
   - name: configuring lvm (device filters in lvm.conf)
     template:
