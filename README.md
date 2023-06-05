@@ -80,7 +80,7 @@ Proxy URL:
 To install prerequisite packages on the Platform9 Express control host, run the following command (a sample session is included):
 
 ```
-# [root@jmiller-dev-centos7-pf9expressv2 pf9-express]# ./pf9-express -i
+# [root@pf9-express]# ./pf9-express -i
 Found release 7.9.2009 on platform centos
 --> Installing Prerequisites
 --> Installation Log: ./log/pf9-express.2023-06-01_20:50:31.log
@@ -224,7 +224,7 @@ The basic syntax for starting Platform9 Express includes a target (host group, i
 Here's an example of invoking Platform9 Express against a number of hosts without registering them automatically to the management plane:
 
 ```
-[root@jmiller-dev-centos7-pf9expressv2 pf9-express]# ./pf9-express -g -a -b centos03
+[root@pf9-express]# ./pf9-express -g -a -b centos03
 Found release 7.9.2009 on platform centos
 ################################################################
 # Platform9 Express Utility
