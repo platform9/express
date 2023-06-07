@@ -331,6 +331,41 @@ If you want to override an Ansible variable defined in Inventory or dynamically 
 ```
 NOTE: Variables passed as extra-vars have the highest precedence.
 
+
+## Troubleshooting
+
+**Issue:**
+```
+[root@sn-n1 express]# ./pf9-express -i
+Found release 7.9.2009 on platform centos
+--> Installing Prerequisites
+--> Installation Log: ./log/pf9-express.2023-06-07_10:14:56.log
+--> Validating package dependencies: sshpass epel-release gcc python3-devel python3-pip jq ansible==2.9.27 openstacksdk==0.62.0
+ERROR: failed to install ansible==2.9.27 openstacksdk==0.62.0 - here's the last 10 lines of the log:
+
+    return self._prepare_linked_requirement(req, parallel_builds)
+  File "/usr/local/lib/python3.6/site-packages/pip/_internal/operations/prepare.py", line 528, in _prepare_linked_requirement
+    link, req.source_dir, self._download, self.download_dir, hashes
+  File "/usr/local/lib/python3.6/site-packages/pip/_internal/operations/prepare.py", line 223, in unpack_url
+    unpack_file(file.path, location, file.content_type)
+  File "/usr/local/lib/python3.6/site-packages/pip/_internal/utils/unpacking.py", line 247, in unpack_file
+    untar_file(filename, location)
+  File "/usr/local/lib/python3.6/site-packages/pip/_internal/utils/unpacking.py", line 218, in untar_file
+    with open(path, "wb") as destfp:
+UnicodeEncodeError: 'ascii' codec can't encode character '\xe9' in position 112: ordinal not in range(128)
+```
+
+**Fix:**
+
+Create `/etc/profile.d/my-custom.lang.sh` Add following lines to it. Then `chmod a+x /etc/profile.d/my-custom.lang.sh ; source /etc/profile.d/my-custom.lang.sh`
+
+```
+export LANG=en_US.UTF-8
+export LANGUAGE=en_US.UTF-8
+export LC_COLLATE=C
+export LC_CTYPE=en_US.UTF-8
+```
+
 ## License
 
 Apache 2.0
