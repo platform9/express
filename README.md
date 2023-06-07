@@ -335,6 +335,7 @@ NOTE: Variables passed as extra-vars have the highest precedence.
 ## Troubleshooting
 
 **Issue:**
+
 ```
 [root@sn-n1 express]# ./pf9-express -i
 Found release 7.9.2009 on platform centos
