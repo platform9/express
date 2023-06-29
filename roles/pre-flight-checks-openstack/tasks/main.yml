@@ -89,7 +89,7 @@
 - debug: msg="neutron_dns_domain = {{neutron_dns_domain}}"
 - debug: msg="neutron_dnsmasq_dns_servers = {{neutron_dnsmasq_dns_servers}}"
 - debug: msg="neutron_ovs_net_type = {{neutron_ovs_net_type}}"
-- debug: 
+- debug:
     msg: "neutron_tunnel_types = {{neutron_tunnel_types}}"
   when: neutron_tunnel_types is defined
 
@@ -103,8 +103,8 @@
     shell: "df -k {{cinder_image_conversion_cache}} | tail -1 | awk '{print $2}'"
     register: cinder_cache_free_space
   - debug: var=cinder_cache_free_space
-  
+
   - fail:
       msg="Insufficient free space in {{cinder_image_conversion_cache}} (mimimum required = {{cinder_image_cache_min_free_space}})"
-    when: cinder_cache_free_space.stdout.strip() < cinder_image_cache_min_free_space
+    when: cinder_cache_free_space.stdout.strip() | int < cinder_image_cache_min_free_space
   when: inventory_hostname in groups['cinder']
