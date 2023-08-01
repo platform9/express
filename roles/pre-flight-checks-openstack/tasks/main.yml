@@ -101,8 +101,10 @@
   stat:
     path: "{{cinder_image_conversion_cache}}"
   register: cinder_image_conversion_cache_dir_exists
+  when: inventory_hostname in groups['cinder']
 
 - debug: var=cinder_image_conversion_cache_dir_exists
+  when: inventory_hostname in groups['cinder']
 
 - block:
   - debug: msg="Validate minimum free space for cinder_image_conversion_cache (at least {{cinder_image_cache_min_free_space}} KBytes)"
