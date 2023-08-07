@@ -3,3 +3,5 @@
 - include: configure.yaml
 - include: services.yaml
 - include: passwordless-ssh.yaml
+- include: ubuntu.yml
+  when: (ansible_distribution == "Ubuntu") and (ansible_distribution_major_version == '20')
