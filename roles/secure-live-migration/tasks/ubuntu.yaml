@@ -1,0 +1,5 @@
+- name: Enable service libvirtd-tls.socket and ensure it is not masked
+  ansible.builtin.systemd:
+    name: libvirtd-tls.socket
+    enabled: true
+    masked: no
