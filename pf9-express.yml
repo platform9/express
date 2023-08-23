@@ -92,6 +92,7 @@
 - hosts: hypervisors
   become: true
   roles:
+    - pf9-auth
     - pre-flight-checks-openstack
     - common
     - ntp
@@ -117,6 +118,7 @@
 - hosts: glance
   become: true
   roles:
+    - pf9-auth  
     - { role: "glance-host", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
@@ -125,6 +127,7 @@
 - hosts: cinder
   become: true
   roles:
+    - pf9-auth  
     - { role: "lvm", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
@@ -134,6 +137,7 @@
 - hosts: designate
   become: true
   roles:
+    - pf9-auth  
     - { role: "map-role", rolename: "pf9-designate", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
 
@@ -141,6 +145,7 @@
 - hosts: k8s_master
   become: true
   roles:
+    - pf9-auth
     - common
     - ntp
     - disable-swap
@@ -154,6 +159,7 @@
 - hosts: k8s_worker
   become: true
   roles:
+    - pf9-auth    
     - common
     - ntp
     - disable-swap
