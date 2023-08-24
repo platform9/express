@@ -11,13 +11,6 @@
 # Neutron Settings
 ################################################################################
 - block:
-  # glance_endpoint_address
-  - set_fact:
-      glance_ip: "{{ansible_host}}"
-    when: glance_ip is undefined
-  - set_fact:
-      glance_endpoint_address: "{{glance_ip}}"
-
   # neutron_l3_agent_mode
   - set_fact:
       neutron_l3_agent_mode: "dvr_snat"
@@ -52,7 +45,7 @@
   - set_fact:
       ha_cluster_ip: ""
     when: ha_cluster_ip is undefined
-  when: rolename != "pf9-kube" and rolename != "pf9-cindervolume-lvm" and rolename != "pf9-cindervolume-base"
+  when: rolename != "pf9-kube" and rolename != "pf9-cindervolume-lvm" and rolename != "pf9-cindervolume-base" and rolename != "pf9-glance-role"
 
 ################################################################################
 # Cinder Settings
@@ -69,6 +62,18 @@
   - set_fact:
       cinder_volume_backend_name: "{{cinder_backend_name}}"
   when: rolename == "pf9-cindervolume-lvm"
+
+################################################################################
+# Glance Settings
+################################################################################
+- block:  
+  # glance_endpoint_address
+  - set_fact:
+      glance_ip: "{{ansible_host}}"
+    when: glance_ip is undefined
+  - set_fact:
+      glance_endpoint_address: "{{glance_ip}}"
+  when: rolename == "pf9-glance-role"
 
 ################################################################################
 # Configure JSON Metadata
