@@ -47,11 +47,6 @@
       when: groups_list.stdout != ""
       delegate_to: localhost
       run_once: true
-    
-    - name: Validate existance of pf9/host_id.conf
-      stat:
-        path: /etc/pf9/host_id.conf
-      register: stat_hostid  
 
 # Common Roles
 - hosts:
@@ -131,8 +126,6 @@
 - hosts: glance
   become: true
   roles:
-    - { role: "pf9-hostagent", when: stat_hostid.stat.exists == false }
-    - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "glance-host", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
@@ -141,8 +134,6 @@
 - hosts: cinder
   become: true
   roles:
-    - { role: "pf9-hostagent", when: stat_hostid.stat.exists == false }
-    - { role: "wait-for-convergence", when: autoreg == "on" }
     - { role: "lvm", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
