@@ -72,6 +72,15 @@
     - common
     - pf9-auth
 
+# Run keystone Authentication
+- hosts:
+    - cinder
+    - glance
+    - designate
+  become: true
+  roles:
+    - pf9-auth    
+
 # Run pre_hook
 - hosts:
     - hypervisors
