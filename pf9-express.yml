@@ -125,13 +125,9 @@
 # Openstack Image Nodes
 - hosts: glance
   become: true
-  tasks:
-    - name: validate pf9/host_id.conf
-      stat:
-        path: /etc/pf9/host_id.conf
-      register: stat_hostid
   roles:
-    - { role: "pf9-hostagent", when: stat_hostid.stat.exists == false }
+    - common  
+    - pf9-hostagent
     - { role: "glance-host", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-glance-role", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
@@ -140,6 +136,8 @@
 - hosts: cinder
   become: true
   roles:
+    - common  
+    - pf9-hostagent
     - { role: "lvm", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-base", when: autoreg == "on" }
     - { role: "map-role", rolename: "pf9-cindervolume-lvm", when: autoreg == "on" }
@@ -149,6 +147,8 @@
 - hosts: designate
   become: true
   roles:
+    - common
+    - pf9-hostagent  
     - { role: "map-role", rolename: "pf9-designate", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
 
