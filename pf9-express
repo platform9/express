@@ -46,6 +46,10 @@ awx_db_export=awx-db-backup-v0.2.sql
 tags=""
 IFS_orig="${IFS}"
 export PATH=/usr/local/bin:$PATH
+export LANG=en_US.UTF-8
+export LANGUAGE=en_US.UTF-8
+export LC_COLLATE=C
+export LC_CTYPE=en_US.UTF-8
 
 # functions
 usage() {
