@@ -26,4 +26,4 @@
     bridge: "{{neutron_ovs_bridge_name}}"
     port: "{{bond_ifname}}"
     state: present
-  when: ovs_bridge_check.stdout.strip() == "exists"
+  when: ovs_bridge_check.stdout.strip() == "not-exists"
