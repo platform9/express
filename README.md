@@ -367,6 +367,19 @@ export LC_COLLATE=C
 export LC_CTYPE=en_US.UTF-8
 ```
 
+On Rocky Linux 9.1 you may need to install `langpacks-en glibc-all-langpacks` first. Verify that locale en_US.UTF-8 is installed.
+
+```
+# localectl set-locale LANG=en_US.UTF-8
+Failed to issue method call: Locale en_US.UTF-8 not installed, refusing.
+```
+
+In such event install the locale by running
+
+```
+# dnf install langpacks-en glibc-all-langpacks -y
+```
+
 ## License
 
 Apache 2.0
