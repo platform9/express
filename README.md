@@ -367,7 +367,7 @@ export LC_COLLATE=C
 export LC_CTYPE=en_US.UTF-8
 ```
 
-On Rocky Linux 9.1 you may need to install langpacks-en glibc-all-langpacks first. Verify that locale en_US.UTF-8 is installed.
+On Rocky Linux 9.1 you may need to install `langpacks-en glibc-all-langpacks` first. Verify that locale en_US.UTF-8 is installed.
 
 ```
 # localectl set-locale LANG=en_US.UTF-8
