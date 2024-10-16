@@ -101,10 +101,10 @@
   stat:
     path: "{{cinder_image_conversion_cache}}"
   register: cinder_image_conversion_cache_dir_exists
-  when: inventory_hostname in groups['cinder']
+  when: "'cinder' in groups and inventory_hostname in groups['cinder']"
 
 - debug: var=cinder_image_conversion_cache_dir_exists
-  when: inventory_hostname in groups['cinder']
+  when: "'cinder' in groups and inventory_hostname in groups['cinder']"
 
 - block:
   - debug: msg="Validate minimum free space for cinder_image_conversion_cache (at least {{cinder_image_cache_min_free_space}} KBytes)"
@@ -118,4 +118,4 @@
   - fail:
       msg="Insufficient free space in {{cinder_image_conversion_cache}} (found {{cinder_cache_free_space.stdout.strip()}} mimimum required = {{cinder_image_cache_min_free_space}})"
     when: cinder_cache_free_space.stdout.strip() | int < cinder_image_cache_min_free_space
-  when: inventory_hostname in groups['cinder'] and cinder_image_conversion_cache_dir_exists == true
+  when: "'cinder' in groups and inventory_hostname in groups['cinder'] and cinder_image_conversion_cache_dir_exists == true"
