@@ -4,4 +4,4 @@
 - include: services.yaml
 - include: passwordless-ssh.yaml
 - include: ubuntu.yaml
-  when: (ansible_distribution == "Ubuntu") and (ansible_distribution_major_version == '20')
+  when: (ansible_distribution == "Ubuntu") and (ansible_distribution_major_version == '20') and (ansible_distribution_major_version == '22')
