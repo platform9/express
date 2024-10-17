@@ -1,5 +1,5 @@
 ---
-- name: Tell libvirt to listen on startup - Red Hat
+- name: Tell libvirt to listen on startup - RHEL 7 or CentOS 7
   lineinfile:
     state: present
     create: True
@@ -8,10 +8,10 @@
     regexp: '^#?LIBVIRTD_ARGS.*$'
   tags: 
     - live-migration
-  when: '"RedHat" in ansible_distribution or ansible_distribution == "CentOS"'
+  when: (ansible_distribution == "RedHat" or ansible_distribution == "CentOS") and ansible_distribution_major_version == "7"
   notify: restart libvirtd
 
-- name: Tell libvirt to listen on startup - Ubuntu
+- name: Tell libvirt to listen on startup - Ubuntu 18.04
   lineinfile:
     state: present
     create: True
@@ -20,7 +20,7 @@
     regexp: '^#?libvirtd_opts=*.*$'
   tags: 
     - live-migration
-  when: ansible_distribution == "Ubuntu"
+  when: ansible_distribution == "Ubuntu" and ansible_distribution_major_version == "18"
   notify: restart libvirtd
 
 - name: "Create {{ libvirt_pki_path }}"
@@ -66,7 +66,9 @@
     ca_file: "\"{{ libvirt_pki_path }}/cacert.pem\""
     cert_file: "\"{{ libvirt_pki_path }}/clientcert.pem\""
     key_file: "\"{{ libvirt_pki_path }}/clientkey.pem\""
-  notify: restart libvirtd
+  notify: 
+    - restart libvirtd
+    - restart libvirtd-systemd-socket
 
 - name: Set libvirt live migration settings in Nova.conf
   ini_file:

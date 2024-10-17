@@ -1,10 +1,50 @@
 ---
-- name: restart libvirtd
-  service:
+- listen: restart libvirtd
+  name: Restart libvirtd service
+  ansible.builtin.service:
     name: "{{ libvirtd_service_name }}"
     state: restarted
+  when: 
+    - (ansible_distribution == "Ubuntu" and ansible_distribution_major_version == "18") or ((ansible_distribution == "RedHat" or ansible_distribution == "CentOS") and (ansible_distribution_major_version == "7"))
+
+- listen: restart libvirtd-systemd-socket
+  name: Stop libvirtd service
+  ansible.builtin.systemd:
+    name: "{{ libvirtd_service_name }}"
+    state: stopped
+  when: 
+    - (ansible_distribution == "RedHat" or ansible_distribution == "Rocky" or ansible_distribution == "Ubuntu")
+    - (ansible_distribution_major_version == "8" or ansible_distribution_major_version == "9" or ansible_distribution_major_version == "20" or ansible_distribution_major_version == "22") 
+
+- listen: restart libvirtd-systemd-socket
+  name: Start libvirtd-tls.socket and set enabled
+  ansible.builtin.systemd:
+    name: libvirtd-tls.socket
+    state: restarted
+    enabled: yes
+  when: 
+    - (ansible_distribution == "RedHat" or ansible_distribution == "Rocky" or ansible_distribution == "Ubuntu")
+    - (ansible_distribution_major_version == "8" or ansible_distribution_major_version == "9" or ansible_distribution_major_version == "20" or ansible_distribution_major_version == "22") 
+
+- listen: restart libvirtd-systemd-socket
+  name: Restart libvirtd.socket
+  ansible.builtin.systemd:
+    name: libvirtd.socket
+    state: restarted
+  when: 
+    - (ansible_distribution == "RedHat" or ansible_distribution == "Rocky" or ansible_distribution == "Ubuntu")
+    - (ansible_distribution_major_version == "8" or ansible_distribution_major_version == "9" or ansible_distribution_major_version == "20" or ansible_distribution_major_version == "22") 
+
+- listen: restart libvirtd-systemd-socket
+  name: Start libvirtd service
+  ansible.builtin.systemd:
+    name: "{{ libvirtd_service_name }}"
+    state: started
+  when: 
+    - (ansible_distribution == "RedHat" or ansible_distribution == "Rocky" or ansible_distribution == "Ubuntu")
+    - (ansible_distribution_major_version == "8" or ansible_distribution_major_version == "9" or ansible_distribution_major_version == "20" or ansible_distribution_major_version == "22")   
 
 - name: restart pf9-ostackhost
-  service:
+  ansible.builtin.service:
     name: pf9-ostackhost
     state: restarted
