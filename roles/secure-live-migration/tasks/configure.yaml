@@ -1,5 +1,5 @@
 ---
-- name: Tell libvirt to listen on startup - Red Hat
+- name: Tell libvirt to listen on startup - RHEL 7 or CentOS 7
   lineinfile:
     state: present
     create: True
@@ -11,7 +11,7 @@
   when: (ansible_distribution == "RedHat" or ansible_distribution == "CentOS") and ansible_distribution_major_version == "7"
   notify: restart libvirtd
 
-- name: Tell libvirt to listen on startup - Ubuntu
+- name: Tell libvirt to listen on startup - Ubuntu 18.04
   lineinfile:
     state: present
     create: True
