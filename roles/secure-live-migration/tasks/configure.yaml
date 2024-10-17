@@ -68,8 +68,7 @@
     key_file: "\"{{ libvirt_pki_path }}/clientkey.pem\""
   notify: 
     - restart libvirtd
-    - restart libvirtd-ubuntu
-    - restart libvirtd-rocky
+    - restart libvirtd-systemd-socket
 
 - name: Set libvirt live migration settings in Nova.conf
   ini_file:
