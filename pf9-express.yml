@@ -87,8 +87,8 @@
     - k8s_master
     - k8s_worker
   become: true
-  roles:
-    - pre-hook
+  #roles:
+   # - pre-hook
 
 # Configure the bond
 - hosts: bond_config
@@ -184,5 +184,5 @@
     - k8s_master
     - k8s_worker
   become: true
-  roles:
-    - post-hook
+  #roles:
+   # - post-hook

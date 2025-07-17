@@ -217,7 +217,7 @@ ansible_playbook_exec_path() {
 }
 
 validate_platform() {
-  # check if running CentOS 7, Ubuntu 16.04, or Ubuntu 18.04
+  # checking OS
   if [ -r /etc/centos-release ]; then
     release=$(cat /etc/centos-release | cut -d ' ' -f 4)
     if [[ ! "${release}" == 7.* ]]; then assert "unsupported CentOS release: ${release}"; fi
@@ -225,7 +225,7 @@ validate_platform() {
     host_os_info=$(cat /etc/centos-release)
   elif [ -r /etc/lsb-release ]; then
     release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
-    if [[ ! "${release}" == 16.04* ]] && [[ ! "${release}" == 18.04* ]] && [[ ! "${release}" == 20.04* ]] ; then assert "unsupported Ubuntu release: ${release}"; fi
+    if [[ ! "${release}" == 16.04* ]] && [[ ! "${release}" == 18.04* ]] && [[ ! "${release}" == 20.04* ]] && [[ ! "${release}" == 22.04* ]]  ; then assert "unsupported Ubuntu release: ${release}"; fi
     platform="ubuntu"
     ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
     host_os_info="${platform} ${ubuntu_release}"
@@ -443,10 +443,10 @@ install_prereqs() {
     echo
   elif [ "${platform}" == "ubuntu" ]; then
     sudo apt update -y
-    apt install python3.9 -y
-    unlink /usr/bin/python3
-    ln -s /usr/bin/python3.9 /usr/bin/python3
-    for pkg in sshpass jq python3.9-dev python3-pip python3.9-venv; do
+   # apt install python3.9 -y
+   # unlink /usr/bin/python3
+   # ln -s /usr/bin/python3.9 /usr/bin/python3
+    for pkg in sshpass jq python3-dev python3-pip python3-venv; do
       echo -n "${pkg} "
       dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
       if [ $? -ne 0 ]; then
