@@ -1,0 +1,35 @@
+---
+- name: Load kernel modules required for Neutron
+  include: modules.yml
+
+- name: Set sysctl variables for Neutron
+  sysctl:
+    state: present
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    ignoreerrors: true
+  with_dict: "{{ neutron_sysctl }}"
+
+- include: redhat.yml
+  when: '"RedHat" in ansible_distribution or ansible_distribution == "CentOS"'
+
+- include: rocky.yml
+  when: ansible_distribution == "Rocky" and ansible_distribution_major_version == "8"
+
+- include: rocky9.yml
+  when: ansible_distribution == "Rocky" and ansible_distribution_major_version == "9"
+
+- include: ubuntu.yml
+  when: ansible_distribution == "Ubuntu"
+
+- name: check if OVS bridge already exists
+  shell: "ifconfig -a | grep ^{{neutron_ovs_bridge_name}} > /dev/null 2>&1; if [ $? -eq 0 ]; then echo 'exists'; else echo 'not-exist'; fi"
+  register: ovs_bridge_check
+
+- name: Create required OVS bridges
+  openvswitch_bridge:
+    bridge: "{{neutron_ovs_bridge_name}}"
+    state: present
+  when: ovs_bridge_check.stdout.strip() == "not-exist"
+

@@ -1,0 +1,32 @@
+---
+
+- name: validate admin kubeconfig present
+  stat:
+    path: /etc/pf9/kube.d/kubeconfigs/admin.yaml
+  register: kubeconfig_status
+
+- fail: msg="failed to open admin kubeconfig"
+  when: kubeconfig_status.stat.exists == false
+
+- name: validate kubectl present
+  stat:
+    path: /opt/pf9/pf9-kube/bin/kubectl
+  register: kubectl_status
+
+- fail: msg="failed to validate kubectl"
+  when: kubectl_status.stat.exists == false
+
+- name: validate kubelet systemd file present
+  stat:
+    path: /run/systemd/system/pf9-kubelet.service
+  register: kubelet_systemd_status
+
+- fail: msg="failed to validate kubelet systemd file"
+  when: kubelet_systemd_status.stat.exists == false
+
+- name: get K8s node name
+  shell: cat /run/systemd/system/pf9-kubelet.service | tr -s ' ' '\n' | grep hostname-override | cut -d = -f 2
+  register: k8s_node_name
+
+- name: drain K8s node
+  shell: /opt/pf9/pf9-kube/bin/kubectl --kubeconfig /etc/pf9/kube.d/kubeconfigs/admin.yaml drain {{k8s_node_name.stdout.strip()}} --ignore-daemonsets --delete-local-data --force --grace-period={{k8s_node_drain_grace_period}}

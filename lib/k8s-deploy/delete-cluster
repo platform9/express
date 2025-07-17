@@ -1,0 +1,23 @@
+#!/bin/bash
+
+target_uuid=""
+
+method_usage() {
+  echo "delete-cluster <uuid>"
+  exit 1
+}
+
+# process paramters
+if [ $# -eq 1 -a "${1}" == "-h" ]; then
+  method_usage
+elif [ $# -eq 2 ]; then
+  target_uuid=${2}
+else
+  method_usage
+fi
+
+# invoke API
+curl ${du_url}/qbert/v1/clusters/${target_uuid} \
+-X DELETE \
+-H "X-Auth-Token: ${token}" \
+-H "Content-Type: application/json" 

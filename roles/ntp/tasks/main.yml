@@ -1,0 +1,27 @@
+---
+- include_vars: redhat.yml
+  when: "'RedHat' in ansible_distribution or ansible_distribution == 'CentOS'"
+
+- include_vars: rocky.yml
+  when: ansible_distribution == 'Rocky'
+
+- include_vars: debian.yml
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Install NTP for non yum package managers
+  package:
+    state: present
+    name: "{{ item }}"
+  with_items: "{{ ntp_packages }}"
+  when: ansible_distribution == 'Rocky' or ansible_distribution == 'Ubuntu'
+
+- name: Install NTP with yum package manager
+  shell: "yum install -y {{ ntp_packages | join(' ') }}"
+  when: "'RedHat' in ansible_distribution or ansible_distribution == 'CentOS'"
+
+- name: Enable and start NTP
+  service:
+    name: "{{ ntp_service_name }}"
+    state: started
+    enabled: yes
+  when: ntp_service_name is defined

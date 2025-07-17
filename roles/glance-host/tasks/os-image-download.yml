@@ -1,0 +1,14 @@
+---
+# http://docs.openstack.org/image-guide/obtain-images.html
+- name: Download OpenStack images
+  get_url:
+    url: "{{ item }}"
+    dest: "{{ glance_filesystem_store_datadir }}/{{ item | basename }}"
+    owner: pf9
+    group: pf9group
+    mode: 0744
+  async: 900
+  tags:
+    - image-import
+  register: image_downloads
+  with_items: "{{ glance_images }}"

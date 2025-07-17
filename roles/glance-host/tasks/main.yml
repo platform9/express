@@ -1,0 +1,13 @@
+---
+
+- name: Create Glance image library path
+  file:
+    path: "{{glance_filesystem_store_datadir}}"
+    state: directory
+    recurse: yes
+    owner: pf9
+    group: pf9group
+  tags: 
+    - image-import
+
+- include: os-image-download.yml

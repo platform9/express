@@ -1,0 +1,45 @@
+#!/bin/bash
+
+echo "n=$#, args=$*"
+usage() {
+  echo "Usage: `basename $0` <vgName> <pv>[,<pv>...]"
+  exit 1
+}
+
+
+if [ $# -ne 2 ]; then usage; fi
+vg_name=${1}
+pvs=${2}
+
+# process pvs (which is formatted as a yml list)
+arglen=$(expr ${#pvs}-3)
+pvs=${pvs:2:${arglen}}
+IFS=","
+pv_list=(${pvs})
+
+# validate PVs
+for pv in "${pv_list[@]}"; do
+  if [ ! -r ${pv} ]; then
+    echo "PV not found: [${pv}]"
+    exit 1
+  fi
+done
+
+# traverse pv_list
+for pv in "${pv_list[@]}"; do
+  vgs | grep ${vg_name}
+  if [ $? -ne 0 ]; then
+    echo "--> vgcreate ${vg_name} ${pv}"
+    vgcreate ${vg_name} ${pv}
+    continue
+  fi
+
+  echo "--> vgextend ${vg_name} ${pv}"
+  vgextend ${vg_name} ${pv}
+done
+
+echo "--- VG INFO ------------------------------------------"
+vgs -v
+echo "------------------------------------------------------"
+
+exit 0

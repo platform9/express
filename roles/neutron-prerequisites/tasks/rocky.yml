@@ -1,0 +1,77 @@
+---
+- name: Set SELinux to permissive
+  selinux:
+    policy: targeted
+    state: permissive
+
+- name: Check if firewalld is a service
+  shell: "systemctl list-units | grep firewalld.service > /dev/null 2>&1; if [ $? -eq 0 ]; then echo 'installed'; fi"
+  register: firewalld_service_install_status
+
+- name: Disable firewalld
+  service:
+    state: stopped
+    name: firewalld
+    enabled: no
+  when: firewalld_service_install_status.stdout is defined and firewalld_service_install_status.stdout.strip() == "installed"
+
+- name: Installing iptables-services
+  dnf:
+    name: iptables-services
+    state: present
+
+- name: Assemble list of ifcfg scripts
+  find:
+    path: /etc/sysconfig/network-scripts
+    recurse: yes
+    patterns: ifcfg-*
+    use_regex: True
+  register: ifcfg_files
+
+- name: Remove interfaces from NetworkManager's control
+  lineinfile:
+    state: present
+    line: NM_CONTROLLED=no
+    regexp: ^NM_CONTROLLED
+    dest: "{{ item }}"
+  with_items: "{{ ifcfg_files.files|map(attribute='path')|list }}"
+  when: ifcfg_files is defined
+
+- name: Check if NetworkManager is installed
+  shell: "systemctl list-units | grep NetworkManager.service > /dev/null 2>&1; if [ $? -eq 0 ]; then echo 'installed'; fi"
+  register: NetworkManager_service_install_status
+
+- name: Disable NetworkManager
+  service:
+    state: stopped
+    name: NetworkManager
+    enabled: no
+  when: NetworkManager_service_install_status.stdout is defined and NetworkManager_service_install_status.stdout.strip() == "installed"
+
+- name: Add OpenStack DNF repository
+  dnf:
+    name: centos-release-openstack-yoga.noarch
+    state: present
+    disable_gpg_check: yes
+    update_cache: yes
+
+- name: Install Open vSwitch
+  dnf:
+    name: openvswitch3.1.x86_64
+    state: present
+
+- name: Install Open vSwitch scripts
+  dnf:
+    name: openstack-network-scripts-openvswitch3.1.x86_64
+    state: present
+
+- name: Enable and start Open vSwitch
+  service:
+    name: openvswitch
+    state: started
+    enabled: yes
+
+- name: Install Router Advertisement Daemon
+  dnf:
+    name: radvd
+    state: present

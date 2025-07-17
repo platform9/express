@@ -1,0 +1,58 @@
+#!/opt/pf9/setupd/bin/python2
+# Copyright (c) 2018 Platform9 Systems
+
+# A script that reads the required configuration files and
+# prepares the host by installing the pf9_setup and configuring
+# the default Cluster
+
+
+import sys, logging, yaml
+from setupd_samples.utils import command_exec
+from setupd_samples.utils.pf9_mgmt_setup import mgmt_cluster_create
+from setupd_samples.utils import get_misc_dir, setup_logs
+import argparse
+
+LOG = logging.getLogger(__name__)
+
+
+def _parse_args():
+    ap = argparse.ArgumentParser(sys.argv[0],
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ap.add_argument('--ctrl-ip', required=True, dest='ctrl_ip',
+                    help='')
+    ap.add_argument('--admin-user', required=True, dest='admin_user',
+                    help='')
+    ap.add_argument('--admin-password', required=True, dest='admin_password',
+                    help='')
+    ap.add_argument('--cluster-fqdn', required=True, dest='cluster_fqdn',
+                    help='')
+    ap.add_argument('--cluster-name', required=True, dest='cluster_name',
+                    help='')
+    return ap.parse_args()
+
+def _run_add_cluster(ctrl_ip, admin_user, admin_password, cluster_fqdn, cluster_name):
+    mgmt_cluster_create(ctrl_ip, admin_user, admin_password, cluster_fqdn, cluster_name)
+
+
+def main():
+    args = _parse_args()
+    setup_logs('/var/log/pf9/management.log')
+
+    _run_add_cluster(
+	args.ctrl_ip,
+        args.admin_user,
+        args.admin_password,
+        args.cluster_fqdn,
+        args.cluster_name
+    )
+
+
+if __name__ == '__main__':
+    try:
+        main()
+        print "Done"
+    except Exception as ex:
+        print "Operation failed"
+        LOG.exception(ex)
+        LOG.critical('Really bad things happened: %s', str(ex))
+        sys.exit(1)

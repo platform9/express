@@ -1,0 +1,7 @@
+---
+# Global Variables for 'glance' Inventory Group
+
+glance_filesystem_store_datadir: /var/opt/pf9/imagelibrary/data
+glance_public_endpoint: False
+glance_images:
+  - http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img

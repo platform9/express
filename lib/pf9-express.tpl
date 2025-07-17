@@ -1,0 +1,10 @@
+manage_hostname|false
+manage_resolver|false
+dns_resolver1|8.8.8.8
+dns_resolver2|8.8.4.4
+os_tenant|service
+du_url|https://company.platform9.net
+os_username|admin-user@company.com
+os_password|
+os_region|
+proxy_url|

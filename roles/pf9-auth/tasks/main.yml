@@ -1,0 +1,56 @@
+---
+
+# Ensure required Keystone variables exist
+- fail: msg="variable undefined - du_url"
+  when: du_url is undefined
+- fail: msg="variable undefined - os_username"
+  when: os_username is undefined
+- fail: msg="variable undefined - os_password"
+  when: os_password is undefined
+- fail: msg="variable undefined - os_region"
+  when: os_region is undefined
+- fail: msg="variable undefined - os_tenant"
+  when: os_tenant is undefined
+
+- name: Set OS_AUTH fact
+  set_fact:
+    os_auth:
+      auth_url: "{{du_url}}/keystone/v3"
+      username: "{{os_username}}"
+      password: "{{os_password}}"
+      project_name: "{{os_tenant}}"
+      user_domain_name: "default"
+      project_domain_name: "default"
+
+- name: Obtain authentication token from Keystone (with custom python)
+  os_auth:
+    auth: "{{os_auth}}"
+    region_name: "{{os_tenant}}"
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ custom_py_interpreter }}"
+  register: auth_reply_custom_py
+  when: custom_py_interpreter is defined
+
+- name: Obtain authentication token from Keystone
+  os_auth:
+    auth: "{{os_auth}}"
+    region_name: "{{os_tenant}}"
+  delegate_to: localhost
+  register: auth_reply
+  when: custom_py_interpreter is undefined
+
+- name: Set os_auth_token fact (with custom python)
+  set_fact: 
+    os_auth_token: "{{ auth_reply_custom_py.auth_token }}"
+  when: custom_py_interpreter is defined
+
+- name: Set os_auth_token fact
+  set_fact: 
+    os_auth_token: "{{ auth_reply.auth_token }}"
+  when: custom_py_interpreter is undefined
+
+- name: Save OS Auth Token
+  copy:
+    content: "{{ os_auth_token }}"
+    dest: /tmp/keystone-token.txt

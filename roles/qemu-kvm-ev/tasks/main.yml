@@ -1,0 +1,23 @@
+---
+# CentOS
+- block:
+  - name: ensure contentdir is configured in yum vars
+    copy:
+      dest: /etc/yum/vars/contentdir
+      content: 'centos'
+ 
+  - name: install the epel-release repo
+    shell: "yum install -y epel-release"
+
+  - name: install the centos-release-qemu-ev repo
+    shell: "yum install -y centos-release-qemu-ev"
+
+  - name: install the latest version of qemu-kvm-ev
+    shell: "yum install -y qemu-kvm-ev"
+  when: ansible_distribution == "CentOS"
+
+# RedHat
+- block:
+  - name: install qemu packages
+    shell: "yum install -y qemu-kvm qemu-kvm-common qemu-kvm-tools qemu-guest-agent libvirt-daemon-driver-qemu"
+  when: ansible_distribution == "RedHat"

@@ -1,0 +1,7 @@
+- copy:
+    src: "{{ role_path }}/files/kubeadm"
+    dest: /tmp/kubeadm
+- name: pmk-syscheck
+  shell: |
+      chmod 755 /tmp/kubeadm
+      /tmp/kubeadm init phase preflight

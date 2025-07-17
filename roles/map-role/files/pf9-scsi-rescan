@@ -1,0 +1,26 @@
+#!/bin/bash
+
+adapter_base="/sys/class/scsi_host"
+
+assert() {
+  if [ $# -ge 1 ]; then echo ${1}; fi
+  exit 1
+}
+
+# discover scsi bus adapter
+echo "adapter_base=${adapter_base}"
+for i in ${adapter_base}/*; do
+  hba=`echo ${i} | awk -F \/ '{print $NF}'`
+  if [ -z "${hba}" ]; then
+    continue
+  fi
+
+  # reset scsi bus
+  echo "resetting ${hba}"
+  echo "- - -" > /sys/class/scsi_host/${hba}/scan
+done
+
+echo "--- Visible Disks --------------------------------------------------------------"
+fdisk -l | grep "Disk /"
+
+exit 0

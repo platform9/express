@@ -1,0 +1,37 @@
+#!/bin/bash
+
+method_usage() {
+  echo "detach-worker <keystoneTenantId> <clusterUuid> <nodeUuid>"
+  exit 1
+}
+
+# process paramters
+if [ $# -eq 1 -a "${1}" == "-h" ]; then
+  method_usage
+elif [ $# -eq 4 ]; then
+  tenant_uuid=${2}
+  cluster_uuid=${3}
+  node_uuid=${4}
+  json_payload="[ { \"uuid\": \"${node_uuid}\", \"isMaster\": true }]"
+else
+  method_usage
+fi
+
+if [ ${flag_verbose} -eq 1 ]; then 
+  echo "--> JSON Payload"
+  echo ${json_payload}
+fi
+
+# invoke API
+echo "Sending Http POST message to: ${du_url}/qbert/v3/<keystoneTenantId>/clusters/<clusterUuid>/detach"
+echo "--> keystoneTenantId=${tenant_uuid}"
+echo "--> clusterUuid=${cluster_uuid}"
+echo "--> nodeUuid=${node_uuid}"
+
+echo -e "\nAPI Response"
+curl ${du_url}/qbert/v3/${tenant_uuid}/clusters/${cluster_uuid}/detach \
+-X POST \
+-H "X-Auth-Token: ${token}" \
+-H "Content-Type: application/json" \
+-d "${json_payload}"
+echo

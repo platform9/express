@@ -1,0 +1,40 @@
+---
+
+- block:
+  - name: install LVM (Redhat)
+    shell: "yum install -y lvm2"
+
+  - name: configuring lvm (device filters in lvm.conf)
+    template:
+      src: lvm.conf.j2
+      dest: /etc/lvm/lvm.conf
+
+  - name: running vgscan
+    shell: vgscan
+  when: '"RedHat" in ansible_distribution or ansible_distribution == "CentOS"'
+
+- block:
+  - name: install LVM (Rocky)
+    dnf:
+      name: lvm2
+      state: latest
+
+  - name: configuring lvm (device filters in lvm.conf)
+    template:
+      src: lvm.conf.j2
+      dest: /etc/lvm/lvm.conf
+
+  - name: running vgscan
+    shell: vgscan
+  when: ansible_distribution == "Rocky"
+
+- block:
+  - name: install LVM (Ubuntu)
+    apt:
+      name: lvm2
+      state: latest
+
+  - name: running vgscan
+    shell: vgscan
+  when: ansible_distribution == "Ubuntu"
+

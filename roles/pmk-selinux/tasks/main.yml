@@ -1,0 +1,16 @@
+# copy: because it seems that otherwise these .te files aren't necessarily copied to the right place.
+- copy:
+    src: "{{ role_path }}/files/pf9.te"
+    dest: /tmp/pf9.te
+
+- name: Install SELinux packages
+  shell: "yum install -y checkpolicy policycoreutils policycoreutils-python"
+ 
+- name: Load SELinux policies
+  command: "{{ item }}"
+  args:
+    chdir: /tmp
+  with_items:
+    - checkmodule -M -m -o pf9.mod pf9.te
+    - semodule_package -o pf9.pp -m pf9.mod
+    - semodule -i pf9.pp

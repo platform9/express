@@ -1,0 +1,5 @@
+auto {{bond_ifname}}.{{item['vlanid']}}
+iface {{bond_ifname}}.{{item['vlanid']}} inet static
+  address {{item['ip']}}
+  netmask {{item['mask']}}
+  mtu {{bond_mtu}}
