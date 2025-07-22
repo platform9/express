@@ -140,7 +140,7 @@ cv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"
 ```
 NOTE:
  1. On systems where there is NO bond configured, simply set `bond_ifname` to the respective interface name like `ens3` or `eth1` , etc.
- 2. The interface configured against `bond_ifname` should NOT have default gateway configured against it. As the `br-pf9` bridge gets created on top of it, the connectivity like ssh via that interface is lost if that is the interface/Iface with default gateway.
+ 2. The interface configured against `bond_ifname` should NOT have default gateway configured against it. As the `br-pf9` bridge gets created on top of it, the connectivity like ssh via that interface is lost if that is the interface/Iface with the default gateway.
 
 ## Sample Inventory File Part 3 - OpenStack Portion
 You can configure the OpenStack hosts and their pertinent roles (Hypervisor, Image Host, Storage Host, DNS Host)

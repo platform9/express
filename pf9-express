@@ -217,7 +217,7 @@ ansible_playbook_exec_path() {
 }
 
 validate_platform() {
-  # checking OS
+  # checking supported OS
   if [ -r /etc/centos-release ]; then
     release=$(cat /etc/centos-release | cut -d ' ' -f 4)
     if [[ ! "${release}" == 7.* ]]; then assert "unsupported CentOS release: ${release}"; fi
