@@ -4,7 +4,7 @@ Platform9 Express (pf9-express) is a Customer Success developed tool for bringin
 ## Prerequisites
 Platform9 Express must be installed on a control host with IP connectivity to the hosts to be brought under management. CentOS 7.8+, Ubuntu 22.04 or Rocky 9.x are supported. Onboarding hosts with Ubuntu 18.04, 20.04 can also be done, howerver the pf9-express cannot be executed from these OS due to some package/software dependency. Before installing Platform9 Express, you'll need administrator credentials for the Platform9 management plane. If a proxy is required for HTTP/HTTPS traffic, you'll need the URL for the proxy.
 
-The systems should have minumum 2 network interfaces with IP configured on them. Default gateway will be against one of those interfaces.
+The systems should have minumum 2 network interfaces with IP configured on them. Default gateway will be on one of those interfaces.
 
 ### Python3
 
