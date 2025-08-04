@@ -2,7 +2,9 @@
 Platform9 Express (pf9-express) is a Customer Success developed tool for bringing hosts under management by a Platform9 management plane.  It can bring a host to the point where it shows up in the Clarity UI as a host waiting to be authorized, or it can (optionally) perform Platform9 role deployments for both OpenStack and Kubernetes.  Platform9 Express includes a CLI and can be installed on a CentOS or Ubuntu control host.
 
 ## Prerequisites
-Platform9 Express must be installed on a control host with IP connectivity to the hosts to be brought under management. CentOS 7.8+, Ubuntu 18.04, 20.04, or Rocky 9.x are supported.  Before installing Platform9 Express, you'll need administrator credentials for the Platform9 management plane.  If a proxy is required for HTTP/HTTPS traffic, you'll need the URL for the proxy.
+Platform9 Express must be installed on a control host with IP connectivity to the hosts to be brought under management. CentOS 7.8+, Ubuntu 22.04 or Rocky 9.x are supported. Onboarding hosts with Ubuntu 18.04, 20.04 can also be done, howerver the pf9-express cannot be executed from these OS due to some package/software dependency. Before installing Platform9 Express, you'll need administrator credentials for the Platform9 management plane. If a proxy is required for HTTP/HTTPS traffic, you'll need the URL for the proxy.
+
+The systems should have minumum 2 network interfaces with IP configured on them. Default gateway will be on one of those interfaces.
 
 ### Python3
 
@@ -80,11 +82,13 @@ Proxy URL:
 To install prerequisite packages on the Platform9 Express control host, run the following command (a sample session is included):
 
 ```
-# [root@pf9-express]# ./pf9-express -i
-Found release 7.9.2009 on platform centos
+[root@rocky94 pf9-express]# ./pf9-express -i
+Found release 9.4 on platform rocky
 --> Installing Prerequisites
---> Installation Log: ./log/pf9-express.2023-06-01_20:50:31.log
---> Validating package dependencies: epel-release ntp nginx gcc python3-devel python3-pip jq bc pbr openstacksdk==0.62.0 docker-py pyopenssl ansible-python3
+--> Installation Log: ./log/pf9-express.2025-07-22_11:05:30.log
+--> Validating package dependencies: sshpass epel-release python3-devel python3-pip python3-virtualenv jq ansible==8.0.0 openstacksdk==4.0.0 docker-py pyopenssl 
+
+[root@rocky94 pf9-express]# 
 ```
 
 **NOTE:** As you can see, python3 based stack will be installed. If your system already has python2, you will need to refer to [the Python3](#python3) section above.
@@ -134,6 +138,9 @@ hv02 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"
 hv03 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.13","mask":"255.255.255.0"}]'
 cv01 bond_members='["eth1","eth2"]' bond_sub_interfaces='[{"vlanid":"100","ip":"10.0.0.15","mask":"255.255.255.0"}]'
 ```
+NOTE:
+ 1. On systems where there is NO bond configured, simply set `bond_ifname` to the respective interface name like `ens3` or `eth1` , etc.
+ 2. The interface configured against `bond_ifname` should NOT have default gateway configured against it. As the `br-pf9` bridge gets created on top of it, the connectivity like ssh via that interface is lost if that is the interface/Iface with the default gateway.
 
 ## Sample Inventory File Part 3 - OpenStack Portion
 You can configure the OpenStack hosts and their pertinent roles (Hypervisor, Image Host, Storage Host, DNS Host)

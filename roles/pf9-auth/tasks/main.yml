@@ -42,12 +42,12 @@
 
 - name: Set os_auth_token fact (with custom python)
   set_fact: 
-    os_auth_token: "{{ auth_reply_custom_py.ansible_facts.auth_token }}"
+    os_auth_token: "{{ auth_reply_custom_py.auth_token }}"
   when: custom_py_interpreter is defined
 
 - name: Set os_auth_token fact
   set_fact: 
-    os_auth_token: "{{ auth_reply.ansible_facts.auth_token }}"
+    os_auth_token: "{{ auth_reply.auth_token }}"
   when: custom_py_interpreter is undefined
 
 - name: Save OS Auth Token

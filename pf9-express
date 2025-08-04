@@ -45,6 +45,8 @@ awx_pf9_email="user@company.com"
 awx_db_export=awx-db-backup-v0.2.sql
 tags=""
 IFS_orig="${IFS}"
+ansible_version="8.0.0"
+openstacksdk_version="4.0.0"
 export PATH=/usr/local/bin:$PATH
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
@@ -193,6 +195,7 @@ csv_import() {
 }
 
 ansible_exec_path() {
+  source /opt/venvs/pf9-express-env/bin/activate
   ansible_exec=$(which ansible 2>/dev/null || true)
   if [[ -e $(which ansible-3 2>/dev/null || true) ]]; then
     ansible_exec=$(which ansible-3)
@@ -203,6 +206,7 @@ ansible_exec_path() {
 }
 
 ansible_playbook_exec_path() {
+  source /opt/venvs/pf9-express-env/bin/activate
   ansible_playbook_exec=$(which ansible-playbook 2> /dev/null || true)
   if [[ -e $(which ansible-playbook-3 2> /dev/null || true) ]]; then
     ansible_playbook_exec=$(which ansible-playbook-3)
@@ -213,7 +217,7 @@ ansible_playbook_exec_path() {
 }
 
 validate_platform() {
-  # check if running CentOS 7, Ubuntu 16.04, or Ubuntu 18.04
+  # checking supported OS
   if [ -r /etc/centos-release ]; then
     release=$(cat /etc/centos-release | cut -d ' ' -f 4)
     if [[ ! "${release}" == 7.* ]]; then assert "unsupported CentOS release: ${release}"; fi
@@ -221,7 +225,7 @@ validate_platform() {
     host_os_info=$(cat /etc/centos-release)
   elif [ -r /etc/lsb-release ]; then
     release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
-    if [[ ! "${release}" == 16.04* ]] && [[ ! "${release}" == 18.04* ]] && [[ ! "${release}" == 20.04* ]] ; then assert "unsupported Ubuntu release: ${release}"; fi
+    if [[ ! "${release}" == 18.04* ]] && [[ ! "${release}" == 20.04* ]] && [[ ! "${release}" == 22.04* ]]  ; then assert "unsupported Ubuntu release: ${release}"; fi
     platform="ubuntu"
     ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
     host_os_info="${platform} ${ubuntu_release}"
@@ -313,8 +317,8 @@ install_awx() {
 
   # Install Tower CLI
   echo "--> installing tower-cli"
-  sudo pip3 install ansible-tower-cli > ${log} 2>&1
-  if [ $? -ne 0 ]; then assert "failed to pip3 install ansible-tower-cli"; fi
+  sudo python3 -m pip install ansible-tower-cli > ${log} 2>&1
+  if [ $? -ne 0 ]; then assert "failed to pip install ansible-tower-cli"; fi
   sudo /bin/cp -f ${basedir}/lib/tower_cli.cfg.tpl /root/.tower_cli.cfg
   if [ $? -ne 0 ]; then assert "failed to copy lib/tower_cli.cfg.tpl"; fi
   sudo chmod 0400 /root/.tower_cli.cfg
@@ -360,7 +364,7 @@ install_oscli() {
   # source rc file
   source ${oscli_rc_file}
 
-  pip3 install python-openstackclient> ${log} 2>&1
+  python3 -m pip install python-openstackclient> ${log} 2>&1
   echo "You may need to add /usr/local/bin to your \$PATH"
   echo "export PATH=\$PATH:/usr/local/bin"
 }
@@ -386,16 +390,16 @@ install_prereqs() {
     done
 
     ## upgrade pip
-    sudo pip3 install --upgrade pip > ${log} 2>&1
+    sudo python3 -m pip install --upgrade pip > ${log} 2>&1
     if [ $? -ne 0 ]; then
-      echo -e "\nERROR: failed to upgrade pip3 - here's the last 10 lines of the log:\n"
+      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
       tail -10 ${log}; exit 1
     fi
 
     ## install additional pip-based packages
-    for pkg in 'ansible==2.9.27 openstacksdk==0.62.0' docker-py pyopenssl; do
+    for pkg in ansible==${ansible_version} openstacksdk==${openstacksdk_version} docker-py pyopenssl; do
       echo -n "${pkg} "
-      sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
+      sudo python3 -m pip install ${pkg} --force-reinstall --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -403,7 +407,8 @@ install_prereqs() {
     done
     echo
   elif [ "${platform}" == "rocky" ]; then
-    for pkg in sshpass epel-release python3-devel python3-pip jq; do
+    sudo dnf config-manager --set-enabled crb
+    for pkg in sshpass epel-release python3-devel python3-pip python3-virtualenv jq; do
       echo -n "${pkg} "
       dnf list installed | grep "^${pkg}\." > /dev/null 2>&1
       if [ $? -ne 0 ]; then
@@ -415,17 +420,19 @@ install_prereqs() {
       fi
     done
 
-    ## upgrade pip
-    sudo pip3 install --upgrade pip > ${log} 2>&1
+    ## Created virutal python env and upgrade pip.
+    python3 -m venv /opt/venvs/pf9-express-env
+    source /opt/venvs/pf9-express-env/bin/activate 
+    sudo python3 -m pip install --upgrade pip > ${log} 2>&1
     if [ $? -ne 0 ]; then
-      echo -e "\nERROR: failed to upgrade pip3 - here's the last 10 lines of the log:\n"
+      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
       tail -10 ${log}; exit 1
     fi
 
     ## install additional pip-based packages
-    for pkg in 'ansible==2.9.27 openstacksdk==0.62.0' docker-py pyopenssl; do
+    for pkg in ansible==${ansible_version} openstacksdk==${openstacksdk_version} docker-py pyopenssl; do
       echo -n "${pkg} "
-      sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
+      python3 -m pip install ${pkg} --force-reinstall --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -433,11 +440,12 @@ install_prereqs() {
     done
     echo
   elif [ "${platform}" == "ubuntu" ]; then
-    for pkg in sshpass jq python3 python3-dev python3-pip; do
+    sudo apt update -y
+    for pkg in sshpass jq python3-dev python3-pip python3-venv; do
       echo -n "${pkg} "
       dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
       if [ $? -ne 0 ]; then
-        sudo apt-get -y install ${pkg} > ${log} 2>&1
+        sudo apt install ${pkg} -y > ${log} 2>&1
         if [ $? -ne 0 ]; then
           echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
           tail -10 ${log}; exit 1
@@ -445,17 +453,19 @@ install_prereqs() {
       fi
     done
 
-    ## upgrade pip
-    sudo pip3 install --upgrade pip > ${log} 2>&1
+    ## Created virutal python env and upgrade pip.
+    python3 -m venv /opt/venvs/pf9-express-env
+    source /opt/venvs/pf9-express-env/bin/activate 
+    sudo python3 -m pip install --upgrade pip > ${log} 2>&1
     if [ $? -ne 0 ]; then
-      echo -e "\nERROR: failed to upgrade pip3 - here's the last 10 lines of the log:\n"
+      echo -e "\nERROR: failed to upgrade pip - here's the last 10 lines of the log:\n"
       tail -10 ${log}; exit 1
     fi
 
     ## install additional pip-based packages
-    for pkg in 'ansible==2.9.27 openstacksdk==0.62.0' docker-py pyopenssl; do
+    for pkg in ansible==${ansible_version} openstacksdk==${openstacksdk_version} docker-py pyopenssl; do
       echo -n "${pkg} "
-      sudo pip3 install ${pkg} --ignore-installed > ${log} 2>&1
+      python3 -m pip install ${pkg} --force-reinstall --upgrade > ${log} 2>&1
       if [ $? -ne 0 ]; then
         echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
         tail -10 ${log}; exit 1
@@ -715,6 +725,7 @@ else
 fi
 
 ## call pf9-express
+source /opt/venvs/pf9-express-env/bin/activate
 sudo $(ansible_playbook_exec_path) -i ${inventory} -l ${target} ${role_tags} -e "skip_prereq=${flag_skip_prereqs} autoreg=${autoreg} du_fqdn=${ctrl_hostname} ctrl_ip=${ctrl_ip} du_username=${du_username} du_password=${du_password} ${extra_vars}" ${express_script} ${verbosity} 2>&1 | tee ${install_log}
 
 ## display log path
