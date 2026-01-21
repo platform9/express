@@ -3,3 +3,6 @@ iface {{bond_ifname}}.{{item['vlanid']}} inet static
   address {{item['ip']}}
   netmask {{item['mask']}}
   mtu {{bond_mtu}}
+  dns-nameservers {{dns_nameservers}}
+  dns-search {{dns_search}}
+  gateway {{gateway}}
